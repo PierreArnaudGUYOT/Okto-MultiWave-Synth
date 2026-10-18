@@ -72,7 +72,7 @@ function WSCoreFactory(SPEC) {
       case 'deg': return Math.round(v * 360) + '°';
       case 'cyc': return '±' + Math.round(v * 360) + '°';
       case 'bandamt': return '±' + v.toFixed(1) + ' bands';
-      case 'abmix': return v <= 0 ? 'A' : v >= 1 ? 'B' : `A ${Math.round((1 - v) * 100)} · B ${Math.round(v * 100)}`;
+      case 'semi': return sgn(Math.round(v), Math.abs(Math.round(v)) + ' st');
       default: return v.toFixed(2);
     }
   }
@@ -80,13 +80,6 @@ function WSCoreFactory(SPEC) {
     if (p.fmt === 'choice') {
       const i = p.choices.findIndex(c => c.toLowerCase() === String(s).trim().toLowerCase());
       if (i >= 0) return i;
-    }
-    if (p.fmt === 'abmix') {   // "A", "B", or the B share in percent ("A 70 · B 30" or "30")
-      const t = String(s).trim().toUpperCase();
-      if (t === 'A') return 0;
-      if (t === 'B') return 1;
-      const mb = /B\s*([0-9.]+)/.exec(t) || /^([0-9.]+)/.exec(t);
-      return mb ? Math.min(1, Math.max(0, parseFloat(mb[1]) / 100)) : null;
     }
     let t = String(s).replace('−', '-');
     if (p.fmt === 'sec' && /off/i.test(t)) return p.min;
@@ -101,14 +94,6 @@ function WSCoreFactory(SPEC) {
     return Math.min(p.max, Math.max(p.min, v));
   }
   function defaults() { return SPEC.PARAMS.map(p => p.def); }
-  // LFO 2 (beta 0.3): parameter i as LFO 2 moves it (its target t2, by d2 in plain units), else exactly as set
-  const LFO2_T = SPEC.LFO2_TARGETS;
-  function lfo2Value(p, i, t2, d2) {
-    if (i !== t2) return p[i];
-    const v = p[i] + d2;
-    return i === P.p_center ? v : Math.min(SPEC.PARAMS[i].max, Math.max(SPEC.PARAMS[i].min, v));   // POSITION wraps later
-  }
-
   // ------------------------------------------------------------ wavelets
   const FILTERS = SPEC.WAVELETS.map(w => {
     const L = w.h.length, h = Float64Array.from(w.h), g = new Float64Array(L);
@@ -235,75 +220,85 @@ function WSCoreFactory(SPEC) {
     return c;
   }
 
-  // Which table sets the sound needs: bit 0 = engine A (A/B MIX below B), bit 1 = engine B (MIX above A).
+  // ------------------------------------------------------------ oscillators and table building
+  // Four oscillators (A1 A2 subtractive, B1 B2 additive); K[s] maps the fields of oscillator s to parameter indices (spec.js SLOTS).
+  const SLOTS = SPEC.SLOTS, ROLES = SPEC.ROLES, LFO2_ROLE = SPEC.LFO2_ROLE;
+  const NS = SLOTS.length;
+  const K = SLOTS.map(s => s.k);
+  const ROLE_PCEN = ROLES.indexOf('pcen'), ROLE_PHASE = ROLES.indexOf('phase');
+  const LVL_EPS = 1e-5;     // an oscillator whose smoothed level is below this is not rendered
+
+  // Which oscillators the sound needs: bit s = oscillator s has a level above 0.
   function tableNeeds(params) {
-    const m = params[P.ab_mix];
-    return (m < 1 ? 1 : 0) | (m > 0 ? 2 : 0);
+    let m = 0;
+    for (let s = 0; s < NS; s++) if (params[K[s].lvl] > 0) m |= 1 << s;
+    return m;
+  }
+  // WAVELET MORPH (beta 0.3): the amounts that can move the sound away from WAVELET; an oscillator whose wavelet is WAVELET 2 has
+  // nothing to morph to
+  function morphOn(params) { return params[P.wmorph] > 0 || params[P.lfo_wav] > 0 || params[P.env_wav] !== 0; }
+  function slotMorph(params, s) { return morphOn(params) && Math.round(params[P.wav2]) !== Math.round(params[K[s].wavelet]); }
+  function morphNeeded(params) {
+    for (let s = 0; s < NS; s++) if (params[K[s].lvl] > 0 && slotMorph(params, s)) return true;
+    return false;
+  }
+  // SOURCE PHASE (beta 0.4) moved by LFO 2: it targets the phase with an amount; the subtractive oscillators that play get the sets
+  function phaseModOn(params) { return LFO2_ROLE[Math.round(params[P.lfo2_target])] === ROLE_PHASE && params[P.lfo2_amt] !== 0; }
+  function slotPhaseMod(params, s) { return phaseModOn(params) && SLOTS[s].mode === 0 && params[K[s].lvl] > 0; }
+  function phaseModNeeded(params) {
+    for (let s = 0; s < NS; s++) if (slotPhaseMod(params, s)) return true;
+    return false;
   }
 
   // Builds everything that depends only on structural parameters.
-  // withMips=false is used by displays (raw layers of the engine shown on the panel).
-  // withMips=true builds what the sound needs: engine A or B alone (A/B MIX at A or at B), or both when they are
-  // mixed: then the engine shown on the panel is the main set and the other one is in `alt` ({ mode, mips, rms }).
+  // withMips=false is used by displays: the raw layers of the oscillator shown on the panel (osc_view).
+  // withMips=true builds what the sound needs: { slots: [A1, A2, B1, B2] } with, for each oscillator that plays,
+  // { mode, mips, rms } (null: it does not play). WAVELET MORPH (beta 0.3): `w2` = the same oscillator built with WAVELET 2,
+  // crossfaded with it in renderSlot. SOURCE PHASE moved by LFO 2 (beta 0.4): `ph` = the other PHASE_K - 1 phases of a
+  // subtractive oscillator (also in w2).
   function buildTables(params, withMips) {
-    const view = Math.round(params[P.engine]);
-    if (!withMips) return buildSet(params, view, false);
-    const out = buildSound(params, view);
-    // WAVELET MORPH (beta 0.3): the same sound built with WAVELET 2, crossfaded with the main one in renderMorph
-    if (morphNeeded(params)) {
-      const p2 = Float64Array.from(params); p2[P.wavelet] = params[P.wav2];
-      const w2 = buildSound(p2, view);
-      out.w2 = { mode: w2.mode, mips: w2.mips, rms: w2.rms, alt: w2.alt || null };
-    }
-    // SOURCE PHASE moved by LFO 2 (beta 0.4): every engine-A set also at the other PHASE_K - 1 positions (set.ph)
-    if (phaseModNeeded(params)) {
-      const add = (set, wav) => { if (set && set.mode === 0) set.ph = phaseSets(params, wav); };
-      add(out, params[P.wavelet]); add(out.alt, params[P.wavelet]);
-      if (out.w2) { add(out.w2, params[P.wav2]); add(out.w2.alt, params[P.wav2]); }
+    if (!withMips) return buildSet(params, Math.round(params[P.osc_view]), false);
+    const need = tableNeeds(params), out = { needs: need, slots: [] };
+    for (let s = 0; s < NS; s++) {
+      if (!(need & (1 << s))) { out.slots.push(null); continue; }
+      const b = buildSet(params, s, true);
+      const t = { mode: b.mode, mips: b.mips, rms: b.rms };
+      if (slotMorph(params, s)) {
+        const w = buildSet(params, s, true, { wavelet: params[P.wav2] });
+        t.w2 = { mode: w.mode, mips: w.mips, rms: w.rms };
+      }
+      if (slotPhaseMod(params, s)) {
+        t.ph = phaseSets(params, s, params[K[s].wavelet]);
+        if (t.w2) t.w2.ph = phaseSets(params, s, params[P.wav2]);
+      }
+      out.slots.push(t);
     }
     return out;
   }
-  // LFO 2 moves the source phase when it targets it with an amount, and engine A plays
-  function phaseModNeeded(params) {
-    return LFO2_T[Math.round(params[P.lfo2_target])] === P.a_phase && params[P.lfo2_amt] !== 0 && (tableNeeds(params) & 1) !== 0;
-  }
-  // the engine-A tables at phases a_phase + k / PHASE_K (k = 1 .. PHASE_K - 1), wavelet wav
-  function phaseSets(params, wav) {
-    const pk = Float64Array.from(params);
-    pk[P.wavelet] = wav;
+  // the tables of subtractive oscillator s at phases a_phase + k / PHASE_K (k = 1 .. PHASE_K - 1), wavelet wav
+  function phaseSets(params, s, wav) {
     const sets = [];
     for (let k = 1; k < PHASE_K; k++) {
-      let v = params[P.a_phase] + k / PHASE_K; v -= Math.floor(v);
-      pk[P.a_phase] = v;
-      const s = buildSet(pk, 0, true);
-      sets.push({ mode: 0, mips: s.mips, rms: s.rms });
+      let v = params[K[s].phase] + k / PHASE_K; v -= Math.floor(v);
+      const b = buildSet(params, s, true, { wavelet: wav, phase: v });
+      sets.push({ mode: 0, mips: b.mips, rms: b.rms });
     }
     return sets;
   }
-  function buildSound(params, view) {
-    const need = tableNeeds(params);
-    if (need !== 3) return buildSet(params, need === 1 ? 0 : 1, true);
-    const out = buildSet(params, view, true), alt = buildSet(params, 1 - view, true);
-    out.alt = { mode: alt.mode, mips: alt.mips, rms: alt.rms };
-    return out;
-  }
-  // The morph needs the WAVELET 2 tables when it can move away from WAVELET (MORPH, LFO or envelope to the wavelet)
-  // and WAVELET 2 is another wavelet.
-  function morphNeeded(params) {
-    return (params[P.wmorph] > 0 || params[P.lfo_wav] > 0 || params[P.env_wav] !== 0) &&
-      Math.round(params[P.wav2]) !== Math.round(params[P.wavelet]);
-  }
 
-  function buildSet(params, mode, withMips) {
-    const f = FILTERS[Math.round(params[P.wavelet])];
+  // over: { wavelet, phase } replace the oscillator's own (the WAVELET MORPH set, the phase sets)
+  function buildSet(params, s, withMips, over) {
+    const k = K[s], mode = SLOTS[s].mode;
+    const f = FILTERS[Math.round(over && over.wavelet !== undefined ? over.wavelet : params[k.wavelet])];
     let c, kept = 0, nonzero = 0;
     const layers = [];
     const bandScale = new Float64Array(NB).fill(1);
     if (mode === 0) {
-      const src = sourceCycle(Math.round(params[P.a_wave]), params[P.a_width], params[P.a_phase]);
+      const ph = over && over.phase !== undefined ? over.phase : params[k.phase];
+      const src = sourceCycle(Math.round(params[k.wave]), params[k.width], ph);
       c = dwt(src, f);
       c[0] = 0;
-      const sp = sparsify(c, params[P.a_sparsity]);
+      const sp = sparsify(c, params[k.sparsity]);
       kept = sp.K; nonzero = sp.nz;
       const dry = new Float64Array(N);
       for (let b = 1; b <= NB; b++) {
@@ -313,7 +308,7 @@ function WSCoreFactory(SPEC) {
       }
       layers.push(dry);
     } else {
-      c = patternCoeffs(Math.round(params[P.b_pattern]), Math.round(params[P.b_seed]));
+      c = patternCoeffs(Math.round(params[k.pattern]), Math.round(params[k.seed]));
       for (let b = 1; b <= NB; b++) {
         const l = idwt(bandOnly(c, b), f);
         let peak = 0; for (let i = 0; i < N; i++) peak = Math.max(peak, Math.abs(l[i]));
@@ -420,21 +415,30 @@ function WSCoreFactory(SPEC) {
     return this.level;
   };
 
+  // The state of one oscillator of one voice.
+  function Slot() {
+    this.phase = new Float64Array(4);                       // the unison copies' phases
+    this.g = new Float64Array(NB); this.dg = new Float64Array(NB); this.tg = new Float64Array(NB);   // band gains: now, step, target
+    this.scale = new Float64Array(NB); this.scaleAtk = new Uint8Array(NB);   // additive oscillators: the band envelopes
+    this.f0 = 261.63; this.mip = 0; this.pc = 0; this.pw = 1; this.pd = 0;   // its pitch, mip level and position window
+    this.own = new Env(); this.pe = 1;                      // its own envelope; its pitch envelope (1 -> 0)
+    this.live = false;                                      // rendered in the last block
+  }
   function Voice() {
     this.active = false; this.gate = false; this.held = false;
     this.note = 60; this.vel = 1; this.age = 0;
     this.pitch = 60; this.target = 60; this.glide = false;
-    this.phase = new Float64Array(4);
+    this.f0 = 261.63;
     this.subPhase = 0;
     this.amp = new Env(); this.mod = new Env();
-    this.scale = new Float64Array(NB); this.scaleAtk = new Uint8Array(NB);
-    this.gA = new Float64Array(NB); this.dA = new Float64Array(NB);
-    this.gB = new Float64Array(NB); this.dB = new Float64Array(NB);
-    this.tA = new Float64Array(NB); this.tB = new Float64Array(NB);
+    this.sl = [];
+    for (let s = 0; s < NS; s++) this.sl.push(new Slot());
     this.fresh = true;
     this.wm0 = 0; this.wm1 = 0;   // WAVELET MORPH position
     this.ap0 = 0; this.ap1 = 0;   // SOURCE PHASE moved by LFO 2: position among the PHASE_K phase sets (0 .. PHASE_K)
   }
+  // releases the voice's own envelopes (with the AMP and MOD envelopes)
+  function relOwn(vc) { for (let s = 0; s < NS; s++) vc.sl[s].own.gate(false); }
 
   // ---------------------------------------------------------------- Okto MultiWave Synth: chord names and the strum plate (both panels)
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -460,14 +464,27 @@ function WSCoreFactory(SPEC) {
     this.lfoPhase = 0; this.lfo = 0; this.sh = 0; this.lfoRng = rng(777);
     this.lfo2Phase = 0; this.lfo2 = 0; this.sh2 = 0; this.lfo2Rng = rng(778);   // LFO 2 (beta 0.3)
     this.keys = new Uint8Array(128);
-    this.tmpA = new Float64Array(NB); this.tmpB = new Float64Array(NB); this.fg = new Float64Array(NB);
+    this.tmpB = new Float64Array(NB); this.fg = new Float64Array(NB);
     this.active = new Int32Array(NL);
     this.bufL = new Float32Array(CTRL); this.bufR = new Float32Array(CTRL);
-    this.panL = new Float64Array(4); this.panR = new Float64Array(4); this.inc = new Float64Array(4);
-    this.endPhase = new Float64Array(4); this.lg = new Float64Array(NB); this.endLevel = 0; this.endStage = 0;
-    this.disp = { gains: new Float32Array(NB), mode: 0, voices: 0, peakL: 0, peakR: 0, center: 0, width: 1, depth: 0, note: -1 };
+    this.panL = new Float64Array(4); this.panR = new Float64Array(4); this.inc = new Float64Array(4); this.detMul = new Float64Array(4);
+    this.lg = new Float64Array(NB);
+    // per block, computed once for all voices (prepBlock): the oscillators' levels and settings
+    this.lvlSm = new Float64Array(NS); this.m0 = new Float64Array(NS); this.m1 = new Float64Array(NS); this.live = new Uint8Array(NS);
+    this.pr = [];
+    for (let s = 0; s < NS; s++) this.pr.push({ tune: 0, ftype: 0, fcut: 0, fslope: 0, fres: 0, fkey: 0, fenv: 0, fvel: 0, pcen: 0, pwid: 0, pdep: 0,
+      bar: new Float64Array(NB), norm: 1, atkRate: new Float64Array(NB), decay: new Float64Array(NB), sus: 1 });
+    this.U = 1; this.topMul = 1; this.role2 = -1; this.d2 = 0;
+    // per voice and block: the amp envelope (with the velocity gain) per sample, each oscillator's own envelope, end states
+    this.envA = new Float64Array(CTRL);
+    this.ownBuf = []; this.endPh = [];
+    for (let s = 0; s < NS; s++) { this.ownBuf.push(new Float64Array(CTRL)); this.endPh.push(new Float64Array(4)); }
+    this.ownOn = new Uint8Array(NS); this.ownLevel = new Float64Array(NS); this.ownStage = new Int32Array(NS);
+    this.endLevel = 0; this.endStage = 0; this.endSubPhase = 0;
+    this.disp = { gains: new Float32Array(NB), mode: 0, view: 0, voices: 0, peakL: 0, peakR: 0, center: 0, width: 1, depth: 0, note: -1, slotLive: false };
     this.lastVoice = -1;
     this.tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
+    this.started = false;   // the first block has been rendered
     // Okto MultiWave Synth: the chord layer (keyOn / keyOff, see there)
     this.holdCnt = new Uint8Array(128);    // how many held keys and chord notes want each note sounding (reference count)
     this.plainHeld = new Uint8Array(128);  // keys played as themselves (below the selector octave, or over the chord)
@@ -513,14 +530,14 @@ function WSCoreFactory(SPEC) {
     this.dcR = 1 - 2 * Math.PI * 10 / sr; this.dcxL = 0; this.dcyL = 0; this.dcxR = 0; this.dcyR = 0;
     this.chLen = Math.ceil(sr * 0.03) + 4;
     this.chBuf = new Float32Array(this.chLen); this.chW = 0; this.chPh = 0; this.chPh2 = 0;
-    this.mixSm = this.p[P.ab_mix];
+    for (let s = 0; s < NS; s++) this.lvlSm[s] = this.p[K[s].lvl];
   };
 
   E.setParam = function (id, v) {
     const old = this.p[id];
     this.p[id] = v;
     if (id === P.hold && old >= 0.5 && v < 0.5) {
-      for (const vc of this.voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
+      for (const vc of this.voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false), relOwn(vc); }
     }
     // Okto MultiWave Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
     // are released first (nothing generated stays behind)
@@ -533,22 +550,36 @@ function WSCoreFactory(SPEC) {
     this.prev = this.cur; this.cur = t; this.fade = 0;
   };
 
+  // Before the first block an oscillator's level (smoothed over 20 ms while the audio runs) simply takes its value: a sound
+  // loaded into a new engine, or an offline render, never fades in
+  const setParamBase = E.setParam;
+  E.setParam = function (id, v) {
+    setParamBase.call(this, id, v);
+    if (!this.started) for (let s = 0; s < NS; s++) if (id === K[s].lvl) this.lvlSm[s] = v;
+  };
   // glideOn: this note slides from the previous pitch (portamento mode and legato decide)
   E.trigger = function (vc, note, vel, legato, glideOn) {
     vc.glide = !!glideOn;
     const glide = glideOn ? this.p[P.v_glide] : 0;
     if (!vc.active) {
       vc.fresh = true;
-      for (let u = 0; u < 4; u++) vc.phase[u] = (u * 0.618034) % 1;
+      for (let s = 0; s < NS; s++) {
+        const sl = vc.sl[s];
+        for (let u = 0; u < 4; u++) sl.phase[u] = (u * 0.618034) % 1;
+        sl.scale.fill(0); sl.live = false; sl.own.level = 0; sl.own.stage = 0; sl.pe = 1;
+      }
       vc.subPhase = 0;
-      vc.amp.level = 0; vc.mod.level = 0; vc.scale.fill(0);
+      vc.amp.level = 0; vc.mod.level = 0;
       // polyphonic portamento: an idle voice glides from its own last pitch (a never-used voice from the last note)
       vc.pitch = glide > 0 ? (vc.age ? vc.pitch : this.lastPitch) : note;
     } else if (glide <= 0) vc.pitch = note;
     vc.active = true; vc.gate = true; vc.held = false;
     vc.note = note; vc.target = note; vc.vel = vel;
     vc.age = ++this.counter;
-    if (!legato) { vc.amp.gate(true); vc.mod.gate(true); vc.scaleAtk.fill(1); }
+    if (!legato) {
+      vc.amp.gate(true); vc.mod.gate(true);
+      for (let s = 0; s < NS; s++) { const sl = vc.sl[s]; sl.scaleAtk.fill(1); sl.own.gate(true); sl.pe = 1; }
+    }
     this.lastPitch = note;
   };
 
@@ -564,7 +595,7 @@ function WSCoreFactory(SPEC) {
       const vc = this.voices[0];
       const legato = vc.active && this.stack.length > 0;   // another key is still held down
       this.stack.push(note);
-      for (let k = 1; k < MAXV; k++) if (this.voices[k].active) { this.voices[k].gate = false; this.voices[k].amp.gate(false); this.voices[k].mod.gate(false); }
+      for (let k = 1; k < MAXV; k++) if (this.voices[k].active) { this.voices[k].gate = false; this.voices[k].amp.gate(false); this.voices[k].mod.gate(false), relOwn(this.voices[k]); }
       this.trigger(vc, note, vel, legato, porta === 1 || (porta === 2 && legato));
       this.lastVoice = 0;
       return;
@@ -618,13 +649,13 @@ function WSCoreFactory(SPEC) {
       }
     }
     for (const vc of this.voices) if (vc.active && vc.gate && vc.note === note) {
-      if (hold) vc.held = true; else { vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
+      if (hold) vc.held = true; else { vc.gate = false; vc.amp.gate(false); vc.mod.gate(false), relOwn(vc); }
     }
   };
 
   E.allNotesOff = function () {
     this.stack.length = 0; this.keys.fill(0); this.chordClear();
-    for (const vc of this.voices) if (vc.active) { vc.gate = false; vc.held = false; vc.amp.gate(false); vc.mod.gate(false); }
+    for (const vc of this.voices) if (vc.active) { vc.gate = false; vc.held = false; vc.amp.gate(false); vc.mod.gate(false), relOwn(vc); }
   };
 
   // MIDI CC120: silence immediately (voices and effect tails)
@@ -773,7 +804,63 @@ function WSCoreFactory(SPEC) {
     if (this.lfo2Phase >= 1) { this.lfo2Phase -= Math.floor(this.lfo2Phase); this.sh2 = this.lfo2Rng() * 2 - 1; }
   };
 
-  // Per-voice control update for a block of n samples. Returns false if the voice ended.
+  // LFO 2 (beta 0.3) moves the parameter of a role (cutoff, slope ... position width) by d2 in plain units: the value of that
+  // field of an oscillator as LFO 2 moves it (kept in range, POSITION wraps later)
+  function roleVal(p, k, role, role2, d2) {
+    const i = k[ROLES[role]], v = p[i];
+    if (role2 !== role) return v;
+    const w = v + d2;
+    return role === ROLE_PCEN ? w : Math.min(SPEC.PARAMS[i].max, Math.max(SPEC.PARAMS[i].min, w));
+  }
+
+  // Everything the voices share in a block of n samples, computed once: LFO 2, the unison copies, the oscillators' levels
+  // (smoothed over 20 ms) and settings, the additive oscillators' band terms. `live[s]`: oscillator s is rendered.
+  E.prepBlock = function (n, fading) {
+    const p = this.p, sr = this.sr;
+    const t2 = Math.round(p[P.lfo2_target]), tp = SPEC.PARAMS[SPEC.LFO2_TARGETS[t2]];
+    const role2 = LFO2_ROLE[t2], d2 = p[P.lfo2_amt] * this.lfo2 * 0.5 * (tp.max - tp.min);
+    this.role2 = role2; this.d2 = d2;
+    // unison copies (detune and pan are the same for every oscillator)
+    const U = Math.round(p[P.v_unison]), det = p[P.v_detune], width = p[P.v_width], uGain = 1 / Math.sqrt(U);
+    this.U = U;
+    this.topMul = Math.pow(2, (U > 1 ? det : 0) / 1200);
+    for (let u = 0; u < U; u++) {
+      const pos = U > 1 ? 2 * u / (U - 1) - 1 : 0;
+      this.detMul[u] = Math.pow(2, det * pos / 1200);
+      const th = (pos * width + 1) * Math.PI / 4;
+      this.panL[u] = Math.SQRT2 * Math.cos(th) * uGain; this.panR[u] = Math.SQRT2 * Math.sin(th) * uGain;
+    }
+    const a = 1 - Math.exp(-n / (0.02 * sr));
+    for (let s = 0; s < NS; s++) {
+      const k = K[s], q = this.pr[s];
+      this.m0[s] = this.lvlSm[s];
+      this.lvlSm[s] += (p[k.lvl] - this.lvlSm[s]) * a;
+      this.m1[s] = this.lvlSm[s];
+      const has = (this.cur && this.cur.slots[s]) || (fading && this.prev && this.prev.slots[s]);
+      this.live[s] = has && (this.m0[s] > LVL_EPS || this.m1[s] > LVL_EPS) ? 1 : 0;
+      if (!this.live[s]) continue;
+      q.tune = 12 * p[k.oct] + p[k.fine] / 100 + p[k.semi];
+      q.ftype = Math.round(p[k.ftype]);
+      q.fcut = roleVal(p, k, 0, role2, d2); q.fslope = roleVal(p, k, 1, role2, d2); q.fres = roleVal(p, k, 2, role2, d2);
+      q.fkey = roleVal(p, k, 3, role2, d2); q.fenv = roleVal(p, k, 4, role2, d2); q.fvel = roleVal(p, k, 5, role2, d2);
+      q.pcen = roleVal(p, k, 6, role2, d2); q.pwid = roleVal(p, k, 7, role2, d2); q.pdep = roleVal(p, k, 8, role2, d2);
+      if (SLOTS[s].mode === 1) {   // additive: drawbars x tilt, their sum, the band envelopes' steps (the same for every voice)
+        const atk = p[k.atk], spread = p[k.spread], body = p[k.body], bright = p[k.bright];
+        let norm = 0;
+        for (let b = 0; b < NB; b++) {
+          const bar = p[k.bar1 + b] * Math.exp(p[k.tilt] * b * (Math.LN10 / 20));
+          q.bar[b] = bar; norm += bar;
+          const t = b / 10;
+          q.atkRate[b] = n / (atk * Math.pow(16, spread * (t - 0.5)) * sr);
+          const dt = body * Math.pow(bright / body, t);
+          q.decay[b] = Math.exp(-n * LN1000 / (dt * sr));
+        }
+        q.norm = Math.max(1, norm); q.sus = p[k.sus];
+      }
+    }
+  };
+
+  // Per-voice control update for a block of n samples.
   E.control = function (vc, n) {
     const p = this.p, sr = this.sr;
     const glide = vc.glide ? p[P.v_glide] : 0;
@@ -783,113 +870,124 @@ function WSCoreFactory(SPEC) {
     } else vc.pitch = vc.target;
     const semis = vc.pitch + 12 * p[P.v_oct] + p[P.v_fine] / 100 + 2 * p[P.bend] +
       this.lfo * (p[P.lfo_pitch] + 50 * p[P.modwheel]) / 100;
-    const f0 = 440 * Math.pow(2, (semis - 69) / 12);
-    vc.f0 = f0;
-    const U = Math.round(p[P.v_unison]), det = p[P.v_detune];
-    vc.U = U;
-    const fTop = f0 * Math.pow(2, (U > 1 ? det : 0) / 1200);
-    const maxH = Math.floor(this.fmax / fTop);
-    vc.mip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : Math.min(NMIP - 1, Math.ceil(Math.log2(1024 / maxH) - 1e-9));
-
+    vc.f0 = 440 * Math.pow(2, (semis - 69) / 12);   // the voice's pitch (the sub oscillator follows it); each oscillator adds its tuning
     const mod = vc.mod.step(n, sr, p[P.mod_a], p[P.mod_d], p[P.mod_s], p[P.mod_r]);
-    // LFO 2 moves its target by up to ± AMOUNT × half the target's range
-    const t2 = LFO2_T[Math.round(p[P.lfo2_target])];
-    const d2 = p[P.lfo2_amt] * this.lfo2 * 0.5 * (SPEC.PARAMS[t2].max - SPEC.PARAMS[t2].min);
-    const cut = lfo2Value(p, P.f_cutoff, t2, d2) + (1 - lfo2Value(p, P.f_keytrk, t2, d2)) * Math.log2(261.63 / f0) +
-      lfo2Value(p, P.f_env, t2, d2) * mod + p[P.lfo_cut] * this.lfo + lfo2Value(p, P.f_vel, t2, d2) * (vc.vel - 1);
-    filterGains(Math.round(p[P.f_type]), cut, lfo2Value(p, P.f_slope, t2, d2), lfo2Value(p, P.f_res, t2, d2), this.fg);
-
-    // Engine B: drawbars, tilt and scale envelope
-    let norm = 0;
-    const atk = p[P.b_atk], spread = p[P.b_spread], body = p[P.b_body], bright = p[P.b_bright], sus = p[P.b_sus];
-    for (let b = 0; b < NB; b++) {
-      const bar = p[P.b_bar1 + b] * Math.pow(10, p[P.b_tilt] * b / 20);
-      norm += bar;
-      const t = b / 10;
-      let lv = vc.scale[b];
-      if (vc.scaleAtk[b]) {
-        lv += n / (atk * Math.pow(16, spread * (t - 0.5)) * sr);
-        if (lv >= 1) { lv = 1; vc.scaleAtk[b] = 0; }
-      } else {
-        const dt = body * Math.pow(bright / body, t);
-        lv = sus + (lv - sus) * Math.exp(-n * LN1000 / (dt * sr));
-      }
-      vc.scale[b] = lv;
-      this.tmpB[b] = bar * lv * this.fg[b];
-    }
-    norm = Math.max(1, norm);
-    for (let b = 0; b < NB; b++) {
-      const tA = this.fg[b], tB = this.tmpB[b] / norm;
-      if (vc.fresh) { vc.gA[b] = tA; vc.gB[b] = tB; }
-      vc.tA[b] = tA; vc.tB[b] = tB;
-      vc.dA[b] = (tA - vc.gA[b]) / n; vc.dB[b] = (tB - vc.gB[b]) / n;
-    }
-    // WAVELET MORPH position of this voice (0 = WAVELET, 1 = WAVELET 2): MORPH + LFO + mod envelope, moving from wm0 to
-    // wm1 across the block
+    // WAVELET MORPH position of this voice (0 = WAVELET, 1 = WAVELET 2): MORPH + LFO + mod envelope, moving from wm0 to wm1
+    // across the block
     const wm = Math.min(1, Math.max(0, p[P.wmorph] + p[P.lfo_wav] * this.lfo + p[P.env_wav] * mod));
     vc.wm0 = vc.fresh ? wm : vc.wm1; vc.wm1 = wm;
     // SOURCE PHASE moved by LFO 2 (beta 0.4): the voice's place among the PHASE_K phase sets, from ap0 to ap1 (round the cycle)
-    let ap = (t2 === P.a_phase ? d2 : 0) * PHASE_K; ap -= Math.floor(ap / PHASE_K) * PHASE_K;
+    let ap = (this.role2 === ROLE_PHASE ? this.d2 : 0) * PHASE_K; ap -= Math.floor(ap / PHASE_K) * PHASE_K;
     vc.ap0 = vc.fresh ? ap : vc.ap1; vc.ap1 = ap;
     vc.fresh = false;
 
-    let pc = lfo2Value(p, P.p_center, t2, d2) + p[P.lfo_pos] * this.lfo; pc -= Math.floor(pc);
-    vc.pc = pc;
-    vc.pw = Math.min(1, Math.max(lfo2Value(p, P.p_width, t2, d2), 16 * fTop / sr));
-    vc.pd = lfo2Value(p, P.p_depth, t2, d2);
+    for (let s = 0; s < NS; s++) {
+      const sl = vc.sl[s], k = K[s], q = this.pr[s];
+      // the pitch envelope and the own envelope go on whether the oscillator sounds or not
+      if (p[k.pamt] !== 0) sl.pe *= Math.exp(-n * LN1000 / (p[k.ptime] * sr));
+      if (!this.live[s]) {
+        if (p[k.eon] >= 0.5) sl.own.step(n, sr, p[k.ea], p[k.ed], p[k.es], p[k.er]);
+        sl.live = false;
+        continue;
+      }
+      const f0 = 440 * Math.pow(2, (semis + q.tune + p[k.pamt] * sl.pe - 69) / 12);
+      sl.f0 = f0;
+      const fTop = f0 * this.topMul;
+      const maxH = Math.floor(this.fmax / fTop);
+      sl.mip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : Math.min(NMIP - 1, Math.ceil(Math.log2(1024 / maxH) - 1e-9));
+      // scale filter
+      const cut = q.fcut + (1 - q.fkey) * Math.log2(261.63 / f0) + q.fenv * mod + p[P.lfo_cut] * this.lfo + q.fvel * (vc.vel - 1);
+      filterGains(q.ftype, cut, q.fslope, q.fres, this.fg);
+      const fresh = !sl.live;   // a note's first block, or the oscillator just came in: the gains start at their target
+      if (SLOTS[s].mode === 1) {   // additive: the band envelopes (a returning oscillator starts them again)
+        if (fresh) { sl.scale.fill(0); sl.scaleAtk.fill(1); }
+        for (let b = 0; b < NB; b++) {
+          let lv = sl.scale[b];
+          if (sl.scaleAtk[b]) {
+            lv += q.atkRate[b];
+            if (lv >= 1) { lv = 1; sl.scaleAtk[b] = 0; }
+          } else lv = q.sus + (lv - q.sus) * q.decay[b];
+          sl.scale[b] = lv;
+          this.tmpB[b] = q.bar[b] * lv * this.fg[b];
+        }
+        for (let b = 0; b < NB; b++) {
+          const t = this.tmpB[b] / q.norm;
+          if (fresh) sl.g[b] = t;
+          sl.tg[b] = t; sl.dg[b] = (t - sl.g[b]) / n;
+        }
+      } else {
+        for (let b = 0; b < NB; b++) {
+          const t = this.fg[b];
+          if (fresh) sl.g[b] = t;
+          sl.tg[b] = t; sl.dg[b] = (t - sl.g[b]) / n;
+        }
+      }
+      let pc = q.pcen + p[P.lfo_pos] * this.lfo; pc -= Math.floor(pc);
+      sl.pc = pc;
+      sl.pw = Math.min(1, Math.max(q.pwid, 16 * fTop / sr));
+      sl.pd = q.pdep;
+    }
   };
 
-  // Render one voice for n samples with table set t, accumulating into bufL/bufR.
-  // Does not modify the voice: the end state is left in this.endLevel/endStage/endPhase
-  // so that during a table crossfade both table sets render from the same state.
-  // Output gain ramps from fade0 by fadeInc per sample (invert: 1 - fade).
-  // gain0/gainInc: the A/B MIX share of this table set (1, 0 when it plays alone); withSub: adds the sub oscillator
-  // (once per voice, at full level whatever the mix).
-  E.renderVoice = function (vc, n, t, fade0, fadeInc, invert, gain0, gainInc, withSub) {
-    const mode = t.mode, mips = t.mips, rms = t.rms;
-    const off = vc.mip * TW;
-    const g = mode === 0 ? vc.gA : vc.gB, dg = mode === 0 ? vc.dA : vc.dB;
-    const act = this.active;
-    // A fundamental at or above Nyquist can only alias: the wavetable part of such a voice stays silent.
-    const audible = vc.f0 < 0.5 * this.sr;
-    let na = 0;
-    if (audible) for (let b = 0; b < NB; b++) {
-      if (rms[vc.mip * NL + b] > 1e-7 && (Math.abs(g[b]) > 1e-6 || Math.abs(g[b] + dg[b] * n) > 1e-6)) act[na++] = b;
-    }
-    const p = this.p, sr = this.sr, U = vc.U;
-    const useDry = audible && mode === 0 && vc.pd > 0;
-    const det = p[P.v_detune], width = p[P.v_width];
-    const gl = this.panL, gr = this.panR, inc = this.inc, ph = this.endPhase, lg = this.lg;
-    const uGain = 1 / Math.sqrt(U);
-    for (let u = 0; u < U; u++) {
-      const pos = U > 1 ? 2 * u / (U - 1) - 1 : 0;
-      inc[u] = vc.f0 * Math.pow(2, det * pos / 1200) / sr;
-      const th = (pos * width + 1) * Math.PI / 4;
-      gl[u] = Math.SQRT2 * Math.cos(th) * uGain; gr[u] = Math.SQRT2 * Math.sin(th) * uGain;
-      ph[u] = vc.phase[u];
-    }
-    for (let b = 0; b < NB; b++) lg[b] = g[b];
-    const pc = vc.pc, pw = vc.pw, pd = vc.pd;
-    const L = this.bufL, R = this.bufR;
-    // amp envelope, per sample
+  // The voice's AMP ENVELOPE for the block, per sample, with the velocity gain (envA); its end state in endLevel / endStage.
+  E.ampPass = function (vc, n) {
+    const p = this.p, sr = this.sr, env = this.envA;
     let lev = vc.amp.level, st = vc.amp.stage;
     const s = p[P.amp_s];
     const aInc = 1 / (p[P.amp_a] * sr), dC = Math.exp(-LN1000 / (p[P.amp_d] * sr)), rC = Math.exp(-LN1000 / (p[P.amp_r] * sr));
     const velGain = VOICE_GAIN * (1 - p[P.amp_vel] * (1 - vc.vel));
-    // sub oscillator: one per voice (not per unison voice), centred, not filtered
-    const subInc = vc.f0 * (Math.round(p[P.sub_oct]) === 1 ? 0.25 : 0.5) / sr, subShape = Math.round(p[P.sub_shape]);
-    const subLvl = p[P.sub_level], subOn = withSub && subLvl > 0 && subInc < 0.5;   // silent when it would alias (above Nyquist)
-    const unity = gain0 === 1 && gainInc === 0;
-    let sph = vc.subPhase;
-    let fade = fade0, gain = gain0;
     for (let i = 0; i < n; i++) {
-      for (let j = 0; j < na; j++) { const b = act[j]; lg[b] += dg[b]; }
       if (st === 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
       else if (st === 2) lev = s + (lev - s) * dC;
       else if (st === 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
+      env[i] = lev * velGain;
+    }
+    this.endLevel = lev; this.endStage = st;
+  };
+  // Oscillator s's OWN ENVELOPE for the block, per sample (ownBuf[s]); its end state in ownLevel[s] / ownStage[s].
+  E.ownPass = function (vc, s, n) {
+    const p = this.p, sr = this.sr, k = K[s], buf = this.ownBuf[s], sl = vc.sl[s];
+    let lev = sl.own.level, st = sl.own.stage;
+    const sus = p[k.es];
+    const aInc = 1 / (p[k.ea] * sr), dC = Math.exp(-LN1000 / (p[k.ed] * sr)), rC = Math.exp(-LN1000 / (p[k.er] * sr));
+    for (let i = 0; i < n; i++) {
+      if (st === 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
+      else if (st === 2) { lev = sus + (lev - sus) * dC; if (Math.abs(lev - sus) < 1e-9) lev = sus; }
+      else if (st === 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
+      buf[i] = lev;
+    }
+    this.ownLevel[s] = lev; this.ownStage[s] = st;
+  };
+
+  // Render one voice's oscillator s for n samples with table set (mode, mips, rms), accumulating into bufL/bufR.
+  // Does not modify the voice: the end phases are left in endPh[s] so that several renders of the same oscillator (table
+  // crossfade, WAVELET MORPH, phase sets) start from the same state. The output follows the amp envelope (envA), the own
+  // envelope when it is on, the crossfade (ramping from fade0 by fadeInc per sample; invert: 1 - fade) and the oscillator's
+  // level share gain0 (+ gainInc per sample).
+  E.renderVoice = function (vc, n, s, mode, mips, rms, fade0, fadeInc, invert, gain0, gainInc) {
+    const sl = vc.sl[s], off = sl.mip * TW, g = sl.g, dg = sl.dg;
+    const act = this.active;
+    // A fundamental at or above Nyquist can only alias: the wavetable part of such a voice stays silent.
+    const audible = sl.f0 < 0.5 * this.sr;
+    let na = 0;
+    if (audible) for (let b = 0; b < NB; b++) {
+      if (rms[sl.mip * NL + b] > 1e-7 && (Math.abs(g[b]) > 1e-6 || Math.abs(g[b] + dg[b] * n) > 1e-6)) act[na++] = b;
+    }
+    const sr = this.sr, U = this.U;
+    const useDry = audible && mode === 0 && sl.pd > 0;
+    const gl = this.panL, gr = this.panR, inc = this.inc, ph = this.endPh[s], lg = this.lg;
+    for (let u = 0; u < U; u++) { inc[u] = sl.f0 * this.detMul[u] / sr; ph[u] = sl.phase[u]; }
+    for (let b = 0; b < NB; b++) lg[b] = g[b];
+    const pc = sl.pc, pw = sl.pw, pd = sl.pd;
+    const L = this.bufL, R = this.bufR, envA = this.envA, own = this.ownOn[s] ? this.ownBuf[s] : null;
+    const unity = gain0 === 1 && gainInc === 0;
+    let fade = fade0, gain = gain0;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < na; j++) { const b = act[j]; lg[b] += dg[b]; }
       const fg = fade >= 1 ? 1 : fade;
-      const envBase = lev * velGain * (invert ? 1 - fg : fg);
-      const env = unity ? envBase : envBase * gain;
+      let env = envA[i] * (invert ? 1 - fg : fg);
+      if (!unity) env *= gain;
+      if (own) env *= own[i];
       fade += fadeInc; gain += gainInc;
       let outL = 0, outR = 0;
       for (let u = 0; u < U; u++) {
@@ -915,59 +1013,55 @@ function WSCoreFactory(SPEC) {
         }
         outL += y * gl[u]; outR += y * gr[u];
       }
-      let sv = 0;
-      if (subOn) {
-        sph += subInc; if (sph >= 1) sph -= Math.floor(sph);
-        sv = subLvl * subWave(sph, subInc, subShape);
-        if (unity) { outL += sv; outR += sv; }
-      }
-      if (unity) { L[i] += outL * env; R[i] += outR * env; }
-      else { L[i] += outL * env + sv * envBase; R[i] += outR * env + sv * envBase; }
+      L[i] += outL * env; R[i] += outR * env;
     }
-    this.endLevel = lev; this.endStage = st;
-    if (withSub) this.endSubPhase = sph;
   };
 
-  // Renders one voice with a table set and, when engines A and B are mixed, its `alt` set: shares 1 - mix (A) and
-  // mix (B), moving from m0 to m1 across the block; the sub oscillator is rendered once.
-  E.renderSet = function (vc, n, t, fade0, fadeInc, invert, m0, m1) {
-    if (!t.alt) { this.renderTable(vc, n, t, fade0, fadeInc, invert, 1, 0, true); return; }
-    const g0 = t.mode === 0 ? 1 - m0 : m0, g1 = t.mode === 0 ? 1 - m1 : m1;
-    this.renderTable(vc, n, t, fade0, fadeInc, invert, g0, (g1 - g0) / n, true);
-    this.renderTable(vc, n, t.alt, fade0, fadeInc, invert, 1 - g0, (g0 - g1) / n, false);
+  // The sub oscillator: one per voice (not per unison voice), centred, not filtered, following the amp envelope.
+  E.renderSub = function (vc, n) {
+    const p = this.p, subLvl = p[P.sub_level];
+    this.endSubPhase = vc.subPhase;
+    if (!(subLvl > 0)) return;
+    const subInc = vc.f0 * (Math.round(p[P.sub_oct]) === 1 ? 0.25 : 0.5) / this.sr, subShape = Math.round(p[P.sub_shape]);
+    if (!(subInc < 0.5)) return;   // silent when it would alias (above Nyquist)
+    const L = this.bufL, R = this.bufR, envA = this.envA;
+    let sph = vc.subPhase;
+    for (let i = 0; i < n; i++) {
+      sph += subInc; if (sph >= 1) sph -= Math.floor(sph);
+      const sv = subLvl * subWave(sph, subInc, subShape) * envA[i];
+      L[i] += sv; R[i] += sv;
+    }
+    this.endSubPhase = sph;
   };
 
-  // SOURCE PHASE moved by LFO 2 (beta 0.4): an engine-A set with its phase sets (t.ph) plays the sets on each side of the
+  // WAVELET MORPH: without WAVELET 2 tables exactly renderTable (bit-identical sound when the morph is off); with them, the
+  // oscillator (share 1 - morph) and the same oscillator built with WAVELET 2 (share morph), the voice's morph moving from wm0
+  // to wm1. The oscillator's level moves from m0 to m1 across the block.
+  E.renderSlot = function (vc, n, s, t, fade0, fadeInc, invert, m0, m1) {
+    if (!t.w2) { this.renderTable(vc, n, s, t, fade0, fadeInc, invert, m0, (m1 - m0) / n); return; }
+    const a0 = m0 * (1 - vc.wm0), a1 = m1 * (1 - vc.wm1), b0 = m0 * vc.wm0, b1 = m1 * vc.wm1;
+    this.renderTable(vc, n, s, t, fade0, fadeInc, invert, a0, (a1 - a0) / n);
+    this.renderTable(vc, n, s, t.w2, fade0, fadeInc, invert, b0, (b1 - b0) / n);
+  };
+
+  // SOURCE PHASE moved by LFO 2 (beta 0.4): a subtractive set with its phase sets (t.ph) plays the sets on each side of the
   // voice's place q (share 1 - |q - k| round the cycle), q moving from ap0 to ap1 across the block; the shares of a block
-  // start and end each add up to 1. Without phase sets exactly renderVoice.
-  E.renderTable = function (vc, n, t, fade0, fadeInc, invert, gain0, gainInc, withSub) {
-    if (!t.ph) { this.renderVoice(vc, n, t, fade0, fadeInc, invert, gain0, gainInc, withSub); return; }
+  // start and end each add up to 1. Without phase sets exactly renderVoice. A share of 0 at both ends renders nothing.
+  E.renderTable = function (vc, n, s, t, fade0, fadeInc, invert, gain0, gainInc) {
+    if (!t.ph) {
+      if (gain0 === 0 && gainInc === 0) return;
+      this.renderVoice(vc, n, s, t.mode, t.mips, t.rms, fade0, fadeInc, invert, gain0, gainInc);
+      return;
+    }
     const gain1 = gain0 + gainInc * n;
     const a0 = Math.floor(vc.ap0) % PHASE_K, f0 = vc.ap0 - Math.floor(vc.ap0), b0 = (a0 + 1) % PHASE_K;
     const a1 = Math.floor(vc.ap1) % PHASE_K, f1 = vc.ap1 - Math.floor(vc.ap1), b1 = (a1 + 1) % PHASE_K;
-    let sub = withSub;
     for (let k = 0; k < PHASE_K; k++) {
       const s0 = k === a0 ? 1 - f0 : k === b0 ? f0 : 0, s1 = k === a1 ? 1 - f1 : k === b1 ? f1 : 0;
       if (s0 === 0 && s1 === 0) continue;
-      const k0 = gain0 * s0, k1 = gain1 * s1;
-      this.renderVoice(vc, n, k === 0 ? t : t.ph[k - 1], fade0, fadeInc, invert, k0, (k1 - k0) / n, sub);
-      sub = false;
+      const k0 = gain0 * s0, k1 = gain1 * s1, set = k === 0 ? t : t.ph[k - 1];
+      this.renderVoice(vc, n, s, set.mode, set.mips, set.rms, fade0, fadeInc, invert, k0, (k1 - k0) / n);
     }
-  };
-
-  // WAVELET MORPH: without WAVELET 2 tables exactly renderSet (bit-identical sound when the morph is off); with them, the sound of WAVELET (share
-  // 1 - morph) and the same sound built with WAVELET 2 (share morph), the voice's morph moving from wm0 to wm1.
-  E.renderMorph = function (vc, n, t, fade0, fadeInc, invert, m0, m1) {
-    if (!t.w2) { this.renderSet(vc, n, t, fade0, fadeInc, invert, m0, m1); return; }
-    this.renderSetK(vc, n, t, fade0, fadeInc, invert, m0, m1, 1 - vc.wm0, 1 - vc.wm1, true);
-    this.renderSetK(vc, n, t.w2, fade0, fadeInc, invert, m0, m1, vc.wm0, vc.wm1, false);
-  };
-  // renderSet with an extra share k (k0 -> k1 across the block) and the sub oscillator only when withSub
-  E.renderSetK = function (vc, n, t, fade0, fadeInc, invert, m0, m1, k0, k1, withSub) {
-    if (!t.alt) { this.renderTable(vc, n, t, fade0, fadeInc, invert, k0, (k1 - k0) / n, withSub); return; }
-    const s0 = t.mode === 0 ? 1 - m0 : m0, s1 = t.mode === 0 ? 1 - m1 : m1;
-    this.renderTable(vc, n, t, fade0, fadeInc, invert, s0 * k0, (s1 * k1 - s0 * k0) / n, withSub);
-    this.renderTable(vc, n, t.alt, fade0, fadeInc, invert, (1 - s0) * k0, ((1 - s1) * k1 - (1 - s0) * k0) / n, false);
   };
 
   // Process n samples (any n) into outL/outR (overwrites).
@@ -984,25 +1078,38 @@ function WSCoreFactory(SPEC) {
     const p = this.p, L = this.bufL, R = this.bufR;
     this.strumTick(); this.clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
     L.fill(0, 0, n); R.fill(0, 0, n);
+    this.started = true;
     this.lfoTick(n);
     this.lfo2Tick(n);
     let voices = 0;
     const fading = !!this.prev, fadeInc = fading ? 1 / 512 : 0, fade0 = fading ? this.fade : 1;
-    // A/B MIX, smoothed (20 ms) so that turning the knob does not click
-    const m0 = this.mixSm;
-    this.mixSm += (p[P.ab_mix] - this.mixSm) * (1 - Math.exp(-n / (0.02 * this.sr)));
-    const m1 = this.mixSm;
+    this.prepBlock(n, fading);
+    const live = this.live, m0 = this.m0, m1 = this.m1;
     for (let k = 0; k < MAXV; k++) {
       const vc = this.voices[k];
       if (!vc.active || !this.cur) continue;
       this.control(vc, n);
-      if (fading) this.renderMorph(vc, n, this.prev, fade0, fadeInc, true, m0, m1);
-      this.renderMorph(vc, n, this.cur, fade0, fadeInc, false, m0, m1);
+      this.ampPass(vc, n);
+      for (let s = 0; s < NS; s++) {
+        if (!live[s]) continue;
+        const sl = vc.sl[s];
+        this.ownOn[s] = p[K[s].eon] >= 0.5 ? 1 : 0;
+        if (this.ownOn[s]) this.ownPass(vc, s, n);
+        this.endPh[s].set(sl.phase);   // a render that is skipped leaves the phases as they were
+        if (fading && this.prev.slots[s]) this.renderSlot(vc, n, s, this.prev.slots[s], fade0, fadeInc, true, m0[s], m1[s]);
+        if (this.cur.slots[s]) this.renderSlot(vc, n, s, this.cur.slots[s], fade0, fadeInc, false, m0[s], m1[s]);
+      }
+      this.renderSub(vc, n);
       // commit end-of-block state
       vc.amp.level = this.endLevel; vc.amp.stage = this.endStage;
-      for (let u = 0; u < 4; u++) vc.phase[u] = this.endPhase[u];
       vc.subPhase = this.endSubPhase;
-      vc.gA.set(vc.tA); vc.gB.set(vc.tB);
+      for (let s = 0; s < NS; s++) {
+        const sl = vc.sl[s];
+        if (live[s]) {
+          sl.phase.set(this.endPh[s]); sl.g.set(sl.tg); sl.live = true;
+          if (this.ownOn[s]) { sl.own.level = this.ownLevel[s]; sl.own.stage = this.ownStage[s]; }
+        } else sl.live = false;
+      }
       if (vc.amp.stage === 0) { vc.active = false; vc.gate = false; continue; }
       voices |= 1 << k;
     }
@@ -1083,24 +1190,25 @@ function WSCoreFactory(SPEC) {
       const al = Math.abs(l), ar = Math.abs(r);
       if (al > pkL) pkL = al; if (ar > pkR) pkR = ar;
     }
-    // ---- display state
-    const d = this.disp;
+    // ---- display state: the oscillator shown on the panel
+    const d = this.disp, view = Math.round(p[P.osc_view]);
     d.peakL = pkL; d.peakR = pkR; d.voices = voices;
-    d.mode = this.cur ? this.cur.mode : Math.round(p[P.engine]);
+    d.view = view; d.mode = SLOTS[view].mode;
     const lv = this.lastVoice >= 0 ? this.voices[this.lastVoice] : null;
-    if (lv && lv.active) {
-      const g = d.mode === 0 ? lv.gA : lv.gB;
-      for (let b = 0; b < NB; b++) d.gains[b] = g[b];
-      d.center = lv.pc; d.width = lv.pw; d.depth = lv.pd; d.note = lv.note;
-    } else d.note = -1;
+    if (lv && lv.active && lv.sl[view].live) {
+      const sl = lv.sl[view];
+      for (let b = 0; b < NB; b++) d.gains[b] = sl.g[b];
+      d.center = sl.pc; d.width = sl.pw; d.depth = sl.pd; d.note = lv.note; d.slotLive = true;
+    } else { d.note = lv && lv.active ? lv.note : -1; d.slotLive = false; }
   };
 
-  // Static gains for displays when no voice is playing (reference note C4, full velocity).
+  // Static gains for displays when no voice is playing (reference note C4, full velocity): the oscillator shown.
   function staticGains(params, out) {
-    const fg = filterGains(Math.round(params[P.f_type]), params[P.f_cutoff], params[P.f_slope], params[P.f_res], new Float64Array(NB));
-    if (Math.round(params[P.engine]) === 0) { for (let b = 0; b < NB; b++) out[b] = fg[b]; return out; }
+    const k = K[Math.round(params[P.osc_view])], mode = SLOTS[Math.round(params[P.osc_view])].mode;
+    const fg = filterGains(Math.round(params[k.ftype]), params[k.fcut], params[k.fslope], params[k.fres], new Float64Array(NB));
+    if (mode === 0) { for (let b = 0; b < NB; b++) out[b] = fg[b]; return out; }
     let norm = 0;
-    for (let b = 0; b < NB; b++) { const bar = params[P.b_bar1 + b] * Math.pow(10, params[P.b_tilt] * b / 20); norm += bar; out[b] = bar * fg[b]; }
+    for (let b = 0; b < NB; b++) { const bar = params[k.bar1 + b] * Math.exp(params[k.tilt] * b * (Math.LN10 / 20)); norm += bar; out[b] = bar * fg[b]; }
     norm = Math.max(1, norm);
     for (let b = 0; b < NB; b++) out[b] /= norm;
     return out;
@@ -1134,7 +1242,7 @@ function WSCoreFactory(SPEC) {
   }
 
   return {
-    N, NB, NL, DRY, NMIP, TW, CTRL, MAXV, PHASE_K, P, NP,
+    N, NB, NL, DRY, NMIP, TW, CTRL, MAXV, PHASE_K, NS, P, NP, K, SLOTS,
     rng, toPlain, toNorm, format, parse, defaults,
     FILTERS, dwt, idwt, fft, sourceCycle, sparsify, patternCoeffs, buildTables, tableNeeds, morphNeeded, phaseModNeeded,
     filterGains, windowValue, staticGains, displayCycle, atomShape, Engine,
