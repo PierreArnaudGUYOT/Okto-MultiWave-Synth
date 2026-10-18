@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // VST3 declarations shared by the processor, controller and editor.
 #pragma once
@@ -33,7 +33,7 @@ struct SharedState {
   std::atomic<uint32_t> voices{0};
   std::atomic<uint32_t> keys[4];
   std::atomic<uint32_t> blocks{0};
-  // WaveChord Synth: the chord sounding (its root, -1 = none; its notes started so far as bits), the last root, the chord type
+  // Okto MultiWave Synth: the chord sounding (its root, -1 = none; its notes started so far as bits), the last root, the chord type
   // the engine plays with, and a count of the times a selector key changed it (the editor then tells the controller)
   std::atomic<int> chordRoot{-1}, chordLast{60}, chordType{-1};
   std::atomic<uint32_t> chordBits[4], chordTypeEdits{0};

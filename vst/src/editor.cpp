@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // Plugin editor: the panel, the same on every system. It draws through editor_platform.h: a Win32 window drawn with GDI+
 // (editor_win.cpp) or a Cocoa view drawn with Core Graphics (editor_mac.mm, Mac port of beta 0.3).
@@ -30,17 +30,17 @@ static const uint32_t kAccentA = 0x2fd4c6, kAccentB = 0xffae42;
 
 struct Item { const WidgetDef* w; int section; R r; };
 
-// kNoteNames: dsp.h (WaveChord Synth: shared with the chord names)
+// kNoteNames: dsp.h (Okto MultiWave Synth: shared with the chord names)
 static std::wstring noteName(int n) { return toW(std::string(kNoteNames[n % 12]) + std::to_string(n / 12 - 1)); }
 static bool isBlack(int n) { int k = n % 12; return k == 1 || k == 3 || k == 6 || k == 8 || k == 10; }
 static const int KB_LO = 36, KB_HI = 96;
 
 // where the presets file must be writable (the message of a failed save)
 #ifdef _WIN32
-static const wchar_t* kFolderNote = L"The presets file is kept next to the WaveChordSynth.vst3 folder: that folder must allow "
+static const wchar_t* kFolderNote = L"The presets file is kept next to the OktoMultiWaveSynth.vst3 folder: that folder must allow "
                                     L"writing (the VST3 system folder, C:\\Program Files\\Common Files\\VST3, needs administrator rights).";
 #else
-static const wchar_t* kFolderNote = L"The presets file is kept next to the WaveChordSynth.vst3 folder: that folder must allow "
+static const wchar_t* kFolderNote = L"The presets file is kept next to the OktoMultiWaveSynth.vst3 folder: that folder must allow "
                                     L"writing (the system folder /Library/Audio/Plug-Ins/VST3 needs administrator rights: install the "
                                     L"plug-in in your own folder, ~/Library/Audio/Plug-Ins/VST3).";
 #endif
@@ -150,7 +150,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // live data
   float liveGains[NB] = {}; float liveC = 0, liveW = 1, liveD = 0; int liveNote = -1, liveMode = 0; uint32_t liveVoices = 0;
   uint32_t liveKeys[4] = {}; float meterL = 0, meterR = 0;
-  // WaveChord Synth: the chord sounding (root, notes), the last root, the selector-key edits seen; the pad under the mouse, the
+  // Okto MultiWave Synth: the chord sounding (root, notes), the last root, the selector-key edits seen; the pad under the mouse, the
   // string of the strum plate being touched (a note)
   int liveChordRoot = -1, liveChordLast = 60; uint32_t liveChordBits[4] = {}; uint32_t liveChordEdits = 0;
   int padHover = -1, plateTouch = -1;
@@ -227,7 +227,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         lastPlain[i] = v; any = true;
         if (kParams[i].structural) structural = true;
         for (size_t k = 0; k < items.size(); k++) if (items[k].w->param == i || items[k].w->vis == i) invalidateItem((int)k);
-        // WaveChord Synth: the pads, the chord shown, the strum plate and the keyboard's selector octave follow these
+        // Okto MultiWave Synth: the pads, the chord shown, the strum plate and the keyboard's selector octave follow these
         if (i == P_CHORD_MODE || i == P_CHORD_TYPE || i == P_CHORD_OCT) for (int t : {W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_KEYBOARD}) invalidateType(t);
       }
       if (any) {
@@ -259,7 +259,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       bool kc = false;
       for (int k = 0; k < 4; k++) { uint32_t b = sh->keys[k].load(); if (b != liveKeys[k]) kc = true; liveKeys[k] = b; }
       if (kc) { invalidateType(W_KEYBOARD); invalidateType(W_STRUMPLATE); }
-      // WaveChord Synth: the chord sounding, and a chord type chosen by a selector key in the processor (hosts that do not
+      // Okto MultiWave Synth: the chord sounding, and a chord type chosen by a selector key in the processor (hosts that do not
       // forward the processor's parameter changes to the controller: the editor does it here, once per edit)
       const int cr = sh->chordRoot.load(), cl = sh->chordLast.load();
       bool cc = cr != liveChordRoot || cl != liveChordLast;
@@ -364,7 +364,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       case W_CREDIT: drawCredit(g, it.r); break;
       case W_TOGGLE: drawToggle(g, idx); break;
       case W_LABEL: text(g, toW(it.w->text ? it.w->text : ""), it.r, 10.5f, true, rgb(kDim), 0); break;   // beta 0.6: SCALOGRAM
-      case W_CHORDPADS: drawChordPads(g, idx); break;   // WaveChord Synth
+      case W_CHORDPADS: drawChordPads(g, idx); break;   // Okto MultiWave Synth
       case W_CHORDNAME: drawChordName(g, it.r); break;
       case W_STRUMPLATE: drawStrumPlate(g, it.r); break;
       default: break;
@@ -646,7 +646,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   void drawKeyboard(Canvas& g, R r) {
     std::vector<int> whites; for (int n = KB_LO; n <= KB_HI; n++) if (!isBlack(n)) whites.push_back(n);
     float ww = r.w / whites.size();
-    // WaveChord Synth: with CHORD on, the selector octave is tinted (its keys choose the chord type and make no sound)
+    // Okto MultiWave Synth: with CHORD on, the selector octave is tinted (its keys choose the chord type and make no sound)
     const bool chordOn = plainOf(P_CHORD_MODE) >= 0.5; const int selBase = 24 + 12 * (int)jsRound(plainOf(P_CHORD_OCT));
     auto sel = [&](int n) { return chordOn && n >= selBase && n < selBase + 12; };
     for (size_t k = 0; k < whites.size(); k++) {
@@ -666,7 +666,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     }
   }
 
-  // ---------------------------------------------------------------- WaveChord Synth: the chord card
+  // ---------------------------------------------------------------- Okto MultiWave Synth: the chord card
   // The twelve chord pads, laid out like the selector octave: the white-key family (Maj, 7, Maj7, Sus2, Sus4, Add9, Note)
   // above, the black-key family (Min, m7, Dim, Aug, 5) below, between them (the same geometry as web/js/ui.js padRects).
   struct PadR { R r; int key; };
@@ -784,7 +784,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     fillRR(g, m, 8, rgb(kInset)); strokeRR(g, m, 8, rgb(0x2a303a));
     const Pt pts[] = {{m.x + 3, m.y + 15}, {m.x + 8, m.y + 15}, {m.x + 11, m.y + 7}, {m.x + 15, m.y + 23}, {m.x + 19, m.y + 11}, {m.x + 22, m.y + 17}, {m.x + 27, m.y + 17}};
     g.lines(pts, 7, Pen(rgb(accent()), 2.2f).join().caps());
-    text(g, L"WAVECHORD", R{r.x + 40, r.y + 1, 160, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // WaveChord Synth
+    text(g, L"OKTOMULTIWAVE", R{r.x + 40, r.y + 1, 160, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // Okto MultiWave Synth
     text(g, L"WAVELET CHORD SYNTHESIZER", R{r.x + 40, r.y + 17, 180, 14}, 9, true, rgb(accent()), 0);
   }
 
@@ -911,7 +911,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         wheelMove(it, y);
         return;
       }
-      case W_CHORDPADS: {   // WaveChord Synth: a pad chooses the chord type (and switches CHORD on)
+      case W_CHORDPADS: {   // Okto MultiWave Synth: a pad chooses the chord type (and switches CHORD on)
         const int k = padAt(it.r, x, y);
         if (k < 0) return;
         gesture(P_CHORD_TYPE, kChordKeys[k]);
@@ -919,7 +919,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         invalidateItem(idx);
         return;
       }
-      case W_STRUMPLATE: {   // WaveChord Synth: a string of the strum plate; dragging across the others strums
+      case W_STRUMPLATE: {   // Okto MultiWave Synth: a string of the strum plate; dragging across the others strums
         double vel; const int n = plateAt(it.r, x, y, vel);
         if (n >= 0) { plateTouch = n; plateOn(n, vel); }
         drag = idx; if (win) win->capture(true);
@@ -963,7 +963,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         return false;
       }
       if (it.w->type == W_WHEELS) { wheelMove(it, y); return false; }
-      if (it.w->type == W_STRUMPLATE) {   // WaveChord Synth: the string under the pointer
+      if (it.w->type == W_STRUMPLATE) {   // Okto MultiWave Synth: the string under the pointer
         double vel; const int n = plateAt(it.r, std::max(it.r.x, std::min(it.r.x + it.r.w - 1, x)), std::max(it.r.y, std::min(it.r.y + it.r.h - 1, y)), vel);
         if (n >= 0 && n != plateTouch) { if (plateTouch >= 0) plateOff(plateTouch); plateTouch = n; plateOn(n, vel); invalidateItem(drag); }
         return false;
@@ -988,7 +988,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       invalidateItem(old); invalidateItem(hover);
       if (old == -2 || h == -2) invalidateLogical(kSaveBtn);
     }
-    if (hover >= 0 && items[hover].w->type == W_CHORDPADS) {   // WaveChord Synth: the pad under the pointer
+    if (hover >= 0 && items[hover].w->type == W_CHORDPADS) {   // Okto MultiWave Synth: the pad under the pointer
       const int pk = padAt(items[hover].r, x, y);
       if (pk != padHover) { padHover = pk; invalidateItem(hover); }
     }
@@ -1011,7 +1011,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (drag < 0) return;
     const Item& it = items[drag];
     if (it.w->type == W_KEYBOARD) { if (mouseNote >= 0) noteOff(mouseNote); mouseNote = -1; }
-    else if (it.w->type == W_STRUMPLATE) { if (plateTouch >= 0) plateOff(plateTouch); plateTouch = -1; }   // WaveChord Synth
+    else if (it.w->type == W_STRUMPLATE) { if (plateTouch >= 0) plateOff(plateTouch); plateTouch = -1; }   // Okto MultiWave Synth
     else if (it.w->type == W_WHEELS) {
       int id = wheelDrag == 0 ? P_BEND : P_MODWHEEL;
       if (wheelDrag == 0) setPlain(P_BEND, 0);
@@ -1359,7 +1359,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     std::wstring path = envPath(L"WS_PRESETS_EXPORT");   // developer test: no dialog
     if (path.empty()) {
       if (!win) return;
-      path = win->saveFileDialog(L"Export all presets (factory presets and user bank)", L"WAVECHORD presets.txt");
+      path = win->saveFileDialog(L"Export all presets (factory presets and user bank)", L"OKTOMULTIWAVE presets.txt");
       if (path.empty()) return;
     }
     Library::get().refresh();
@@ -1757,7 +1757,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (rowMoving) st = bTab == 0 ? L"Drop it on a category: it moves there (on TOP Sounds: added to it)." : L"Drop it on a section: it moves there.";
     if (st.empty())
       st = std::to_wstring(lib.adjustedCount()) + L" adjusted \u00B7 " + std::to_wstring(lib.deletedCount()) + L" deleted \u00B7 " +
-           std::to_wstring(menuBank.size()) + L" in the user bank \u00B7 WAVECHORD presets.txt";
+           std::to_wstring(menuBank.size()) + L" in the user bank \u00B7 OKTOMULTIWAVE presets.txt";
     g.textEllipsis(st, R{c.x + 12, c.y + 684, c.w - 24, 14}, 9, false, rgb(kFaint), false);
     if (rowMoving && rowDrag >= 0) {   // beta 0.5: the sound being dragged, under the pointer (inside the browser)
       const std::string nm = bTab == 0 ? lib.name(rowDrag) : rowDrag < (int)menuBank.size() ? menuBank[rowDrag].name : "";
@@ -1816,7 +1816,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     // <bundle>.vst3/Contents/<binary folder>/<binary>  ->  <bundle>.vst3/Contents/Resources/manual/<file>
     const std::wstring man = contentsFolder() + kPathSep + L"Resources" + kPathSep + L"manual" + kPathSep + file;
     if (!fileExists(man)) {
-      if (win) win->message(L"The manual was not found:\n" + man + L"\n\nInstall the complete WaveChordSynth.vst3 bundle folder.", false);
+      if (win) win->message(L"The manual was not found:\n" + man + L"\n\nInstall the complete OktoMultiWaveSynth.vst3 bundle folder.", false);
       return;
     }
     if (win) win->openDocument(man);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Okto MultiWave Synth — single source of truth (based on the Wavelet Synthesizer beta 0.7).
 // Created by Pierre Arnaud GUYOT ("OktoPierre"). Release history: see RELEASE_HISTORY.md
-// WaveChord Synth beta 0.1 (2026-10-18) — the Wavelet Synthesizer beta 0.6 with a CHORD KEYBOARD: one octave of the keyboard
+// Okto MultiWave Synth beta 0.1 (2026-10-18) — the Wavelet Synthesizer beta 0.6 with a CHORD KEYBOARD: one octave of the keyboard
 //   (or the chord pads) chooses a chord type, every key above it plays the whole chord (chord-harp-style), with a
 //   voicing choice, a bass note, a strum, and a strum plate on the panel. The history below is the base synthesizer's.
 //   beta 0.1 (2026-10-14) — first release.
@@ -20,9 +20,9 @@
 // Parameter order defines the VST3 ParamIDs: append only, never reorder.
 'use strict';
 
-const DEVICE = { w: 1100, h: 840 };   // WaveChord Synth: the CHORD KEYBOARD card below the keyboard row (840 = 720 + 120)
+const DEVICE = { w: 1100, h: 840 };   // Okto MultiWave Synth: the CHORD KEYBOARD card below the keyboard row (840 = 720 + 120)
 const APP = {
-  name: 'WaveChord Synth',
+  name: 'Okto MultiWave Synth',
   author: 'Pierre Arnaud GUYOT',
   credit: 'created by OktoPierre',   // the vendor line (manuals)
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
@@ -39,7 +39,7 @@ const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new p
 // curve: lin | exp | pow2 | int | choice
 // fmt:   pct | db | sec | hz | cents | band | dbband | int | choice | deg | cyc | semi | bipct | bandamt
 const P = [];
-// perf: a performance setting (WaveChord Synth): on the panel and automatable, but never stored in a preset, never marking the
+// perf: a performance setting (Okto MultiWave Synth): on the panel and automatable, but never stored in a preset, never marking the
 // preset modified; the plug-in's state and the web app's saved state keep it (like the keyboard, it is not a sound).
 function add(key, name, short, o) { P.push(Object.assign({ key, name, short, curve: 'lin', fmt: 'pct', hidden: false, structural: false, perf: false }, o)); }
 
@@ -170,7 +170,7 @@ add('lfo_div', 'LFO 1 Rate (sync)', 'RATE', notes(LFO_NOTES, '1/4'));
 add('lfo2_sync', 'LFO 2 Sync', 'SYNC', syncChoice);
 add('lfo2_div', 'LFO 2 Rate (sync)', 'RATE', notes(LFO_NOTES, '1/4'));
 
-// ---------------------------------------------------------------- WaveChord Synth: the chord keyboard (beta 0.1)
+// ---------------------------------------------------------------- Okto MultiWave Synth: the chord keyboard (beta 0.1)
 // The chord types: label (the pads, the selector keys), suffix (the chord name after the root; "" = major), iv = the
 // notes in semitones above the root. Append only: chord_type stores the index. The first twelve are on the selector keys.
 const CHORDS = [
@@ -225,7 +225,7 @@ if (LFO2_TARGETS.length !== P[idx.lfo2_target].choices.length || LFO2_TARGETS.so
 // Sections are cards; widget coordinates are relative to their section.
 // widget types: knobL knobM knobS knobT seg step drawbar scope scalogram atom source
 //               window adsr leds fxheads keyboard wheels logo presets manual download meter zoom credit menu toggle label
-//               chordpads chordname strumplate (WaveChord Synth)
+//               chordpads chordname strumplate (Okto MultiWave Synth)
 // beta 0.6 widget fields: only 'web' / 'vst' (shown in one of them), vis + visOn (shown while that parameter is on / off,
 // the plug-in's SYNC), style 'value' (a knob labelled with its value: note values), text (toggle, label, menu caption)
 const S = [];
@@ -333,7 +333,7 @@ section('voice', 'VOICE', 12, 608, 416, 92, '', [
   { type: 'leds', x: 236, y: 6, w: 170, h: 18 },
   ...row(['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'], 26, 30),
 ]);
-// WaveChord Synth: the CHORD KEYBOARD card. The ON button in the title row; the twelve chord pads (the white-key family above,
+// Okto MultiWave Synth: the CHORD KEYBOARD card. The ON button in the title row; the twelve chord pads (the white-key family above,
 // the black-key family below, as on the selector octave); the chord shown (name and notes); KEYS OCT, VOICING, BASS,
 // STRUM; and the strum plate: drag across it to strum the chord, as on an electronic chord harp.
 section('chord', 'CHORD KEYBOARD', 12, 728, 1076, 104, '', [

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// test_web.js - end-to-end test of the WaveChord Synth web app in headless Edge.
+// test_web.js - end-to-end test of the Okto MultiWave Synth web app in headless Edge.
 //
 //   node tests/web/test_web.js [--url <url>] [--out <dir>] [--quick] [--headed]
 //
@@ -72,7 +72,7 @@ function writeReport(abort) {
   return n('FAIL') + (abort ? 1 : 0);
 }
 // beta 0.6: where the free VST plug-in is published (the header's DOWNLOAD VST and the welcome window's third choice)
-const VST_URL = 'https://github.com/PierreArnaudGUYOT/WaveChord-Synth/releases';
+const VST_URL = 'https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases';
 const db = (x) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf');
 const short = (arr, max = 10) => (arr.length > max ? arr.slice(0, max).join('; ') + `; ... (${arr.length} total)` : arr.join('; '));
 
@@ -425,7 +425,7 @@ async function stepWelcome() {
   if (!check(!!w && w.visible, 'the welcome window is shown when the page opens', JSON.stringify(w))) return;
   await shot('welcome');
   log(`  title '${w.title}'; choices: ${w.choices.map((c) => c.title).join(' | ')}`);
-  check(/WAVECHORD/.test(w.title) && /Chord Synthesizer/.test(w.title), "its title is 'WAVECHORD · Wavelet Chord Synthesizer'", w.title);
+  check(/OKTOMULTIWAVE/.test(w.title) && /Chord Synthesizer/.test(w.title), "its title is 'OKTOMULTIWAVE · Wavelet Chord Synthesizer'", w.title);
   const titles = w.choices.map((c) => c.title);
   check(JSON.stringify(titles) === JSON.stringify(['Run the demo', 'Play the synth', 'Download the VST']), 'three choices: Run the demo, Play the synth, Download the VST', JSON.stringify(titles));
   const demo = w.choices[0] || {}, play = w.choices.find((c) => c.id === 'start-btn'), dl = w.choices[2] || {};
@@ -970,7 +970,7 @@ async function stepHashes() {
 async function main() {
   fs.mkdirSync(opt.out, { recursive: true });
   for (const f of fs.readdirSync(opt.out)) if (/\.(png|txt)$/.test(f)) fs.rmSync(path.join(opt.out, f));
-  log('test_web.js - WaveChord Synth web app test (headless Edge via CDP)');
+  log('test_web.js - Okto MultiWave Synth web app test (headless Edge via CDP)');
   log(`date   : ${new Date().toISOString()}`);
   log(`page   : ${BASE_URL}`);
   log(`browser: headless Edge${opt.fileAccess ? ' with --allow-file-access-from-files' : ' WITHOUT --allow-file-access-from-files (normal browser)'}`);

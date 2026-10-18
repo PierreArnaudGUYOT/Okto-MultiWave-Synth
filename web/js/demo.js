@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
 // Demo player: plays public-domain pieces (MIDI from the Mutopia Project) or your own MIDI file
 // while animating the important parameters. A small window explains, in English, what is changing.
 function WSDemo(api) {

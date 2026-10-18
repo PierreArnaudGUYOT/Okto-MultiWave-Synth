@@ -6,7 +6,7 @@
 namespace ws {
 
 constexpr float kDeviceW = 1100.0f, kDeviceH = 840.0f;
-inline constexpr const char* kAppName = "WaveChord Synth";
+inline constexpr const char* kAppName = "Okto MultiWave Synth";
 inline constexpr const char* kAppAuthor = "Pierre Arnaud GUYOT";
 inline constexpr const char* kAppCredit = "created by OktoPierre";
 inline constexpr const char* kAppVersion = "beta 0.1";
@@ -582,7 +582,7 @@ inline constexpr int kDefaultPreset = 11;   // A · Warm Pad
 // beta 0.6: the note values of the tempo sync in beats (a quarter note = 1), in the order of the fx_ddiv / lfo_div choices
 inline constexpr double kDelayBeats[] = { 0.12500000000000000, 0.16666666666666666, 0.25000000000000000, 0.33333333333333331, 0.37500000000000000, 0.50000000000000000, 0.66666666666666663, 0.75000000000000000, 1.0000000000000000, 1.3333333333333333, 1.5000000000000000, 2.0000000000000000, 3.0000000000000000, 4.0000000000000000 };
 inline constexpr double kLfoBeats[] = { 16.000000000000000, 8.0000000000000000, 4.0000000000000000, 3.0000000000000000, 2.0000000000000000, 1.5000000000000000, 1.3333333333333333, 1.0000000000000000, 0.75000000000000000, 0.66666666666666663, 0.50000000000000000, 0.37500000000000000, 0.33333333333333331, 0.25000000000000000, 0.16666666666666666, 0.12500000000000000 };
-// WaveChord Synth: the chord types (the chord_type choices): label, suffix of the chord name, notes above the root (semitones)
+// Okto MultiWave Synth: the chord types (the chord_type choices): label, suffix of the chord name, notes above the root (semitones)
 struct ChordDef { const char* label; const char* suffix; int n; int iv[6]; };
 inline constexpr ChordDef kChords[] = {
   { "Maj", "", 3, { 0, 4, 7, 0, 0, 0 } },

@@ -1,9 +1,9 @@
-# WaveChord Synth — Release history
+# Okto MultiWave Synth — Release history
 
-Created by **Pierre Arnaud GUYOT** ("OktoPierre"). WaveChord Synth is built on his Wavelet Synthesizer; the history of the
+Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer; the history of the
 synthesizer follows its own first release below.
 
-## WaveChord Synth beta 0.1 — 2026-10-18 (the chord keyboard)
+## Okto MultiWave Synth beta 0.1 — 2026-10-18 (the chord keyboard)
 
 **In short**
 - **CHORD KEYBOARD** (bottom card of the panel, plug-in and web app): one octave of the keyboard (KEYS OCT, C3–B3 by
@@ -20,7 +20,7 @@ synthesizer follows its own first release below.
   sounding until both release it.
 - The six chord settings are automatable plug-in parameters, saved with the Live Set and never in a preset; a selector key
   updates the Chord Type parameter (its automation lane follows what you play).
-- Its own plug-in identity (name, class IDs, VST2 ID, presets file `WAVECHORD presets.txt`, macOS bundle id): it installs
+- Its own plug-in identity (name, class IDs, VST2 ID, presets file `OKTOMULTIWAVE presets.txt`, macOS bundle id): it installs
   next to the Wavelet Synthesizer.
 
 **Your sounds**: the 150 presets are those of the Wavelet Synthesizer beta 0.6, and with the chord keyboard off every
@@ -33,7 +33,7 @@ ends it); the VST3 test host; the web app.
 
 ---
 
-# Wavelet Synthesizer — Release history (the synthesizer WaveChord Synth is built on)
+# Wavelet Synthesizer — Release history (the synthesizer Okto MultiWave Synth is built on)
 
 ## beta 0.7 — 2026-10-18 (OktoPierre's TOP Sounds, a roomier panel, a new demo)
 

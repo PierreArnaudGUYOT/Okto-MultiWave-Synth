@@ -243,7 +243,7 @@ console.log('10. tempo sync of the delay and the LFOs (beta 0.6)');
   check(Math.abs(at - 4) < 0.01, `60 BPM, 1/1: the first echo after ${at.toFixed(3)} s (4 s)`);
 }
 
-console.log('11. WaveChord Synth: the chord layer (keyOn / keyOff over the engine)');
+console.log('11. Okto MultiWave Synth: the chord layer (keyOn / keyOff over the engine)');
 {
   const P = C.P, S = SPEC;
   const eng = new C.Engine(48000), log = [];

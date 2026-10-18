@@ -1,11 +1,11 @@
-# CLAUDE.md — WaveChord Synth: architecture and maintenance guide
+# CLAUDE.md — Okto MultiWave Synth: architecture and maintenance guide
 
-**WaveChord Synth** (beta 0.1, 2026-10-18) is the Wavelet Synthesizer beta 0.6 (commit 7a7670e of
+**Okto MultiWave Synth** (beta 0.1, 2026-10-18) is the Wavelet Synthesizer beta 0.6 (commit 7a7670e of
 https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST, whose history this repository keeps) with a **chord
 keyboard** (§3.3f). Everything else in this guide is the synthesizer's and still applies; "beta 0.x" below are the
-synthesizer's versions. What WaveChord Synth changed besides §3.3f: the product name and identity everywhere (bundle
-`WaveChordSynth.vst3`, VST3 class IDs, VST2 ID 'WcSy', macOS `com.oktopierre.wavechordsynth.vst3`, window / view class names,
-presets file `WAVECHORD presets.txt`, web storage keys `wc.*`, preset files `wavechord-synth-preset`), so it installs next to the
+synthesizer's versions. What Okto MultiWave Synth changed besides §3.3f: the product name and identity everywhere (bundle
+`OktoMultiWaveSynth.vst3`, VST3 class IDs, VST2 ID 'OkMW', macOS `com.oktopierre.oktomultiwavesynth.vst3`, window / view class names,
+presets file `OKTOMULTIWAVE presets.txt`, web storage keys `wc.*`, preset files `okto-multiwave-synth-preset`), so it installs next to the
 Wavelet Synthesizer; the panel is 1100 × **840** (the CHORD KEYBOARD card below the keyboard row; the test suites and the
 manual tools use 840 / a 1124 × 902 window); `APP.version` restarts at beta 0.1 (`APP.base` names the synthesizer).
 
@@ -63,7 +63,7 @@ products identical. Read it before changing the DSP, the parameters or the prese
   wheels and keyboard 100; the credit `APP.panelCredit` ("By OktoPierre · version · licence", small, faint) at the bottom
   left under VOICE (`APP.credit` stays the vendor wording of the manuals).
 - **Presets**: `PRESET_LIST` (name + sparse values over the defaults; presets added in beta 0.2 carry `cat`, older ones get
-  theirs from `CATEGORY_OF`). beta 0.5 = OktoPierre's sort (his file "WAVECHORD presets V4.txt"): 150 kept, `LEFT_OUT` the
+  theirs from `CATEGORY_OF`). beta 0.5 = OktoPierre's sort (his file "OKTOMULTIWAVE presets V4.txt"): 150 kept, `LEFT_OUT` the
   103 others (a Live Set saved with one keeps its name: `kLeftOutPresets`, controller `formerName`). `LIST_ORDER` gives
   each category's presets in his browser order (→ `rank` / `kPresetRank`); `TOP_SOUNDS` (beta 0.7: exactly his 22
   favourites of "OKTOWAVE presets V7.txt", the best first; beta 0.5 / 0.6 had 37 with 15 Source Phase sounds one in two).
@@ -183,7 +183,7 @@ products identical. Read it before changing the DSP, the parameters or the prese
 - The longer delay buffer changes rounding of the read position: 2 presets (Steel Pluck, Phase Glitch) differ from
   beta 0.5 by < 4e-9 (−170 dB); the 148 others are bit-identical.
 
-### 3.3f CHORD KEYBOARD (WaveChord Synth beta 0.1)
+### 3.3f CHORD KEYBOARD (Okto MultiWave Synth beta 0.1)
 - Spec: `CHORDS` (label, name, suffix, intervals; append only, `chord_type` stores the index), `CHORD_KEYS` (the type of each
   selector key C..B: white = major / bright family, black = minor / altered / bare), six **perf** parameters appended:
   `chord_mode`, `chord_type`, `chord_oct` (selector octave = MIDI 24 + 12·k, default k 2 = C3–B3, middle C = C4 = 60),
@@ -245,7 +245,7 @@ and run `node tools/dsp_compare.js <dir>`: every preset must match within ~2.4e-
   manuals overlay) → `demo.js` (demo player) with `midi.js` (Standard MIDI File reader) and `demo_data.js` (generated).
 - The worklet code is serialised (`WSCoreFactory.toString()`, `WSWorkletMain.toString()`) and loaded from a **data:
   URL** so the app works from `file://` (blob: URLs fail there).
-- Audio lifecycle: one playing window at a time (`localStorage 'wc.audioOwner'` + `storage` event), `pagehide` closes
+- Audio lifecycle: one playing window at a time (`localStorage 'mw.audioOwner'` + `storage` event), `pagehide` closes
   the AudioContext.
 - MIDI (Web MIDI, all inputs): notes, bend, CC1, CC64, CC120/123, **channel filter** (`ws.midiCh`), **Program Change**
   → preset, **MIDI learn** (`ws.ccMap`: CC → parameter key; validated on load). Stored data is untrusted: names are
@@ -263,7 +263,7 @@ and run `node tools/dsp_compare.js <dir>`: every preset must match within ~2.4e-
   its 1100 × 720 box: the test suites locate it by that shape), scaled with it by `fit()`; lists = TOP Sounds (the first
   `TOP` presets) and the categories sorted by `rank`, as the plug-in's defaults; selection only. beta 0.5: the arrow keys
   (`app.js` keydown → `ui.browserKey`: ↑ ↓ the sound above / below, ← → the category; browser hidden: `presetStep`). Open state
-  in `localStorage 'wc.browser'`; `#nobrowser` in the address leaves it out (manual screenshots, `tools/manual/shots.js`).
+  in `localStorage 'mw.browser'`; `#nobrowser` in the address leaves it out (manual screenshots, `tools/manual/shots.js`).
   The preset name opens it when hidden, else the classic menu.
 - beta 0.6 **welcome window** (`index.html` `.welcome`, shown at page open): "Run the demo" (`#w-demo`), "Play the synth"
   (`#start-btn`, starts the audio, plays no note; "MIDI supported"), "Download the VST" (`#w-vst`, the GitHub releases
@@ -304,7 +304,7 @@ and run `node tools/dsp_compare.js <dir>`: every preset must match within ~2.4e-
     `ws.name`), NSSavePanel; Cmd = Ctrl (reset), Control-click = right-click; modifier keys read from the mouse event;
     `wsTestCommand:` = the Windows `WM_APP + 1` test hook.
 - **Preset library** (beta 0.3, VST only): `bank.h`, `Library::get()` (one per process, mutex, reads the file again
-  when its write time or size changes: several instances). One text file `WAVECHORD presets.txt` next to the `.vst3`
+  when its write time or size changes: several instances). One text file `OKTOMULTIWAVE presets.txt` next to the `.vst3`
   bundle folder (`libraryFolder`; `WS_PRESETS_FILE` / `WS_PRESETS_EXPORT` / `WS_PRESETS_IMPORT` for tests), written atomically after every
   edit (an error leaves the state unchanged): `######## FACTORY PRESETS` (every preset: `Preset:` its name now,
   `Factory:` its built-in name = the key, `Adjusted: yes|no`, optional `Deleted: yes`, then `  key: value   (Name: shown)`
@@ -314,9 +314,9 @@ and run `node tools/dsp_compare.js <dir>`: every preset must match within ~2.4e-
   category goes back to its own; files without "v3" — beta 0.3 to 0.6 — keep their adjusted / deleted presets and bank but
   not their lists, which are rebuilt with this version's TOP Sounds and categories;
   an adjusted block equal to the built-in preset is not "adjusted"), `######## USER BANK` (12 `kBankSections`, `Preset:`, `From:`, values). A
-  beta 0.3 user-bank file (`WaveChord Synth user bank.txt`) is read when the library file does not exist. Parsing
+  beta 0.3 user-bank file (`Okto MultiWave Synth user bank.txt`) is read when the library file does not exist. Parsing
   ignores unknown lines and clamps values. `importFrom` (beta 0.4 IMPORT) reads and checks another file (a `Preset:` line), parses it
-  over the built-in state, keeps the current file as `WAVECHORD presets (backup YYYY-MM-DD HHMM[ n]).txt` (never over an
+  over the built-in state, keeps the current file as `OKTOMULTIWAVE presets (backup YYYY-MM-DD HHMM[ n]).txt` (never over an
   earlier backup), then commits; an error leaves the library unchanged. The controller takes factory values and names from the library (`loadPreset`,
   `exactPreset`, `findPreset` = name now or built-in name, new instances' default preset, VST2 program names).
 - **Editor, presets** (beta 0.3): the **preset browser** (`kBrowserW` = 360 logical px added at the right while open;
@@ -336,16 +336,16 @@ and run `node tools/dsp_compare.js <dir>`: every preset must match within ~2.4e-
   as `WM_APP + 1` (test hook). Controller: `loadUserSound` (group edit, keeps `presetIdx` for ◀ ▶), `userPresetName()`;
   the state `"WSC2"` stores `"USER · name"` for a bank sound (name buffer 512, no NUL byte; an unknown name is taken only
   with that prefix). Knobs with ≤ 5 positions: 24 px per step, a click = next value (web `dragBehaviour` too). The
-  panel's logo reads WAVECHORD / WAVELET SYNTHESIZER (both products; the plug-in keeps its name).
+  panel's logo reads OKTOMULTIWAVE / WAVELET SYNTHESIZER (both products; the plug-in keeps its name).
 - `vst2.cpp`: `VSTPluginMain` with VST 2.4 declarations written from the public binary layout (no Steinberg VST2 file).
   It hosts the same Processor + Controller in-process (parameter queues, event list, chunk `"WSV2"` = both states,
   programs = factory presets, editor via `IPlugView` + `IPlugFrame`).
-- **Bundle**: `WaveChordSynth.vst3/Contents/x86_64-win/WaveChordSynth.vst3` (VST3) + a copy named
-  `WaveChordSynth.dll` (found by hosts scanning a VST2 folder) + `Contents/Resources/` (manuals, licences).
+- **Bundle**: `OktoMultiWaveSynth.vst3/Contents/x86_64-win/OktoMultiWaveSynth.vst3` (VST3) + a copy named
+  `OktoMultiWaveSynth.dll` (found by hosts scanning a VST2 folder) + `Contents/Resources/` (manuals, licences).
   Only Windows system DLLs and the UCRT are imported.
-- **macOS bundle**: `WaveChordSynth.vst3/Contents/MacOS/WaveChordSynth` (universal Mach-O bundle exporting only
+- **macOS bundle**: `OktoMultiWaveSynth.vst3/Contents/MacOS/OktoMultiWaveSynth` (universal Mach-O bundle exporting only
   `GetPluginFactory`, `bundleEntry`, `bundleExit`; `-fvisibility=hidden`), `Info.plist` (BNDL,
-  `com.oktopierre.wavechordsynth.vst3`, version from `WS_VERSION`), `PkgInfo`, `Resources/` (manuals, licences),
+  `com.oktopierre.oktomultiwavesynth.vst3`, version from `WS_VERSION`), `PkgInfo`, `Resources/` (manuals, licences),
   ad-hoc signed. Same class IDs as on Windows. The presets file is written next to the bundle (`libraryFolder`: up from
   `Contents/MacOS`), so the player installs into `~/Library/Audio/Plug-Ins/VST3`. Flush-to-zero: MXCSR on x86, FPCR.FZ on
   Apple silicon. No VST2 on macOS.
@@ -410,7 +410,7 @@ runs from `file://`); GitHub Actions pinned by tag.
   browser, the zoom and preset menus (chosen through `NSMenuDidBeginTrackingNotification` + `performActionForItemAtIndex`),
   SAVE PRESET / TO BANK / DELETE / undelete / EXPORT / IMPORT (903, `WS_PRESETS_IMPORT`) through `wsTestCommand:` with the NSAlert windows answered by a timer
   (`stopModalWithCode`). The presets file's header quotes "Adjusted: yes" / "Deleted: yes": look for them at a line start.
-  Results: the run's page in the repository's Actions tab, or the Actions REST API (artifacts `WaveChordSynth-mac`
+  Results: the run's page in the repository's Actions tab, or the Actions REST API (artifacts `OktoMultiWaveSynth-mac`
   = the release zip, `mac-test-output` = logs and screenshots).
 - **Headless Edge must always run with `--mute-audio`** (otherwise test audio plays on the user's speakers) and be
   closed in `finally`; check that no `msedge --headless` process is left.
@@ -429,7 +429,7 @@ runs from `file://`); GitHub Actions pinned by tag.
   the beta 0.4 favourites ≈ −14 dB; drums measured over 50 ms, 3 dB lower), regenerate the spec, the VST and the manuals.
   The demo sequence is fixed (`TOUR_APPASSIONATA`): add a preset there only on purpose.
 - **DSP change**: both engines, bit-exact for unchanged settings where possible, cross-check, VST suite, web suite.
-- **Release**: version in `tools/spec.js` (APP) **and** `vst/src/version.rc` (DLL version info), build, manuals, tests (muted), release zip (`WaveChordSynth.vst3` + `INSTALL.txt`, made with
+- **Release**: version in `tools/spec.js` (APP) **and** `vst/src/version.rc` (DLL version info), build, manuals, tests (muted), release zip (`OktoMultiWaveSynth.vst3` + `INSTALL.txt`, made with
   Windows `tar` so paths use `/`), README + RELEASE_HISTORY. Publishing to GitHub uses a repo-local identity
   (GitHub noreply address), never the author's work identity.
 

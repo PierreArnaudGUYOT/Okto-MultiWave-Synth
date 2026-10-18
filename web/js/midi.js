@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
 // Minimal Standard MIDI File reader (format 0/1) for the browser and Node.
 // Input: Uint8Array (a Node Buffer works too). Output: notes with times in seconds.
 function WSReadMIDI(bytes) {

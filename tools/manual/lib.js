@@ -74,7 +74,7 @@ const snip = name => { if (!SNIPS[name]) throw new Error('missing diagram ' + na
 const fig = (src, cap, cls, alt) => `<figure class="${cls || 'frame'}"><img src="img/${src}" alt="${alt || cap.replace(/<[^>]+>/g, '').replace(/"/g, '')}"><figcaption>${cap}</figcaption></figure>`;
 const figInline = (name, cap) => `<figure class="frame inline">${snip(name)}<figcaption>${cap}</figcaption></figure>`;
 
-// annotated screenshot: image is 1124 x 902 CSS px (WaveChord Synth), device panel at offset (12,12)
+// annotated screenshot: image is 1124 x 902 CSS px (Okto MultiWave Synth), device panel at offset (12,12)
 function annotated(img, alt, pins) {
   const pct = (v, tot) => (Math.round(v / tot * 10000) / 100) + '%';
   let h = `<div class="annot"><img src="img/${img}" alt="${alt}">`;

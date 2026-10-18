@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // DSP core (C++ port of web/js/core.js, same algorithm 1:1).
 #pragma once
@@ -543,7 +543,7 @@ inline TableRef tableRef(const Tables& t) {
   return r;
 }
 
-// ---------------------------------------------------------------- WaveChord Synth: chord names and the strum plate (core.js, 1:1)
+// ---------------------------------------------------------------- Okto MultiWave Synth: chord names and the strum plate (core.js, 1:1)
 inline constexpr const char* kNoteNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 inline std::string chordName(int root, int type) { return std::string(kNoteNames[((root % 12) + 12) % 12]) + kChords[type].suffix; }
 // the notes of the strum plate, lowest first: the chord's pitch classes over the three octaves above the C..B octave
@@ -578,7 +578,7 @@ class Engine {
   Display disp; int lastVoice = -1;
   double sr = 48000, fmax = 29000;
   double tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
-  // WaveChord Synth: the chord layer (keyOn / keyOff, see there)
+  // Okto MultiWave Synth: the chord layer (keyOn / keyOff, see there)
   uint8_t holdCnt[128] = {};    // how many held keys and chord notes want each note sounding (reference count)
   uint8_t plainHeld[128] = {};  // keys played as themselves (below the selector octave, or over the chord)
   uint8_t plateHeld[128] = {};  // notes of the strum plate being touched
@@ -644,7 +644,7 @@ class Engine {
     p[id] = v;
     if (id == P_HOLD && old >= 0.5 && v < 0.5)
       for (auto& vc : voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
-    // WaveChord Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
+    // Okto MultiWave Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
     // are released first (nothing generated stays behind)
     if ((id == P_CHORD_MODE || id == P_CHORD_OCT) && old != v) chordReset();
   }
@@ -743,7 +743,7 @@ class Engine {
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
   }
 
-  // ---------------------------------------------------------------- WaveChord Synth: the chord layer (core.js keyOn, 1:1)
+  // ---------------------------------------------------------------- Okto MultiWave Synth: the chord layer (core.js keyOn, 1:1)
   // Every key a player presses comes here (MIDI, the on-screen keyboard); CHORD off: keyOn is exactly noteOn. CHORD on:
   // the selector octave sets chord_type and makes no sound; above it, a key pressed while no root is held becomes the root
   // and the whole chord sounds, other keys play as themselves; below it, keys play as themselves. Notes are reference-
@@ -1114,7 +1114,7 @@ class Engine {
   }
 
   void block(float* outL, float* outR, int o, int n) {
-    strumTick(); clock += n;   // WaveChord Synth: the strummed chord notes whose time has come
+    strumTick(); clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
     std::fill(bufL, bufL + n, 0.0f); std::fill(bufR, bufR + n, 0.0f);
     lfoTick(n);
     lfo2Tick(n);

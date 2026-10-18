@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
-// beta 0.3: the PRESET LIBRARY of the plug-in, in one readable text file "WAVECHORD presets.txt" kept next to the
-// WaveChordSynth.vst3 folder (so that installing a new version, which replaces that folder, keeps it):
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// beta 0.3: the PRESET LIBRARY of the plug-in, in one readable text file "OKTOMULTIWAVE presets.txt" kept next to the
+// OktoMultiWaveSynth.vst3 folder (so that installing a new version, which replaces that folder, keeps it):
 // - every factory preset, as the player may have ADJUSTED it (SAVE PRESET overwrites a factory preset, optionally under a
 //   new name; "Adjusted: yes" in the file; only those override the built-in presets when the file is read back), or
 //   DELETED it ("Deleted: yes": hidden from the browser, the menu and the arrows, to be dropped from the next version);
@@ -26,7 +26,7 @@
 //   Preset: My Chord
 //   From: A · Warm Pad (modified)
 //     ...
-// A beta 0.3 user-bank file ("WaveChord Synth user bank.txt", sections and presets only) is read when the library
+// A beta 0.3 user-bank file ("Okto MultiWave Synth user bank.txt", sections and presets only) is read when the library
 // file does not exist yet.
 #pragma once
 #include <algorithm>
@@ -82,7 +82,7 @@ inline std::string bankNum(double v) {   // up to 6 decimals, no trailing zeros
 inline void paramLines(const double* v, std::string& s) {
   for (int i = 0; i < kNumParams; i++) {
     const ParamDef& d = kParams[i];
-    if (d.hidden || d.perf) continue;   // WaveChord Synth: the chord keyboard's settings are not a sound
+    if (d.hidden || d.perf) continue;   // Okto MultiWave Synth: the chord keyboard's settings are not a sound
     if (i != P_ENGINE && i != P_AB_MIX && std::fabs(v[i] - d.def) <= 1e-9 * std::max(1.0, std::fabs(d.def))) continue;
     s += std::string("  ") + d.key + ": " + bankNum(v[i]) + "   (" + d.name + ": " + formatValue(d, v[i]) + ")\r\n";
   }
@@ -255,9 +255,9 @@ class Library {
     std::lock_guard<std::mutex> l(m); refreshLocked();
     return writeTextFile(to, text(s));
   }
-  // IMPORT (beta 0.4): the presets of another file (an EXPORT, someone's "WAVECHORD presets.txt", a beta 0.3 user bank)
+  // IMPORT (beta 0.4): the presets of another file (an EXPORT, someone's "OKTOMULTIWAVE presets.txt", a beta 0.3 user bank)
   // replace the library — adjusted and deleted presets, list order, user bank. The file is read and checked first; the
-  // current file is then kept as "WAVECHORD presets (backup <date> <time>).txt" next to it (`backup`, "" when there was
+  // current file is then kept as "OKTOMULTIWAVE presets (backup <date> <time>).txt" next to it (`backup`, "" when there was
   // none). Returns "" or the error (the library is then unchanged).
   std::wstring importFrom(const std::wstring& from, std::wstring& backup) {
     std::lock_guard<std::mutex> l(m); refreshLocked();
@@ -267,7 +267,7 @@ class Library {
     if (!found) return L"the file cannot be read";
     if (all.size() >= (16u << 20)) return L"the file is too large for a presets file (16 MB or more)";
     if (all.find("\nPreset: ") == std::string::npos && all.compare(0, 8, "Preset: ") != 0)
-      return L"it holds no preset of the WaveChord Synth (no \"Preset:\" line)";
+      return L"it holds no preset of the Okto MultiWave Synth (no \"Preset:\" line)";
     State t;
     builtIn(t);
     parse(all, t);
@@ -283,7 +283,7 @@ class Library {
         for (int k = 1; k < 1000; k++) {   // never over an earlier backup (two imports in the same minute: "... 1644 2")
           if (k == 1) std::snprintf(b, sizeof b, " (backup %04d-%02d-%02d %02d%02d)", tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute);
           else std::snprintf(b, sizeof b, " (backup %04d-%02d-%02d %02d%02d %d)", tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute, k);
-          backup = dir + kPathSep + L"WAVECHORD presets" + std::wstring(b, b + std::strlen(b)) + L".txt";
+          backup = dir + kPathSep + L"OKTOMULTIWAVE presets" + std::wstring(b, b + std::strlen(b)) + L".txt";
           if (!fileExists(backup)) break;
         }
         const std::wstring e = writeTextFile(backup, cur);
@@ -345,12 +345,12 @@ class Library {
   }
   static std::wstring pathOf() {
     const std::wstring e = envPath(L"WS_PRESETS_FILE");
-    return e.empty() ? libraryFolder() + kPathSep + L"WAVECHORD presets.txt" : e;
+    return e.empty() ? libraryFolder() + kPathSep + L"OKTOMULTIWAVE presets.txt" : e;
   }
   static std::wstring oldBankPath() {
     const std::wstring e = envPath(L"WS_PRESETS_FILE");
     if (!e.empty()) return e + L".oldbank";   // tests: never the player's files
-    return libraryFolder() + kPathSep + L"WaveChord Synth user bank.txt";
+    return libraryFolder() + kPathSep + L"Okto MultiWave Synth user bank.txt";
   }
   void refreshLocked() {
     uint64_t st = 0, sz = 0;
@@ -491,7 +491,7 @@ class Library {
     auto L = [&s](const std::string& x) { s += x; s += "\r\n"; };
     const LocalTime tm = localNow();
     int adj = 0, del = 0; for (char a : t.adj) adj += a; for (char d : t.del) del += d;
-    L("WAVECHORD SYNTH - presets");
+    L("OKTOMULTIWAVE SYNTH - presets");
     L(std::string("Saved by the VST plug-in (") + kAppVersion + "): every factory preset (those you adjusted with SAVE PRESET say \"Adjusted: yes\",");
     L("with their name now; those you deleted say \"Deleted: yes\") and your user bank. Each preset: its name, then the");
     L("parameters that differ from the defaults.");

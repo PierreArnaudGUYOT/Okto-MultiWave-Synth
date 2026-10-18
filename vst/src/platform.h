@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Mac port (beta 0.3): the operating-system calls of the plug-in outside its editor window (the plug-in file and folders,
 // the presets file, environment variables, text conversion), for Windows and macOS. Paths are std::wstring on both
 // systems (UTF-16 on Windows, UTF-32 on macOS); the Windows code is the one of beta 0.3, moved here.
@@ -96,7 +96,7 @@ inline std::wstring contentsFolder() {
   pathUp(p); pathUp(p);
   return p;
 }
-// The folder of the presets library: the one holding the WaveChordSynth.vst3 bundle, else the binary's folder.
+// The folder of the presets library: the one holding the OktoMultiWaveSynth.vst3 bundle, else the binary's folder.
 inline std::wstring libraryFolder() {
   std::wstring p = moduleFile();
   pathUp(p);

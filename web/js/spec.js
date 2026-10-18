@@ -7,7 +7,7 @@ var WS_SPEC = {
   "h": 840
  },
  "APP": {
-  "name": "WaveChord Synth",
+  "name": "Okto MultiWave Synth",
   "author": "Pierre Arnaud GUYOT",
   "credit": "created by OktoPierre",
   "panelCredit": "By OktoPierre",

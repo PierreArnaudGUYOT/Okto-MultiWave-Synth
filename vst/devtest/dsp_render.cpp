@@ -6,7 +6,7 @@
 #include "../src/dsp.h"
 #include <chrono>
 using namespace ws;
-// WaveChord Synth: the chord layer and the strum plate driven as a player would (keys through keyOn / keyOff, the plate's notes),
+// Okto MultiWave Synth: the chord layer and the strum plate driven as a player would (keys through keyOn / keyOff, the plate's notes),
 // the same events as tools/dsp_compare.js: offset (a multiple of the 128-sample block), kind, note, velocity
 struct KeyEv { int o, kind, note; double vel; };   // kind 0 keyOn, 1 keyOff, 2 plateOn, 3 plateOff, 4 allNotesOff
 static const KeyEv kChordScript[] = {
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     for (const Set& s : synced[j]) params[s.p] = s.v;
     render(params, kNumPresets + targets + (int)variants.size() + (int)j, snames[j], outdir, tempos[j]);
   }
-  // WaveChord Synth: the chord keyboard (folded voicing with the bass; stacked with a strum and 4 voices; mono with a long strum),
+  // Okto MultiWave Synth: the chord keyboard (folded voicing with the bass; stacked with a strum and 4 voices; mono with a long strum),
   // the same variants as tools/dsp_compare.js, on the first preset
   const std::vector<std::vector<Set>> chords = {
     {{P_CHORD_MODE, 1}, {P_CHORD_VOICING, 1}, {P_CHORD_BASS, 1}},

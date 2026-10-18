@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // VST3 processor, controller and factory.
 // Written directly against the VST3 interfaces (pluginterfaces, MIT); no SDK helper library.
@@ -41,9 +41,9 @@ using namespace Steinberg::Vst;
 
 namespace ws {
 
-// WaveChord Synth: its own class IDs (the Wavelet Synthesizer and WaveChord Synth can be installed side by side)
-static const FUID kProcessorUID(0x7C3E9A1B, 0x5D2F4C8A, 0x9E6B41D3, 0xA8F27E55);
-static const FUID kControllerUID(0x1F8D6B2C, 0x3A7E49F1, 0xB5C2D084, 0x6E9A3F17);
+// Okto MultiWave Synth: its own class IDs (the Wavelet Synthesizer and Okto MultiWave Synth can be installed side by side)
+static const FUID kProcessorUID(0xAD0A5967, 0x9F4B4D8F, 0x98779E69, 0x04E4F2D0);
+static const FUID kControllerUID(0x7E02B916, 0x86914A57, 0xBCBCA737, 0xA4F08A21);
 static constexpr uint32_t kStateMagic = 0x31595357;  // "WSY1"
 static constexpr uint32_t kCtlMagic = 0x31435357;    // "WSC1" (beta 0.1): zoom, preset index, modified flag
 static constexpr uint32_t kCtlMagic2 = 0x32435357;   // "WSC2": zoom, modified flag, preset name
@@ -440,7 +440,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     // 3. notes from the on-screen keyboard
     if (shared) {
       SharedState::Ev e;
-      while (shared->pop(e)) {   // WaveChord Synth: keys go through the chord layer, the strum plate's notes play as themselves
+      while (shared->pop(e)) {   // Okto MultiWave Synth: keys go through the chord layer, the strum plate's notes play as themselves
         if (e.vel < 0) engine.allNotesOff();
         else if (e.kind == 1) { if (e.vel == 0) engine.plateOff(e.note); else engine.plateOn(e.note, e.vel / 127.0); }
         else if (e.vel == 0) engine.keyOff(e.note);
@@ -467,12 +467,12 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
       if (events->getEvent(i, e) != kResultOk) continue;
       int32 off = std::max(0, std::min(ns, e.sampleOffset));
       if (L && off > pos) { engine.process(L + pos, R + pos, off - pos); pos = off; }
-      if (e.type == Event::kNoteOnEvent) engine.keyOn(e.noteOn.pitch, e.noteOn.velocity);   // WaveChord Synth: the chord layer
+      if (e.type == Event::kNoteOnEvent) engine.keyOn(e.noteOn.pitch, e.noteOn.velocity);   // Okto MultiWave Synth: the chord layer
       else if (e.type == Event::kNoteOffEvent) engine.keyOff(e.noteOff.pitch);
     }
     if (L && pos < ns) engine.process(L + pos, R + pos, ns - pos);
     if (L) data.outputs[0].silenceFlags = 0;
-    // WaveChord Synth: a key of the selector octave chose a chord type: the parameter follows, the host and its controller are
+    // Okto MultiWave Synth: a key of the selector octave chose a chord type: the parameter follows, the host and its controller are
     // told through the output parameter changes (and the editor through the shared state, for hosts that do not forward)
     if (engine.chordTypeChanged) {
       engine.chordTypeChanged = false;
@@ -506,7 +506,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
         for (int k = 0; k < 32; k++) if (engine.keys[w * 32 + k]) bits |= 1u << k;
         shared->keys[w].store(bits);
       }
-      // WaveChord Synth: the chord sounding for the panel (its name, its notes, the strum plate)
+      // Okto MultiWave Synth: the chord sounding for the panel (its name, its notes, the strum plate)
       uint32_t cb[4] = {0, 0, 0, 0};
       for (int k = 0; k < engine.chordN; k++) if (engine.chordOn[k]) cb[engine.chordNote[k] >> 5] |= 1u << (engine.chordNote[k] & 31);
       for (int w = 0; w < 4; w++) shared->chordBits[w].store(cb[w]);
@@ -778,7 +778,7 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     double v = toNorm(kParams[id], pv);
     if (norm[id] == v) return;
     norm[id] = v; version++;
-    // the ENGINE tabs only choose the panel shown: switching them does not modify the sound; WaveChord Synth: the chord keyboard's
+    // the ENGINE tabs only choose the panel shown: switching them does not modify the sound; Okto MultiWave Synth: the chord keyboard's
     // settings (perf) are not a sound either
     if (!kParams[id].hidden && !kParams[id].perf && id != P_ENGINE && !dirty) { dirty = true; }
     if (handler) handler->performEdit(id, v);
@@ -824,7 +824,7 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
   bool browserOpen_ = true;   // the preset browser panel of the editor (beta 0.3)
   float zoomFactor = 1.0f;
 
-  // every non-hidden parameter to these plain values, sent to the host as one group edit (WaveChord Synth: the chord keyboard's
+  // every non-hidden parameter to these plain values, sent to the host as one group edit (Okto MultiWave Synth: the chord keyboard's
   // settings stay as they are: a preset is a sound, not a playing setup)
   void applySound(const double* pv) {
     IComponentHandler2* h2 = nullptr;

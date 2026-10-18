@@ -340,12 +340,12 @@ const HOOK_SOURCE = `(() => {
   try {
     const origClose = AudioContext.prototype.close;
     AudioContext.prototype.close = function () {
-      try { localStorage.setItem('wc.test.closed', JSON.stringify({ t: Date.now(), href: location.href, state: this.state })); } catch (e) {}
+      try { localStorage.setItem('mw.test.closed', JSON.stringify({ t: Date.now(), href: location.href, state: this.state })); } catch (e) {}
       return origClose.apply(this, arguments);
     };
   } catch (e) {}
   addEventListener('load', () => addEventListener('pagehide', () => {
-    try { localStorage.setItem('wc.test.pagehide', JSON.stringify({ t: Date.now(), demo: WS_TEST.demoState().running, audio: WS_TEST.audioState() })); } catch (e) {}
+    try { localStorage.setItem('mw.test.pagehide', JSON.stringify({ t: Date.now(), demo: WS_TEST.demoState().running, audio: WS_TEST.audioState() })); } catch (e) {}
   }));
 })();`;
 
@@ -370,7 +370,7 @@ async function lifecycleTests() {
   begin('Audio lifecycle (one window/tab plays at a time)');
   const A = B;
   check(await A.evaluate(`typeof WS_TEST.audioState === 'function'`), 'WS_TEST.audioState() exists');
-  await A.evaluate(`localStorage.removeItem('wc.test.closed'); localStorage.removeItem('wc.test.pagehide'); true`);
+  await A.evaluate(`localStorage.removeItem('mw.test.closed'); localStorage.removeItem('mw.test.pagehide'); true`);
   await A.evaluate('Promise.resolve(WS_TEST.start()).then(() => true)');
   await sleep(300);
   check(await A.evaluate('WS_TEST.audioState()') === 'running', "tab A: audioState() is 'running' after start()", await A.evaluate('WS_TEST.audioState()'));
@@ -416,14 +416,14 @@ async function lifecycleTests() {
   check(await A.evaluate('WS_TEST.audioState()') === 'suspended', 'tab A paused again while tab B plays');
   await T2.navigate('about:blank');
   await sleep(800);
-  const closed = JSON.parse((await A.evaluate(`localStorage.getItem('wc.test.closed')`)) || 'null');
-  const ph = JSON.parse((await A.evaluate(`localStorage.getItem('wc.test.pagehide')`)) || 'null');
+  const closed = JSON.parse((await A.evaluate(`localStorage.getItem('mw.test.closed')`)) || 'null');
+  const ph = JSON.parse((await A.evaluate(`localStorage.getItem('mw.test.pagehide')`)) || 'null');
   log(`  after leaving tab B's page: AudioContext.close() record ${JSON.stringify(closed)}; state at pagehide ${JSON.stringify(ph)}`);
   check(!!closed, "pagehide closes the page's AudioContext (AudioContext.close() called)", JSON.stringify(closed));
   check(!!ph && ph.demo === false, 'pagehide stops the demo', JSON.stringify(ph));
   await T2.close();
   check(A.errors().length === 0 && T2.errors().length === 0, 'no console errors in either tab', short([...A.errors(), ...T2.errors()]));
-  await A.evaluate(`localStorage.removeItem('wc.test.closed'); localStorage.removeItem('wc.test.pagehide'); true`);
+  await A.evaluate(`localStorage.removeItem('mw.test.closed'); localStorage.removeItem('mw.test.pagehide'); true`);
 }
 
 // ------------------------------------------------------------------ hostile MIDI files (security regression)

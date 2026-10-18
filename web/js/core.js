@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // DSP core (reference implementation).
 // The same algorithm is ported 1:1 to C++ in vst/src/dsp.h.
@@ -436,7 +436,7 @@ function WSCoreFactory(SPEC) {
     this.ap0 = 0; this.ap1 = 0;   // SOURCE PHASE moved by LFO 2: position among the PHASE_K phase sets (0 .. PHASE_K)
   }
 
-  // ---------------------------------------------------------------- WaveChord Synth: chord names and the strum plate (both panels)
+  // ---------------------------------------------------------------- Okto MultiWave Synth: chord names and the strum plate (both panels)
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   // "G#m7" for a root and a chord type; the single-note type is the note alone
   function chordName(root, type) { return NOTE_NAMES[((root % 12) + 12) % 12] + SPEC.CHORDS[type].suffix; }
@@ -468,7 +468,7 @@ function WSCoreFactory(SPEC) {
     this.disp = { gains: new Float32Array(NB), mode: 0, voices: 0, peakL: 0, peakR: 0, center: 0, width: 1, depth: 0, note: -1 };
     this.lastVoice = -1;
     this.tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
-    // WaveChord Synth: the chord layer (keyOn / keyOff, see there)
+    // Okto MultiWave Synth: the chord layer (keyOn / keyOff, see there)
     this.holdCnt = new Uint8Array(128);    // how many held keys and chord notes want each note sounding (reference count)
     this.plainHeld = new Uint8Array(128);  // keys played as themselves (below the selector octave, or over the chord)
     this.plateHeld = new Uint8Array(128);  // notes of the strum plate being touched
@@ -522,7 +522,7 @@ function WSCoreFactory(SPEC) {
     if (id === P.hold && old >= 0.5 && v < 0.5) {
       for (const vc of this.voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
     }
-    // WaveChord Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
+    // Okto MultiWave Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
     // are released first (nothing generated stays behind)
     if ((id === P.chord_mode || id === P.chord_oct) && old !== v) this.chordReset();
   };
@@ -637,7 +637,7 @@ function WSCoreFactory(SPEC) {
     this.chBuf.fill(0);
   };
 
-  // ---------------------------------------------------------------- WaveChord Synth: the chord layer
+  // ---------------------------------------------------------------- Okto MultiWave Synth: the chord layer
   // Every key a player presses comes here (MIDI, the on-screen and computer keyboards); the demo sequencer plays noteOn /
   // noteOff directly and is never affected. CHORD off: keyOn is exactly noteOn (the base synthesizer, bit for bit).
   // CHORD on, three zones of the keyboard:
@@ -982,7 +982,7 @@ function WSCoreFactory(SPEC) {
 
   E.block = function (outL, outR, o, n) {
     const p = this.p, L = this.bufL, R = this.bufR;
-    this.strumTick(); this.clock += n;   // WaveChord Synth: the strummed chord notes whose time has come
+    this.strumTick(); this.clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
     L.fill(0, 0, n); R.fill(0, 0, n);
     this.lfoTick(n);
     this.lfo2Tick(n);
@@ -1138,7 +1138,7 @@ function WSCoreFactory(SPEC) {
     rng, toPlain, toNorm, format, parse, defaults,
     FILTERS, dwt, idwt, fft, sourceCycle, sparsify, patternCoeffs, buildTables, tableNeeds, morphNeeded, phaseModNeeded,
     filterGains, windowValue, staticGains, displayCycle, atomShape, Engine,
-    NOTE_NAMES, chordName, plateNotes,   // WaveChord Synth
+    NOTE_NAMES, chordName, plateNotes,   // Okto MultiWave Synth
   };
 }
 if (typeof module !== 'undefined') module.exports = WSCoreFactory;

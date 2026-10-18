@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Developer check of the VST2 entry point: loads build\WaveChordSynth.vst3\Contents\x86_64-win\WaveChordSynth.dll
+// Developer check of the VST2 entry point: loads build\OktoMultiWaveSynth.vst3\Contents\x86_64-win\OktoMultiWaveSynth.dll
 // like a VST2 host does (LoadLibrary + VSTPluginMain) and exercises audio, MIDI, parameters, programs, chunks and the editor.
 //   x86_64-w64-mingw32-clang++ -std=c++17 -O2 -static -I vst/external -I vst/src vst/devtest/vst2_smoke.cpp -o vst2_smoke.exe -luser32
-//   vst2_smoke.exe [path\to\WaveChordSynth.dll]
+//   vst2_smoke.exe [path\to\OktoMultiWaveSynth.dll]
 #include <windows.h>
 #include <cmath>
 #include <cstdio>
@@ -76,7 +76,7 @@ void pump(int ms) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  const char* dll = argc > 1 ? argv[1] : "build\\WaveChordSynth.vst3\\Contents\\x86_64-win\\WaveChordSynth.dll";
+  const char* dll = argc > 1 ? argv[1] : "build\\OktoMultiWaveSynth.vst3\\Contents\\x86_64-win\\OktoMultiWaveSynth.dll";
   std::printf("VST2 smoke test: %s\n", dll);
   HMODULE mod = LoadLibraryA(dll);
   check(mod != nullptr, "the DLL loads");
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
   check(fx->numParams == kNumParams && fx->numPrograms == kNumPresets && fx->numInputs == 0 && fx->numOutputs == 2, "69 parameters, 32 programs, 0 in / 2 out");
   check((fx->flags & 1) && (fx->flags & 16) && (fx->flags & 32) && (fx->flags & 256), "flags: editor, replacing, chunks, synth");
   D(fx, 0);
-  std::memset(buf, 0, sizeof buf); D(fx, 45, 0, 0, buf); check(!std::strcmp(buf, "WaveChord Synth"), "effect name", buf);
+  std::memset(buf, 0, sizeof buf); D(fx, 45, 0, 0, buf); check(!std::strcmp(buf, "Okto MultiWave Synth"), "effect name", buf);
   std::memset(buf, 0, sizeof buf); D(fx, 47, 0, 0, buf); check(!std::strcmp(buf, "OktoPierre"), "vendor", buf);
   check(D(fx, 35) == 2, "category: synth");
   check(D(fx, 51, 0, 0, (void*)"receiveVstMidiEvent") == 1, "canDo receiveVstMidiEvent");
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   Render r3 = render(fx, 10); std::snprintf(d, sizeof d, "peak %.5f", r3.peak);
   check(r3.peak < 1e-3, "CC123 (all notes off) stops the notes", d);
 
-  // WaveChord Synth: the chord keyboard through the VST2 entry point (MIDI in, the processor's chord type out to the host)
+  // Okto MultiWave Synth: the chord keyboard through the VST2 entry point (MIDI in, the processor's chord type out to the host)
   {
     midi(fx, 0x90, 67, 100); Render single = render(fx, 60); midi(fx, 0x80, 67, 0); render(fx, 400);
     fx->setParameter(fx, P_CHORD_MODE, 1.0f); render(fx, 1);
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
   D(fx, 15); pump(100);
   check(GetWindow(parent, GW_CHILD) == nullptr, "editor closes");
   check(D(fx, 14, 0, 0, parent) == 1, "editor reopens"); pump(200);
-  // WaveChord Synth: vst2_smoke.exe <dll> <shot.bmp> also saves the editor with CHORD on and G major 7 held (a visual check)
+  // Okto MultiWave Synth: vst2_smoke.exe <dll> <shot.bmp> also saves the editor with CHORD on and G major 7 held (a visual check)
   if (argc > 2) {
     fx->setParameter(fx, P_CHORD_MODE, 1.0f); fx->setParameter(fx, P_CHORD_TYPE, (float)toNorm(kParams[P_CHORD_TYPE], 4)); D(fx, 19);
     midi(fx, 0x90, 67, 100);

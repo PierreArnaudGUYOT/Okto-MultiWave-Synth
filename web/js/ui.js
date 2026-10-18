@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
 // Panel UI built from WS_SPEC (same layout as the VST editor).
 'use strict';
 
@@ -11,7 +11,7 @@ const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const SVGNS = 'http://www.w3.org/2000/svg';
 // beta 0.6: where the free plug-in is published (the header's DOWNLOAD VST; index.html's welcome window links there too)
-const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/WaveChord-Synth/releases';
+const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases';
 
 function el(tag, cls, parent, style) {
   const e = document.createElement(tag);
@@ -34,7 +34,7 @@ function arcPath(cx, cy, r, a0, a1) {
   return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large} ${sweep} ${x1.toFixed(2)},${y1.toFixed(2)}`;
 }
 
-// WaveChord Synth: a rounded rectangle path (the pads, the displays of the chord card)
+// Okto MultiWave Synth: a rounded rectangle path (the pads, the displays of the chord card)
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -69,7 +69,7 @@ class SynthUI {
     // "#nobrowser" in the address leaves it out (the manual's screenshots of the panel alone).
     this.browserOn = !/nobrowser/.test(location.hash);
     this.bOpen = this.browserOn;
-    try { if (localStorage.getItem('wc.browser') === 'closed') this.bOpen = false; } catch (_) { /* storage unavailable */ }
+    try { if (localStorage.getItem('mw.browser') === 'closed') this.bOpen = false; } catch (_) { /* storage unavailable */ }
     this.build();
     if (this.browserOn) this.makeBrowser();
     window.addEventListener('resize', () => this.fit());
@@ -143,7 +143,7 @@ class SynthUI {
         return;
       }
       case 'label': box.classList.add('wlabel'); box.textContent = w.text; return;
-      case 'toggle': return this.toggle(w, box);   // WaveChord Synth: the web app shows toggles too (CHORD ON, BASS)
+      case 'toggle': return this.toggle(w, box);   // Okto MultiWave Synth: the web app shows toggles too (CHORD ON, BASS)
       case 'zoom': return;
       case 'credit': {
         // beta 0.7: "By OktoPierre · version · licence" at the bottom left, small and discreet as before beta 0.6
@@ -358,7 +358,7 @@ class SynthUI {
     const mark = el('div', 'mark', box);
     mark.innerHTML = '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M3 16h5l3-9 4 18 4-13 3 7h7" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
     const t = el('div', 'txt', box);
-    t.innerHTML = '<b>WAVECHORD</b><span>WAVELET CHORD SYNTHESIZER</span>';   // WaveChord Synth
+    t.innerHTML = '<b>OKTOMULTIWAVE</b><span>WAVELET CHORD SYNTHESIZER</span>';   // Okto MultiWave Synth
   }
 
   presets(box) {
@@ -436,7 +436,7 @@ class SynthUI {
     this.canvases.push(c);
     if (w.type === 'keyboard') this.keyboardInput(c);
     if (w.type === 'wheels') this.wheelInput(c);
-    if (w.type === 'chordpads') this.padsInput(c);     // WaveChord Synth
+    if (w.type === 'chordpads') this.padsInput(c);     // Okto MultiWave Synth
     if (w.type === 'strumplate') this.plateInput(c);
   }
 
@@ -454,7 +454,7 @@ class SynthUI {
 
   fit() {
     const stage = this.dev.parentElement;
-    const DH = this.SPEC.DEVICE.h;   // WaveChord Synth: 840 (the chord card)
+    const DH = this.SPEC.DEVICE.h;   // Okto MultiWave Synth: 840 (the chord card)
     const W = 1100 + (this.browser && this.bOpen ? 360 : 0);   // the panel, and the preset browser at its right
     const aw = stage.clientWidth - 24, ah = stage.clientHeight - 24;
     const s = clamp(Math.min(aw / W, ah / DH), 0.45, 2.5);
@@ -523,7 +523,7 @@ class SynthUI {
   }
   setBrowser(open) {
     this.bOpen = open;
-    try { localStorage.setItem('wc.browser', open ? 'open' : 'closed'); } catch (_) { /* storage unavailable */ }
+    try { localStorage.setItem('mw.browser', open ? 'open' : 'closed'); } catch (_) { /* storage unavailable */ }
     if (open) { this.bReveal(); this.renderBrowser(); }
     this.fit();
   }
@@ -679,7 +679,7 @@ class SynthUI {
     for (const c of this.canvases) {
       const t = c.w.type;
       const animated = t === 'scope' || t === 'scalogram' || t === 'meter' || t === 'leds' || t === 'keyboard' || t === 'window' ||
-        t === 'chordname' || t === 'strumplate';   // WaveChord Synth: they show the chord sounding
+        t === 'chordname' || t === 'strumplate';   // Okto MultiWave Synth: they show the chord sounding
       if (!c.dirty && !animated) continue;
       c.dirty = false;
       const ctx = c.ctx;
@@ -906,7 +906,7 @@ class SynthUI {
     const whites = []; for (let n = KB_LO; n <= KB_HI; n++) if (!isBlack(n)) whites.push(n);
     const ww = W / whites.length, keys = this.host.keysDown();
     this.keyGeom = { ww, whites };
-    // WaveChord Synth: with CHORD on, the selector octave is tinted (its keys choose the chord type and make no sound)
+    // Okto MultiWave Synth: with CHORD on, the selector octave is tinted (its keys choose the chord type and make no sound)
     const P = this.P, chordOn = this.host.get(P.chord_mode) >= 0.5, selBase = 24 + 12 * Math.round(this.host.get(P.chord_oct));
     const sel = n => chordOn && n >= selBase && n < selBase + 12;
     whites.forEach((n, k) => {
@@ -996,7 +996,7 @@ class SynthUI {
     });
   }
 
-  // ------------------------------------------------------------------ WaveChord Synth: toggle, chord pads, chord name, strum plate
+  // ------------------------------------------------------------------ Okto MultiWave Synth: toggle, chord pads, chord name, strum plate
   // an on / off button (CHORD ON, BASS), lit when on: the plug-in's W_TOGGLE
   toggle(w, box) {
     const i = this.P[w.param], p = this.params[i];

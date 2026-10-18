@@ -65,7 +65,7 @@ const PHT = SPEC.LFO2_TARGETS.indexOf(P.a_phase);
   for (const [key, x] of Object.entries(set)) v[P[key]] = x;
   compare(v, SPEC.PRESETS.length + SPEC.LFO2_TARGETS.length + 4 + k, name, tempo);
 });
-// WaveChord Synth: the chord keyboard driven as a player would (keys through keyOn / keyOff, the strum plate's notes); the same
+// Okto MultiWave Synth: the chord keyboard driven as a player would (keys through keyOn / keyOff, the strum plate's notes); the same
 // events and variants as vst/devtest/dsp_render.cpp. kind: 0 keyOn, 1 keyOff, 2 plateOn, 3 plateOff, 4 allNotesOff
 const CHORD_SCRIPT = [
   [0, 0, 48, 1], [0, 0, 67, 0.9], [12800, 0, 64, 0.7], [19200, 2, 74, 0.8], [22400, 3, 74, 0], [22400, 2, 79, 0.8],

@@ -15,12 +15,12 @@ const pre = name => { const k = SPEC.PRESETS.findIndex(p => p.name === name); if
 const ROOT = path.resolve(__dirname, '..', '..');
 const IMG = path.join(ROOT, 'web', 'manual', 'img');
 const APP = pathToFileURL(path.join(ROOT, 'web', 'index.html')).href;
-// The 1100 x 840 panel (WaveChord Synth) is drawn at scale 1 in a 1124 x 902 window (12 px margin, 38 px status bar); "#nobrowser" leaves the
+// The 1100 x 840 panel (Okto MultiWave Synth) is drawn at scale 1 in a 1124 x 902 window (12 px margin, 38 px status bar); "#nobrowser" leaves the
 // preset browser (beta 0.3) out, so the panel alone fills the window.
 // Clips are in CSS pixels of that window: panel coordinate + 12.
 const TOP = { x: 20, y: 64, width: 1084, height: 268 };      // the top row (beta 0.6): ENGINE section + SUB OSC + SCOPE (scope and scalogram)
 // beta 0.6: the welcome window (640 px wide, centred; about 298 px high) with a 20 px margin of the dimmed panel around it
-const WELCOME = { x: 222, y: 282, width: 680, height: 338 };   // WaveChord Synth: the 902 px high window centres it 60 px lower
+const WELCOME = { x: 222, y: 282, width: 680, height: 338 };   // Okto MultiWave Synth: the 902 px high window centres it 60 px lower
 const set = o => Object.entries(o).map(([k, v]) => `WS_TEST.setParam('${k}', ${v});`).join('');
 
 const jobs = [
@@ -46,7 +46,7 @@ const jobs = [
   // welcome sentence); the panel only, without the status bar
   { url: `${APP}#nobrowser&noaudio`, eval: '(async () => { await WS_TEST.start(); WS_TEST.demoStart(); await new Promise(r => setTimeout(r, 9500)); })()',
     clip: { x: 0, y: 0, width: 1124, height: 864 }, after: 'WS_TEST.demoStop()', out: 'demo.png' },
-  // WaveChord Synth: the CHORD KEYBOARD card with G major 7 held (FOLDED) and a string of the strum plate touched
+  // Okto MultiWave Synth: the CHORD KEYBOARD card with G major 7 held (FOLDED) and a string of the strum plate touched
   { url: `${APP}#nobrowser&noaudio`, eval: "(async () => { await WS_TEST.start(); WS_TEST.setParam('chord_mode', 1); WS_TEST.setParam('chord_type', 4); WS_TEST.noteOn(67, 0.9); WS_TEST.plateOn(83, 0.8); await new Promise(r => setTimeout(r, 700)); })()",
     clip: { x: 20, y: 736, width: 1084, height: 112 }, after: 'WS_TEST.allNotesOff()', out: 'chord-card.png' },
   // the keyboard row with CHORD on: the selector octave C3–B3 tinted

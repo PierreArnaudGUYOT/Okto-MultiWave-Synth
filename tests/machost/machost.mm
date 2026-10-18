@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
 // machost.mm - a small DAW-like VST3 host for macOS (Mac port of beta 0.3), run by the GitHub workflow on Apple's machines:
-// loads WaveChordSynth.vst3 as Live does (bundleEntry, factory, processor + controller connected), plays notes, checks
+// loads OktoMultiWaveSynth.vst3 as Live does (bundleEntry, factory, processor + controller connected), plays notes, checks
 // the sound, the states and a few presets, then opens the editor in a window, takes screenshots (PNG) and drives it with
 // mouse events: the preset browser, the engine tab, a knob, HIDE and back, and the presets library with its save and
 // delete windows (answered by a timer, as a player would). Every result is a PASS / FAIL line; the exit code is the
 // number of failures.
-//   machost <WaveChordSynth.vst3> <output folder>
+//   machost <OktoMultiWaveSynth.vst3> <output folder>
 // Environment: WS_PRESETS_FILE is set to a file in the output folder, so the player's presets are never touched.
 #define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 #import <Cocoa/Cocoa.h>
@@ -289,16 +289,16 @@ static void answerMenu(CFRunLoopTimerRef, void*) {
 
 int main(int argc, char** argv) {
   @autoreleasepool {
-    if (argc < 3) { std::fprintf(stderr, "usage: machost <WaveChordSynth.vst3> <outdir>\n"); return 2; }
+    if (argc < 3) { std::fprintf(stderr, "usage: machost <OktoMultiWaveSynth.vst3> <outdir>\n"); return 2; }
     const std::string bundlePath = argv[1], out = argv[2];
-    const std::string presets = out + "/WAVECHORD presets (test).txt", exported = out + "/exported presets.txt";
+    const std::string presets = out + "/OKTOMULTIWAVE presets (test).txt", exported = out + "/exported presets.txt";
     std::remove(presets.c_str());
     setenv("WS_PRESETS_FILE", presets.c_str(), 1);
     setenv("WS_PRESETS_EXPORT", exported.c_str(), 1);
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
     [NSApp finishLaunching];
-    std::printf("WaveChord Synth - macOS host test (%s, %s)\n", bundlePath.c_str(),
+    std::printf("Okto MultiWave Synth - macOS host test (%s, %s)\n", bundlePath.c_str(),
 #if defined(__aarch64__)
                 "arm64"
 #else
@@ -310,8 +310,8 @@ int main(int argc, char** argv) {
     std::printf("[Bundle]\n");
     NSString* bp = [NSString stringWithUTF8String:bundlePath.c_str()];
     NSDictionary* info = [NSDictionary dictionaryWithContentsOfFile:[bp stringByAppendingPathComponent:@"Contents/Info.plist"]];
-    check(info && [info[@"CFBundlePackageType"] isEqualToString:@"BNDL"] && [info[@"CFBundleExecutable"] isEqualToString:@"WaveChordSynth"],
-          "Info.plist: a BNDL bundle, executable WaveChordSynth", info ? std::string([[info description] UTF8String]).substr(0, 0) : "missing");
+    check(info && [info[@"CFBundlePackageType"] isEqualToString:@"BNDL"] && [info[@"CFBundleExecutable"] isEqualToString:@"OktoMultiWaveSynth"],
+          "Info.plist: a BNDL bundle, executable OktoMultiWaveSynth", info ? std::string([[info description] UTF8String]).substr(0, 0) : "missing");
     check([[NSFileManager defaultManager] fileExistsAtPath:[bp stringByAppendingPathComponent:@"Contents/Resources/manual/manual-a.html"]],
           "the manuals are in Contents/Resources/manual");
     CFURLRef url = CFURLCreateWithFileSystemPath(nullptr, (__bridge CFStringRef)bp, kCFURLPOSIXPathStyle, true);
@@ -589,7 +589,7 @@ int main(int argc, char** argv) {
       lib = readFile(presets);
       std::string backup;
       for (NSString* fn in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[NSString stringWithUTF8String:out.c_str()] error:nil])
-        if ([fn hasPrefix:@"WAVECHORD presets (backup "]) backup = readFile(out + "/" + fn.UTF8String);
+        if ([fn hasPrefix:@"OKTOMULTIWAVE presets (backup "]) backup = readFile(out + "/" + fn.UTF8String);
       check(gAnswered >= 1 && lib.find("Preset: CI Imported Sound") != std::string::npos && lib.find("Preset: CI Bank Sound") == std::string::npos,
             "IMPORT: the question, then the library is the imported file", fmt("%d windows", gAnswered));
       check(!backup.empty() && backup == before, "IMPORT: the previous presets file kept as a backup copy next to it", fmt("%zu bytes", backup.size()));
