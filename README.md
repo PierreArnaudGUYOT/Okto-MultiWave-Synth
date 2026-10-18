@@ -53,14 +53,16 @@ Click **EVALUATE SOUNDS** in the header.
 - The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) with preset **001**, then asks for
   **1 to 10 stars** (a click; in the web app also the keys 1–9 and 0 = 10). It goes on with the next preset; **Skip**,
   **Previous**, **Replay** and **Stop** are always there.
+- **Stop half way whenever you like** — nothing is lost (every answer is saved) — and keep this state under a name of your own with
+  **Save as…** (on the start, rating and end windows): it saves a copy of the ratings so far, e.g.
+  `okto-multiwave-ratings-45of200-2026-10-18.txt`, and the session goes on with its own file.
 - **More than 5 stars** offers to *modify* the preset: it loads exactly as designed, you change the panel with the mouse and
   play it on your keyboard, then **Keep initial settings** or **Record preset change**. The parameters that differ from the
   preset are written in the file.
 - Every rating is saved at once, so you can stop and **continue where you stopped** (the file is read again at the next
   session).
 - **Web app**: the ratings are kept in the browser meanwhile; in Edge or Chrome you choose the file at the start
-  (`okto-multiwave-ratings.txt`) and it is rewritten after every rating or change; in other browsers use **Download the
-  ratings (.txt)**.
+  (`okto-multiwave-ratings.txt`) and it is rewritten after every rating or change; in other browsers **Save as…** downloads it.
 - **Plug-in**: the file is `Documents\Okto MultiWave Synth\okto-multiwave-ratings.txt` (the local application data folder when
   there is no Documents folder), written after every rating or change; **Change file…** chooses another one, **Show file**
   opens its folder, **Save now** writes it again. Both versions write the same readable text: the stars of every preset, a

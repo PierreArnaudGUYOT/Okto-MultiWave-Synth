@@ -414,8 +414,8 @@ function evaluateChapter() {
 </ol>
 <h3 id="evaluate-file">The ratings file</h3>
 <ul>
-<li><b>Plug-in:</b> <code>Documents\\Okto MultiWave Synth\\okto-multiwave-ratings.txt</code> (the local application data folder when the Documents folder is missing). ${ctl('Change file…')} chooses another file (an existing ratings file continues where it stopped; the choice is remembered), ${ctl('Show file')} opens its folder, ${ctl('Save now')} writes it again, ${ctl('Clear ratings')} starts over.</li>
-<li><b>Web app:</b> the ratings are kept in the browser; in Edge or Chrome you choose the file at the start (it is rewritten after every answer), in other browsers use ${ctl('Download the ratings (.txt)')}.</li>
+<li><b>Plug-in:</b> <code>Documents\\Okto MultiWave Synth\\okto-multiwave-ratings.txt</code> (the local application data folder when the Documents folder is missing). ${ctl('Change file…')} chooses another file (an existing ratings file continues where it stopped; the choice is remembered), ${ctl('Show file')} opens its folder, ${ctl('Save now')} writes it again, ${ctl('Save as…')} saves a copy of the ratings so far under a name you choose, ${ctl('Clear all')} starts over.</li>
+<li><b>Web app:</b> the ratings are kept in the browser; in Edge or Chrome you choose the file at the start (it is rewritten after every answer), in other browsers ${ctl('Save as…')} downloads a copy (it also works in Edge and Chrome, with the name you choose).</li>
 <li>The text is the same in both: a header, <code>NUMBER | STARS | CHANGED | PRESET</code> for every preset, a ranking, and <b>PRESET CHANGES</b> as <code>parameter key: value in the preset -> new value (name: shown value -> new shown value)</code>.</li>
 </ul>`;
 }

@@ -49,6 +49,7 @@ const first = SPEC.PRESETS[SPEC.NEW_FIRST], second = SPEC.PRESETS[SPEC.NEW_FIRST
     for (let i = 0; i < 20; i++) { const l = await ev('WS_TEST.getLevel()'); peak = Math.max(peak, l.peakL, l.peakR); await sleep(100); }
     check(peak > 0.02, 'the passage sounds', `peak ${peak.toFixed(3)}`);
     check(await waitPhase('vote', 8000), 'after the passage the window asks for stars');
+    check(await ev(`[...document.querySelectorAll('.vote-win .vrow button')].some(b => /^Save as/.test(b.textContent))`), "the rating window has 'Save as…' (a copy under a name of your own, to stop half way)");
 
     console.log('3. 7 stars: the question, then the preset as designed');
     await ev(`document.querySelectorAll('.vote-win .vstars button')[6].click(); true`);

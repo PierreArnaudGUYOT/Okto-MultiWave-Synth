@@ -1288,6 +1288,19 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (!fileExists(vPath)) { vStatus = L"No ratings file yet: it is written after the first rating."; voteInvalidate(); return; }
     if (win) win->reveal(vPath);
   }
+  // "Save as…": a copy of the ratings so far under a name of the player's choice (stop half way and keep this state); the ratings file
+  // being rewritten stays as it is, and the session goes on with it
+  void voteSaveAs() {
+    if (!win) return;
+    char b[160]; const LocalTime t = localNow();
+    std::snprintf(b, sizeof b, "okto-multiwave-ratings-%dof%d-%04d-%02d-%02d.txt", vVoted(), (int)vList.size(), t.wYear, t.wMonth, t.wDay);
+    const std::wstring forced = envPath(L"MW_SAVEAS_PATH");   // developer tests: no window
+    const std::wstring path = !forced.empty() ? forced : win->saveFileDialog(L"Save a copy of the ratings as…", toW(b).c_str());
+    if (path.empty()) return;
+    const std::wstring e = writeTextFile(path, voteText());
+    vStatus = e.empty() ? L"Copy saved (" + std::to_wstring(vVoted()) + L" rated): " + path : L"NOT SAVED: could not write " + path + L" (" + e + L")";
+    voteInvalidate();
+  }
 
   // ---- phases
   std::shared_ptr<SharedState> voteAudio() { return host->sharedState(); }
@@ -1323,8 +1336,9 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (next < n) b.push_back({done ? L"Continue at " + toW(vNum(next)) : L"Start at 001", [this, next] { votePlay(next); }, true, {}});
     if (done) b.push_back({L"Restart at 001", [this] { votePlay(0); }, false, {}});
     b.push_back({L"Change file…", [this] { voteChooseFile(); }, false, {}});
+    if (done) b.push_back({L"Save as…", [this] { voteSaveAs(); }, false, {}});
     if (fileExists(vPath)) b.push_back({L"Show file", [this] { voteOpenFile(); }, false, {}});
-    if (done) b.push_back({L"Clear ratings", [this] {
+    if (done) b.push_back({L"Clear all", [this] {
       if (!win || !win->ask(L"Clear all your ratings and recorded changes?")) return;
       vVotes.assign(vList.size(), 0); vChanges.assign(vList.size(), {});
       voteSave(); voteStartScreen();
@@ -1376,6 +1390,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     voteShow(V_VOTE, {{L"▶ Replay", [this] { votePlay(vK); }, true, {}}, {L"◀ Previous", [this] { votePlay(vK - 1); }, false, {}},
                       {L"Skip", [this] { votePlay(vK + 1); }, false, {}},
                       {L"Save now", [this] { if (voteSave()) vStatus = L"Saved now (" + std::to_wstring(vVoted()) + L" rated): " + voteShortPath(); voteInvalidate(); }, false, {}},
+                      {L"Save as…", [this] { voteSaveAs(); }, false, {}},
                       {L"Stop", [this] { voteStop(); }, false, {}}});
   }
   void voteCast(int n) {
@@ -1432,8 +1447,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     vDesc += (vDesc.empty() ? L"" : L". ") + std::to_wstring(vChanged()) + L" preset change(s) recorded.";
     vProgress = 1;
     vStatus = voteFileLabel();
-    voteShow(V_END, {{L"Show the ratings file", [this] { voteOpenFile(); }, true, {}}, {L"Back to the start", [this] { voteStartScreen(); }, false, {}},
-                     {L"Close", [this] { voteStop(); }, false, {}}});
+    voteShow(V_END, {{L"Show the ratings file", [this] { voteOpenFile(); }, true, {}}, {L"Save as…", [this] { voteSaveAs(); }, false, {}},
+                     {L"Back to the start", [this] { voteStartScreen(); }, false, {}}, {L"Close", [this] { voteStop(); }, false, {}}});
   }
   // ends the session and gives back the sound played before it
   void voteStop() {
@@ -1534,7 +1549,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     }
     voteButtons(g, c.x + 18, c.y + 170, 28);
     g.textEllipsis(vStatus, R{c.x + 18, c.y + 206, c.w - 36, 16}, 11.5f, false, vSaveErr.empty() ? rgb(0x9aa3b0) : rgb(0xff5d5d), true);
-    text(g, L"Every rating is saved at once: stop when you like, EVALUATE SOUNDS → Continue picks up where you stopped.", R{c.x + 18, c.y + 230, c.w - 36, 16}, 10.5f, false, rgb(0x6f7885), 0);
+    text(g, L"Every rating is saved at once; stop when you like (EVALUATE SOUNDS → Continue picks up). “Save as…” keeps a copy under a name you choose.", R{c.x + 18, c.y + 230, c.w - 36, 16}, 10.5f, false, rgb(0x6f7885), 0);
   }
 
   // ================================================================ presets: menu, library, browser (beta 0.3)

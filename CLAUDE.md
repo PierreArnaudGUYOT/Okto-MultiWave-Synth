@@ -319,7 +319,9 @@ scale** (it was 1e-5 in the earlier code, 400 times looser than the real 2.4e-7;
   feedback ≤ 0.3). Stars 1–10 (keys 1–9, 0), above 5 `ASK`: modify → the preset as designed (+ the recorded change), `Keep initial
   settings` / `Record preset change` (the parameters that differ, `EDITABLE` = sound parameters only). State in `localStorage`
   `mw.votes`; the file `okto-multiwave-ratings.txt` through `showSaveFilePicker` (Edge / Chrome, rewritten after every answer) or a
-  download. The plug-in writes the same text (§5); the line formats are the contract between them.
+  download. **Save as…** (start, rating and end windows) saves a copy of the ratings so far under a name the player chooses, without changing the file being
+  rewritten (`saveCopy`: the save window in Edge / Chrome, else a `prompt` for the name and a download); the plug-in's `voteSaveAs` does the same (`MW_SAVEAS_PATH`
+  replaces its window in tests). The plug-in writes the same text (§5); the line formats are the contract between them.
 - Test hooks: `window.WS_TEST` (used by the test suites). `node.onprocessorerror` tells the player when the worklet fails. The animated
   canvases are drawn when `setLive` saw a change (`liveVer`), while the meter falls back and twice a second at rest.
 - Other storage keys: `ws.user` (user presets), `ws.state`.

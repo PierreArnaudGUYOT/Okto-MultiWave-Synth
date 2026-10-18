@@ -366,6 +366,18 @@ int wmain(int argc, wchar_t** argv) {
   h.click(evalX, evalY);
   h.run(0.3);
   h.shot(out + L"\\7_reopen.png");
+  {   // "Save as…": a copy of the ratings so far under a name of the player's choice (the window is replaced by MW_SAVEAS_PATH here)
+    const std::wstring copy = votesDir + L"\\my special ratings.txt";
+    DeleteFileW(copy.c_str());
+    SetEnvironmentVariableW(L"MW_SAVEAS_PATH", copy.c_str());
+    h.click(buttonCenter({{L"Continue at 003", true}, {L"Restart at 001", false}, {L"Change file…", false}, {L"Save as…", false}, {L"Show file", false}, {L"Clear all", false}, {L"Close", false}}, 3, CARD_X), CARD_Y);
+    h.run(0.3);
+    const std::string cp = readFile(copy), main = readFile(votes);
+    check(has(cp, "Rated: 2 / 200") && has(cp, "001 |  7 | yes     |") && has(cp, "002 |  3 |"), "Save as…: a copy of the ratings so far under another name", std::to_string(cp.size()) + " bytes");
+    check(!main.empty() && has(main, "Rated: 2 / 200"), "the ratings file being rewritten is untouched");
+    h.shot(out + L"\\7b_saved_as.png");
+    SetEnvironmentVariableW(L"MW_SAVEAS_PATH", nullptr);
+  }
   h.click(evalX, evalY);   // the lit button stops the session
   h.run(0.2);
   h.shot(out + L"\\8_closed.png");

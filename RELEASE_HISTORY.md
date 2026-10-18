@@ -22,7 +22,8 @@ A **test version**: the sound engine, the panel and the presets are new, and the
   to the TOP Sounds, and none is a near copy of another (checked by their spectra and envelopes).
 - **EVALUATE SOUNDS** (web app and plug-in): plays 5 s of Beethoven's *Appassionata* (III) with each new preset, asks 1–10
   stars, offers to modify what you rated above 5 (the changes are recorded as the parameters that differ from the preset) and
-  saves a `.txt` after every answer; it continues where it stopped.
+  saves a `.txt` after every answer; it continues where it stopped, and **Save as…** keeps a copy of the ratings so far under a name of
+  your own (stop half way whenever you like).
 - **CHORD MODE** button next to the keyboard: it grows the panel by 120 px and shows the chord-harp card; off, the panel is
   the plain synthesizer (the chord settings stay plug-in parameters, saved with the project, never in a preset).
 - Demo: a tour of 29 presets on *Appassionata* (the TOP Sounds mixed with new presets that show the oscillators at work), the

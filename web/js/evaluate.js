@@ -6,7 +6,8 @@
 // designed, the window shrinks to a bar, the player changes the panel (mouse or MIDI controller) and plays it (MIDI
 // keyboard), then keeps the initial settings or records the change. The ratings and the recorded changes are kept in this
 // browser (stop and resume later) and written to a .txt file after every rating or change (Edge / Chrome: the file chosen at
-// the start; otherwise "Download the votes"). The .txt is read later to keep, rank and correct the good presets.
+// the start; otherwise "Save as…", which downloads a copy under a name the player chooses; it also keeps a copy of a session stopped half
+// way). The .txt is read later to keep, rank and correct the good presets.
 // (Adapted from the listening test of the Wavelet-Synthesizer-TEST project.)
 function WSEvaluate(api) {
   'use strict';
@@ -97,15 +98,38 @@ function WSEvaluate(api) {
     writing = writing.then(async () => { const w = await h.createWritable(); await w.write(text); await w.close(); })
       .catch((e) => { status('Could not write the ratings file (' + e.message + '); the ratings stay saved in this browser.'); });
   }
-  function download() {
+  function download(name) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([fileText()], { type: 'text/plain' }));
-    a.download = 'okto-multiwave-ratings.txt';
+    a.download = name || 'okto-multiwave-ratings.txt';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
+  // "Save as…": a copy of the ratings so far under a name of the player's choice (stop half way, keep this state); the ratings file
+  // being rewritten (if any) stays as it is. Edge / Chrome: the save window; other browsers: a question for the name, then a download.
+  const copyName = () => {
+    const d = new Date(), pad = (x) => String(x).padStart(2, '0');
+    return `okto-multiwave-ratings-${nVotes()}of${PRESETS.length}-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.txt`;
+  };
+  async function saveCopy() {
+    let name = copyName();
+    if (window.showSaveFilePicker) {
+      try {
+        const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Text file', accept: { 'text/plain': ['.txt'] } }] });
+        const w = await h.createWritable(); await w.write(fileText()); await w.close();
+        status(`Copy saved: ${h.name} (${nVotes()} rated).`);
+      } catch (e) { if (!e || e.name !== 'AbortError') status('Could not save the copy: ' + (e && e.message)); }
+      return;
+    }
+    const asked = window.prompt('Name of the file (a copy of your ratings so far):', name);
+    if (asked === null) return;
+    name = asked.trim().replace(/[\\/:*?"<>|]+/g, '_') || name;
+    if (!/\.txt$/i.test(name)) name += '.txt';
+    download(name);
+    status(`Copy downloaded: ${name} (${nVotes()} rated).`);
+  }
   async function chooseFile() {
-    if (!window.showSaveFilePicker) { status('This browser cannot write a file directly: use "Download the ratings" (Edge or Chrome can).'); return false; }
+    if (!window.showSaveFilePicker) { status('This browser cannot write a file directly: use "Save as…" (it downloads a copy; Edge or Chrome can also keep a file up to date).'); return false; }
     try {
       fileHandle = await window.showSaveFilePicker({ suggestedName: 'okto-multiwave-ratings.txt', types: [{ description: 'Text file', accept: { 'text/plain': ['.txt'] } }] });
       saveFile();
@@ -210,7 +234,7 @@ function WSEvaluate(api) {
     if (window.showSaveFilePicker) list.push([fileHandle ? 'Change the ratings file…' : 'Choose the ratings file (.txt)…', async () => { await chooseFile(); status(fileLabel()); showStart(); }, !fileHandle]);
     if (next < PRESETS.length) list.push([done ? `Continue at ${num(next)}` : 'Start at 001', () => play(next), !!fileHandle || !window.showSaveFilePicker]);
     if (done) list.push(['Start again at 001', () => play(0)]);
-    list.push(['Download the ratings (.txt)', download, !!done && next >= PRESETS.length]);
+    if (done) list.push(['Save as…', saveCopy, next >= PRESETS.length]);
     if (done) list.push(['Clear all ratings', () => { if (confirm('Clear all your ratings and recorded changes?')) { data = { votes: {}, changes: {} }; saveFile(); showStart(); } }]);
     list.push(['Close', stop]);
     buttons(list);
@@ -260,7 +284,7 @@ function WSEvaluate(api) {
     s.phase = 'vote';
     win.desc.textContent = DESC[PRESETS[s.k].name] || 'How do you like this preset?';
     showStars('on', data.votes[num(s.k)]);
-    buttons([['▶ Replay', () => play(s.k), true], ['◀ Previous', () => play(s.k - 1)], ['Skip', () => play(s.k + 1)], ['Stop', stop]]);
+    buttons([['▶ Replay', () => play(s.k), true], ['◀ Previous', () => play(s.k - 1)], ['Skip', () => play(s.k + 1)], ['Save as…', saveCopy], ['Stop', stop]]);
     status(voteNote(num(s.k)) + 'Rate 1–10 (you can also play the keyboard to try the preset).');
   }
   function vote(n) {
@@ -332,7 +356,7 @@ function WSEvaluate(api) {
       `${Object.keys(data.changes).length} preset change(s) recorded.`;
     win.bar.style.width = '100%';
     showStars('off');
-    buttons([['Download the ratings (.txt)', download, true], ['Back to the start', showStart], ['Close', stop]]);
+    buttons([['Save as…', saveCopy, true], ['Back to the start', showStart], ['Close', stop]]);
     status(fileLabel());
   }
   function stop() {
