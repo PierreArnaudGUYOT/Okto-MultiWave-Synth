@@ -448,9 +448,9 @@ top; it needs `MW_VOTES_DIR`, which it sets itself, so it never touches the play
 oscillator tabs, 860 px panel, no Source Phase, a neutral patch made of the spec defaults — there is no Init preset; the full run plays all
 222 presets and takes about 10 minutes), `tests/web/test_demo.js` (every song is a preset tour: the plan against the spec's `TOUR`, the
 welcome sentences, the forced playing rules, stop paths, MIDI files; `--smoke` about 2 minutes), `tools/dsp_selftest.js` (12 sections; 12 =
-the four oscillators), `vst/devtest/library_test.cpp` (the presets file, no window), `vst/devtest/vst2_smoke.cpp`. **Not ported** (they drive
-the Wavelet Synthesizer's presets, panel or screenshots, or the macOS build): `vst/devtest/bank_session.cpp`, the editor and reload sections
-of `tests/vst3host`, `tests/machost`. Run them only after porting them. The old descriptions follow.
+the four oscillators), `vst/devtest/library_test.cpp` (the presets file, no window), `vst/devtest/vst2_smoke.cpp`. `tests/vst3host` with `--skip-editor`: the sections params, audio, state, offline, presets, sub, porta, stress, instances and sync pass (190 checks).
+**Not ported** (they drive the Wavelet Synthesizer's presets, panel or screenshots, or the macOS build): `vst/devtest/bank_session.cpp`,
+the controller-state and editor sections of `tests/vst3host` (the editor one hangs on a popup menu), `tests/machost`. Run them only after porting them. The old descriptions follow.
 - `tests/vst3host/vst3host.exe <bundle> <outdir> [--quick] [--only a,b]`: DAW-like VST3 host (parameters, audio,
   state, controller state, offline, presets, sub, portamento, high notes, attribute list, editor screenshots, reload).
 - `tests/web/test_web.js`, `tests/web/test_demo.js [--smoke]`: browser suites through `tests/web/cdp.js`.

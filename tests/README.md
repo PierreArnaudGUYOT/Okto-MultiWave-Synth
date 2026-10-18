@@ -21,8 +21,9 @@ tests/
 (the four oscillator views and CHORD MODE), `web/test_evaluate.js` (an EVALUATE SOUNDS session: stars, the question, a recorded change, the text), `web/test_web.js` (about 10 minutes: it plays all 222 presets) and `web/test_demo.js`,
 `tools/dsp_selftest.js` (12 sections), the C++ cross-check (`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp`, 251 cases) and the
 developer checks `vst/devtest/vote_session.cpp` (EVALUATE SOUNDS and CHORD MODE in the plug-in's window), `library_test.cpp` (the
-presets file) and `vst2_smoke.cpp`. The VST3 host below is the Wavelet Synthesizer's: its sections that do not look at the editor
-apply unchanged. **Not ported** (they drive the Wavelet Synthesizer's browser, screenshots and presets, or the macOS build, which
+presets file) and `vst2_smoke.cpp`. The VST3 host below is the Wavelet Synthesizer's: with `--skip-editor` its sections params, audio, state, offline, presets, sub,
+porta, stress, instances and sync pass (190 checks); its controller-state section (beta 0.1 WSC1 projects, presets left out in beta 0.5, `A · Reese Sub`…)
+is the Wavelet Synthesizer's and fails on its first check. **Not ported** (they drive the Wavelet Synthesizer's browser, screenshots and presets, or the macOS build, which
 this version does not make): `vst/devtest/bank_session.cpp`, `tests/machost`, the editor and reload sections of the VST3 host.
 
 Requirements: Windows x64, `%USERPROFILE%\tools\llvm-mingw` (or set `CXX`), Node.js >= 22 (it has a

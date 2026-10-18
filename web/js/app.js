@@ -17,6 +17,7 @@
   let presetId = 'f:' + SPEC.DEFAULT_PRESET, presetName = SPEC.PRESETS[SPEC.DEFAULT_PRESET].name, dirty = false;
   let buildTimer = null, lastBuild = 0;
   let demo = null, evaluator = null;
+  let evalLabel = null;   // while EVALUATE SOUNDS runs: the name its preset box shows (a knob moved then shows it modified, whatever the page's own preset)
 
   // ---------------------------------------------------------------- storage (optional)
   const store = {
@@ -52,7 +53,7 @@
     if ((p.structural && i !== P.osc_view) || C.tableNeeds(values) !== needs || C.morphNeeded(values) !== morph ||
         C.phaseModNeeded(values) !== phm) scheduleBuild();
     // the OSC tabs only choose the panel shown: switching them does not modify the sound
-    if (user && !p.hidden && !p.perf && i !== P.osc_view) { if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
+    if (user && !p.hidden && !p.perf && i !== P.osc_view) { if (evalLabel) ui.setPresetName(evalLabel, true); else if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
     if (user && !p.hidden) saveStateSoon();
   }
 
@@ -528,8 +529,8 @@
       applyKeyed(o);
     },
     snapshot: () => ({ values: toKeyed(), presetId, presetName, dirty }),
-    restore: (s) => { applyKeyed(s.values); presetId = s.presetId; presetName = s.presetName; dirty = s.dirty; ui.setPresetName(presetName, dirty); },
-    setPresetLabel: (txt, modified) => ui.setPresetName(txt, !!modified),
+    restore: (s) => { evalLabel = null; applyKeyed(s.values); presetId = s.presetId; presetName = s.presetName; dirty = s.dirty; ui.setPresetName(presetName, dirty); },
+    setPresetLabel: (txt, modified) => { evalLabel = txt; ui.setPresetName(txt, !!modified); },
   });
   host.evaluate = () => { if (evaluator.running()) evaluator.stop(); else evaluator.start(); };
   $('file-midi').onchange = (e) => {
