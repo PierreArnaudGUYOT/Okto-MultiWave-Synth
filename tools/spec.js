@@ -290,10 +290,10 @@ const CHORD_H = 120;   // the chord card (shown by CHORD MODE) adds this much to
 section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'logo', x: 16, y: 8, w: 200, h: 32 },
   { type: 'zoom', x: 222, y: 14, w: 50, h: 20 },
-  { type: 'seg', param: 'osc_view', style: 'engine', x: 290, y: 9, w: 264, h: 30 },   // the four oscillators: A1 A2 | B1 B2
-  { type: 'presets', x: 566, y: 9, w: 236, h: 30 },
-  { type: 'evaluate', x: 808, y: 9, w: 104, h: 30 },
-  { type: 'manual', x: 918, y: 9, w: 68, h: 30 },
+  { type: 'seg', param: 'osc_view', style: 'engine', x: 278, y: 9, w: 240, h: 30 },   // the four oscillators: A1 A2 | B1 B2
+  { type: 'presets', x: 526, y: 9, w: 220, h: 30 },
+  { type: 'evaluate', x: 752, y: 9, w: 104, h: 30 },   // (the plug-in's SAVE PRESET is at 862)
+  { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
   { type: 'knobS', param: 'master', x: 1028, y: 6, w: 36, h: 36 },
   { type: 'meter', x: 1072, y: 9, w: 14, h: 30 },
 ]);

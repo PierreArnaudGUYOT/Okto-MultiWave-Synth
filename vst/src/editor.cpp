@@ -58,8 +58,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       }
     }
     for (int i = 0; i < kNumParams; i++) lastPlain[i] = host->getPlain(i);
-    // beta 0.3: SAVE PRESET takes the right end of the preset box (beta 0.6: where the web app shows DOWNLOAD VST)
-    for (auto& it : items) if (it.w->type == W_PRESETS) it.r.w = kSaveBtn.x - 6 - it.r.x;
     buildCategories();
   }
   virtual ~Editor() { cleanup(); if (keepAlive) keepAlive->release(); }
@@ -144,11 +142,12 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // state
   double lastPlain[kNumParams];
   uint32_t lastVersion = 0;
-  int mode = 0;
+  int view = 0, mode = 0;   // the oscillator shown (A1 A2 B1 B2) and its engine
+  bool chordOn = false;     // CHORD MODE: the chord card is shown and the panel is taller
   Tables disp; uint64_t dispSig = ~0ull;
   std::map<int, Atom> atoms;
   // live data
-  float liveGains[NB] = {}; float liveC = 0, liveW = 1, liveD = 0; int liveNote = -1, liveMode = 0; uint32_t liveVoices = 0;
+  float liveGains[NB] = {}; float liveC = 0, liveW = 1, liveD = 0; int liveNote = -1, liveView = 0; bool liveSlot = false; uint32_t liveVoices = 0;
   uint32_t liveKeys[4] = {}; float meterL = 0, meterR = 0;
   // Okto MultiWave Synth: the chord sounding (root, notes), the last root, the selector-key edits seen; the pad under the mouse, the
   // string of the strum plate being touched (a note)
@@ -160,7 +159,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
 
   double scale() const override { return dpiScale * host->zoom(); }
   int pxW() const { return (int)std::lround((kDeviceW + (host->browserOpen() ? kBrowserW : 0)) * scale()); }   // + the browser
-  int pxH() const { return (int)std::lround(kDeviceH * scale()); }
+  float devH() const { return kDeviceH + (chordOn ? kChordH : 0); }   // the panel's logical height: CHORD MODE adds the chord card
+  int pxH() const { return (int)std::lround(devH() * scale()); }
   uint32_t accent() const { return mode == 0 ? kAccentA : kAccentB; }
 
   void requestResize() {
@@ -190,12 +190,17 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       uint64_t bits; double d = v[i]; std::memcpy(&bits, &d, 8); sig = (sig ^ bits) * 1099511628211ull;
     }
     if (force || sig != dispSig) { buildTables(v, false, disp); dispSig = sig; }
-    mode = (int)jsRound(v[P_ENGINE]);
+    view = std::max(0, std::min(NS - 1, (int)jsRound(v[P_OSC_VIEW]))); mode = kSlots[view].mode;
+    chordOn = v[P_CHORD_MODE] >= 0.5;
   }
 
+  // a section shows for one oscillator (view) or always, and may need a parameter on / off (the chord card)
+  bool sectionShown(const SectionDef& sd) const {
+    if (sd.view >= 0 && sd.view != view) return false;
+    return sd.vis < 0 || (lastPlain[sd.vis] >= 0.5) == sd.visOn;
+  }
   bool visible(const Item& it) const {
-    int m = kSections[it.section].mode;
-    if (m >= 0 && m != mode) return false;
+    if (!sectionShown(kSections[it.section])) return false;
     // beta 0.6: a knob shown while a SYNC button is on (a note value) or off (seconds / hertz)
     return it.w->vis < 0 || (lastPlain[it.w->vis] >= 0.5) == it.w->visOn;
   }
@@ -219,7 +224,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     uint32_t ver = host->paramVersion();
     if (ver != lastVersion) {
       lastVersion = ver;
-      int oldMode = mode;
+      const int oldView = view; const bool oldChord = chordOn;
       bool any = false, structural = false;
       for (int i = 0; i < kNumParams; i++) {
         double v = host->getPlain(i);
@@ -232,7 +237,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       }
       if (any) {
         rebuildDisplay(false);
-        if (structural || mode != oldMode) invalidateAll();
+        if (chordOn != oldChord) requestResize();   // CHORD MODE: the panel grows or shrinks
+        if (structural || view != oldView || chordOn != oldChord) invalidateAll();
         else for (int t : {W_SCOPE, W_SCALOGRAM, W_WINDOW, W_ADSR, W_LEDS, W_WHEELS, W_PRESETS}) invalidateType(t);
       }
       invalidateType(W_PRESETS);
@@ -251,9 +257,9 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       float g[NB]; bool changed = false;
       for (int b = 0; b < NB; b++) { g[b] = sh->gains[b].load(); if (g[b] != liveGains[b]) changed = true; liveGains[b] = g[b]; }
       float c = sh->center.load(), w = sh->width.load(), d = sh->depth.load();
-      int n = sh->note.load(), m = sh->mode.load(); uint32_t vo = sh->voices.load();
-      if (c != liveC || w != liveW || d != liveD || n != liveNote || m != liveMode) changed = true;
-      liveC = c; liveW = w; liveD = d; liveNote = n; liveMode = m;
+      int n = sh->note.load(), vw = sh->view.load(); const bool sl = sh->slotLive.load(); uint32_t vo = sh->voices.load();
+      if (c != liveC || w != liveW || d != liveD || n != liveNote || vw != liveView || sl != liveSlot) changed = true;
+      liveC = c; liveW = w; liveD = d; liveNote = n; liveView = vw; liveSlot = sl;
       if (changed) { invalidateType(W_SCOPE); invalidateType(W_SCALOGRAM); invalidateType(W_WINDOW); }
       if (vo != liveVoices) { liveVoices = vo; invalidateType(W_LEDS); }
       bool kc = false;
@@ -300,10 +306,10 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // the window has set its scale, clip and smoothing; dirty is the logical area to draw again
   void paint(Canvas& g, R dirty) override {
     // device background
-    g.fillRect(dirty, Brush(Pt{0, 0}, Pt{0, (float)kDeviceH}, rgb(0x1a1d23), rgb(0x13161b)));
+    g.fillRect(dirty, Brush(Pt{0, 0}, Pt{0, devH()}, rgb(0x1a1d23), rgb(0x13161b)));
     for (int si = 0; si < kNumSections; si++) {
       const SectionDef& sd = kSections[si];
-      if (sd.mode >= 0 && sd.mode != mode) continue;
+      if (!sectionShown(sd)) continue;
       R r{sd.x, sd.y, sd.w, sd.h};
       if (!r.hits(dirty) || sd.title[0] == 0) continue;
       fillRR(g, r, 10, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, rgb(0x1f242c), rgb(0x1a1e25)));
@@ -364,7 +370,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       case W_CREDIT: drawCredit(g, it.r); break;
       case W_TOGGLE: drawToggle(g, idx); break;
       case W_LABEL: text(g, toW(it.w->text ? it.w->text : ""), it.r, 10.5f, true, rgb(kDim), 0); break;   // beta 0.6: SCALOGRAM
-      case W_CHORDPADS: drawChordPads(g, idx); break;   // Okto MultiWave Synth
+      case W_EVALUATE: drawEvaluateBtn(g, idx); break;   // Okto MultiWave Synth
+      case W_CHORDPADS: drawChordPads(g, idx); break;
       case W_CHORDNAME: drawChordName(g, it.r); break;
       case W_STRUMPLATE: drawStrumPlate(g, it.r); break;
       default: break;
@@ -374,9 +381,12 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // angle 0 = 12 o'clock, clockwise, radians -> canvas degrees (0 = 3 o'clock, clockwise)
   static float gdiDeg(double a) { return (float)(a * 180 / PI - 90); }
 
+  // the source width only means something for PULSE and TRIANGLE, the seed for RANDOM (every oscillator)
   bool disabledParam(int id) {
-    if (id == P_A_WIDTH) { int w = (int)jsRound(plainOf(P_A_WAVE)); return !(w == 2 || w == 3); }
-    if (id == P_B_SEED) return (int)jsRound(plainOf(P_B_PATTERN)) != 5;
+    for (int s = 0; s < NS; s++) {
+      if (id == kSlots[s].width) { int w = (int)jsRound(plainOf(kSlots[s].wave)); return !(w == 2 || w == 3); }
+      if (id == kSlots[s].seed) return (int)jsRound(plainOf(kSlots[s].pattern)) != 5;
+    }
     return false;
   }
 
@@ -421,7 +431,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       R b{it.r.x + pad + k * (bw + gap), it.r.y + pad, bw, it.r.h - 2 * pad};
       bool on = k == cur;
       if (on) {
-        uint32_t c = engine ? (k == 0 ? kAccentA : kAccentB) : accent();
+        uint32_t c = engine ? (k < 2 ? kAccentA : kAccentB) : accent();   // the oscillator tabs: A1 A2 teal, B1 B2 orange
         fillRR(g, b, 5, rgb(c));
       }
       text(g, toW(p.choiceShort[k]), b, engine ? 11.f : 10.f, true, on ? rgb(0x0d1014) : rgb(kDim));
@@ -457,12 +467,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   void gainsForDisplay(double* g, double& c, double& w, double& d, int& note) {
-    if (liveNote >= 0 && liveMode == mode && host->sharedState()) {
+    if (liveNote >= 0 && liveSlot && liveView == view && host->sharedState()) {
       for (int b = 0; b < NB; b++) g[b] = liveGains[b];
       c = liveC; w = liveW; d = liveD; note = liveNote; return;
     }
     double v[kNumParams]; currentParams(v);
-    staticGains(v, g); c = v[P_P_CENTER]; w = v[P_P_WIDTH]; d = v[P_P_DEPTH]; note = -1;
+    const SlotDef& k = kSlots[view];
+    staticGains(v, g); c = v[k.pcen]; w = v[k.pwid]; d = v[k.pdep]; note = -1;
   }
 
   void polyline(Canvas& g, const double* arr, R r, double sy, Col c, float width, bool glow) {
@@ -545,7 +556,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   void drawAtom(Canvas& g, R r) {
-    int wi = (int)jsRound(plainOf(P_WAVELET));
+    int wi = (int)jsRound(plainOf(kSlots[view].wavelet));
     if (!atoms.count(wi)) atoms[wi] = atomShape(wi);
     const Atom& a = atoms[wi];
     double span = a.hi - a.lo + 1, margin = std::max(4.0, span * 0.15), lo = a.lo - margin, hi = a.hi + margin;
@@ -569,7 +580,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   void drawSource(Canvas& g, R r) {
     if (disp.mode != 0) return;
     std::vector<double> raw(N);
-    sourceCycle((int)jsRound(plainOf(P_A_WAVE)), plainOf(P_A_WIDTH), raw.data(), plainOf(P_A_PHASE));   // shifted by SOURCE PHASE
+    const SlotDef& k = kSlots[view];
+    sourceCycle((int)jsRound(plainOf(k.wave)), plainOf(k.width), raw.data(), plainOf(k.phase));   // shifted by SOURCE PHASE
     const double* dry = disp.layer(DRY);
     double peak = 1; for (int i = 0; i < N; i++) peak = std::max(peak, std::fabs(dry[i]));
     double sy = (r.h / 2 - 8) / peak;
@@ -591,7 +603,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
 
   void drawAdsr(Canvas& g, const Item& it) {
     R r = it.r;
-    int base = it.w->env == 0 ? P_AMP_A : P_MOD_A;
+    int base = it.w->env == 0 ? P_AMP_A : it.w->env == 1 ? P_MOD_A : it.w->param;   // the oscillator's own envelope: its four parameters in a row
     double a = plainOf(base), d = plainOf(base + 1), s = plainOf(base + 2), rl = plainOf(base + 3);
     auto f = [](double t) { return 0.06 + std::log10(1 + t * 100) / std::log10(1001.0); };
     double wa = f(a), wd = f(d), wr = f(rl), hold = 0.35, tot = wa + wd + hold + wr;
@@ -785,7 +797,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     const Pt pts[] = {{m.x + 3, m.y + 15}, {m.x + 8, m.y + 15}, {m.x + 11, m.y + 7}, {m.x + 15, m.y + 23}, {m.x + 19, m.y + 11}, {m.x + 22, m.y + 17}, {m.x + 27, m.y + 17}};
     g.lines(pts, 7, Pen(rgb(accent()), 2.2f).join().caps());
     text(g, L"OKTOMULTIWAVE", R{r.x + 40, r.y + 1, 160, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // Okto MultiWave Synth
-    text(g, L"WAVELET CHORD SYNTHESIZER", R{r.x + 40, r.y + 17, 180, 14}, 9, true, rgb(accent()), 0);
+    text(g, L"WAVELET SYNTHESIZER", R{r.x + 40, r.y + 17, 180, 14}, 9, true, rgb(accent()), 0);
   }
 
   void drawPresets(Canvas& g, R r) {
@@ -806,6 +818,15 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     inset(g, it.r, 8);
     text(g, L"USER", R{it.r.x, it.r.y + 3, it.r.w, 12}, 9.5f, true, rgb(kDim));
     text(g, L"MANUAL", R{it.r.x, it.r.y + 14, it.r.w, 14}, 12, true, rgb(accent()));
+  }
+
+  // Okto MultiWave Synth: the EVALUATE SOUNDS button (the listening test of the new presets)
+  void drawEvaluateBtn(Canvas& g, int idx) {
+    const Item& it = items[idx];
+    const bool hot = hover == idx;
+    inset(g, it.r, 8);
+    text(g, L"EVALUATE", R{it.r.x, it.r.y + 3, it.r.w, 12}, 9.5f, true, rgb(hot ? kText : kDim));
+    text(g, L"SOUNDS", R{it.r.x, it.r.y + 14, it.r.w, 14}, 12, true, rgb(accent()));
   }
 
   void drawMeter(Canvas& g, R r) {
@@ -1101,7 +1122,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
                        kCmdBankImport = 903,   // beta 0.4
                        kCmdMoveTo = 7000, kCmdTopAdd = 7100, kCmdTopRemove = 7101;   // beta 0.5: the sound menu (ctxRow)
   static constexpr float kBrowserW = 360;                  // logical width added at the right while the browser is open
-  static constexpr R kSaveBtn{876, 9, 68, 30};             // SAVE PRESET, left of MANUAL (beta 0.6: the web app's DOWNLOAD VST place)
+  static constexpr R kSaveBtn{862, 9, 68, 30};             // SAVE PRESET, between EVALUATE and MANUAL
   std::vector<BankPreset> menuBank;                        // the bank as listed by the last menu / browser (commands index it)
   struct BCat { std::wstring label; std::vector<int> presets; };   // a factory category of the browser
   std::vector<BCat> fCats;                                 // TOP Sounds, then the categories in factory order
@@ -1398,11 +1419,11 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   // ---------------------------------------------------------------- preset browser panel
-  R bCard() const { return R{kDeviceW + 4, 8, kBrowserW - 12, 704}; }
+  R bCard() const { return R{kDeviceW + 4, 8, kBrowserW - 12, kDeviceH - 16}; }
   R bHide() const { const R c = bCard(); return R{c.x + c.w - 70, c.y + 6, 58, 20}; }
   R bTabR(int t) const { const R c = bCard(); const float w = (c.w - 24) / 2; return R{c.x + 12 + t * w, c.y + 34, w, 26}; }
   R bCatR(int i) const { const R c = bCard(); return R{c.x + 12, c.y + 72 + i * 26.0f, 118, 24}; }
-  R bList() const { const R c = bCard(); return R{c.x + 136, c.y + 98, c.w - 162, 548}; }
+  R bList() const { const R c = bCard(); return R{c.x + 136, c.y + 98, c.w - 162, c.h - 156}; }
   R bScrollR() const { const R l = bList(); return R{l.x + l.w + 2, l.y, 12, l.h}; }   // the list's scroll bar (beta 0.4)
   // its thumb for n rows, at least 28 px high so that it is easy to grab
   R bThumb(int n) const {
@@ -1424,7 +1445,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   int bVisibleRows() const { return (int)(bList().h / kRowH); }
   R bRowR(int j) const { const R l = bList(); return R{l.x, l.y + j * kRowH, l.w, kRowH - 1}; }
   static constexpr int kBtns = 5;   // TO BANK, RESTORE, DELETE, EXPORT, IMPORT (beta 0.4; FILE is in the right-click menu)
-  R bBtnR(int b) const { const R c = bCard(); const float w = (c.w - 24 - 4 * 5) / kBtns; return R{c.x + 12 + b * (w + 5), c.y + 654, w, 26}; }
+  R bBtnR(int b) const { const R c = bCard(); const float w = (c.w - 24 - 4 * 5) / kBtns; return R{c.x + 12 + b * (w + 5), c.y + c.h - 50, w, 26}; }
   int bNumCats() const { return bTab == 0 ? (int)fCats.size() : kNumBankSections; }
   // the rows of the selected category: factory preset indices, or indices into menuBank
   std::vector<int> bRows() {

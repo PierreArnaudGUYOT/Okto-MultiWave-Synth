@@ -29,7 +29,8 @@ inline constexpr double kMinRate = 8000, kMaxRate = 1536000;
 struct SharedState {
   std::atomic<float> gains[NB];
   std::atomic<float> center{0}, width{1}, depth{0}, peakL{0}, peakR{0};
-  std::atomic<int> note{-1}, mode{0};
+  std::atomic<int> note{-1}, mode{0}, view{0};   // view: the oscillator shown (the gains are its)
+  std::atomic<bool> slotLive{false};              // the oscillator shown plays in the last voice (else the panel shows its static gains)
   std::atomic<uint32_t> voices{0};
   std::atomic<uint32_t> keys[4];
   std::atomic<uint32_t> blocks{0};

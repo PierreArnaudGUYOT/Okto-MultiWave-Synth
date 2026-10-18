@@ -45,20 +45,7 @@ namespace ws {
 static const FUID kProcessorUID(0xAD0A5967, 0x9F4B4D8F, 0x98779E69, 0x04E4F2D0);
 static const FUID kControllerUID(0x7E02B916, 0x86914A57, 0xBCBCA737, 0xA4F08A21);
 static constexpr uint32_t kStateMagic = 0x31595357;  // "WSY1"
-static constexpr uint32_t kCtlMagic = 0x31435357;    // "WSC1" (beta 0.1): zoom, preset index, modified flag
 static constexpr uint32_t kCtlMagic2 = 0x32435357;   // "WSC2": zoom, modified flag, preset name
-// Factory order of the first beta 0.1 build: its "WSC1" states store an index into this list.
-static const char* const kBeta01Order[] = {
-    "A · Warm Pad", "B · Mirror Sub Bass", "A · Square Mod", "B · Init",
-    "A · Square Mod 2", "B · Octave Organ", "A · Init", "B · Chip Walsh",
-    "A · Wavelet Lead", "B · Walsh Bells", "A · Haar Bass", "B · Impulse Pluck",
-    "A · Edge Pluck", "B · Random Glass", "A · Sparse Keys", "B · Mirror Pad",
-    "A · Glass Pad", "B · Focus Sweep", "A · Noise Brass", "B · Soft Flute",
-    "A · Scanning Edge", "B · Music Box", "A · Clean Keys", "B · Space Choir",
-    "A · Infra Sub Bass", "B · Chip Echo", "A · Dub Echo Lead", "B · Distorted Organ",
-    "A · Fuzz Bass", "B · Alien Texture", "A · Cathedral Saw", "A · Laser Sweep",
-};
-
 // ------------------------------------------------------------------ helpers
 #ifdef _WIN32
 std::u16string toU16(const std::string& s) {
@@ -218,24 +205,17 @@ static bool readAll(IBStream* s, void* d, int32 n) { int32 got = 0; return s->re
 static bool writeAll(IBStream* s, const void* d, int32 n) { int32 put = 0; return s->write(const_cast<void*>(d), n, &put) == kResultOk && put == n; }
 
 // Reads a processor state blob into plain values (missing parameters keep their current value).
-// A state saved before beta 0.2 has no A/B MIX: it gets A/B MIX = ENGINE, so it plays the engine it was made for.
-// A state saved before beta 0.4 has no SOURCE PHASE: it gets 0, the source it was made with.
 static bool readState(IBStream* s, double* plain) {
   uint32_t magic = 0, version = 0, count = 0;
   if (!readAll(s, &magic, 4) || magic != kStateMagic) return false;
   if (!readAll(s, &version, 4) || !readAll(s, &count, 4) || count > 4096) return false;
-  bool sawMix = false, sawPhase = false;
   for (uint32_t k = 0; k < count; k++) {
     uint32_t id; double v;
     if (!readAll(s, &id, 4) || !readAll(s, &v, 8)) return false;
     if (id < (uint32_t)kNumParams && std::isfinite(v) && !kParams[id].hidden) {
       plain[id] = std::min(kParams[id].max, std::max(kParams[id].min, v));
-      if (id == (uint32_t)P_AB_MIX) sawMix = true;
-      if (id == (uint32_t)P_A_PHASE) sawPhase = true;
     }
   }
-  if (!sawMix) plain[P_AB_MIX] = plain[P_ENGINE];
-  if (!sawPhase) plain[P_A_PHASE] = kParams[P_A_PHASE].def;
   return true;
 }
 
@@ -398,14 +378,15 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
             const double old = plain[id].load();
             plain[id].store(pv);
             engine.setParam((int)id, pv);
-            // A/B MIX rebuilds the tables only when it reaches or leaves one end (engine A or B alone)
-            const bool mixEnds = id == (ParamID)P_AB_MIX && ((old < 1) != (pv < 1) || (old > 0) != (pv > 0));
+            // an oscillator's level rebuilds the tables only when it reaches or leaves 0 (the oscillator plays or not)
+            bool levelEnds = false;
+            for (int s = 0; s < NS; s++) if (id == (ParamID)kSlots[s].lvl && (old > 0) != (pv > 0)) levelEnds = true;
             // WAVELET MORPH needs (or no longer needs) the WAVELET 2 tables when one of its amounts leaves 0
             const bool morphEnds = (id == (ParamID)P_WMORPH || id == (ParamID)P_LFO_WAV || id == (ParamID)P_ENV_WAV) && ((old == 0) != (pv == 0));
             // SOURCE PHASE moved by LFO 2 (beta 0.4): the phase tables become needed or are no longer needed
             const bool phaseEnds = (id == (ParamID)P_LFO2_AMT && (old == 0) != (pv == 0)) ||
-                                   (id == (ParamID)P_LFO2_TARGET && (kLfo2Targets[(int)jsRound(old)] == P_A_PHASE) != (kLfo2Targets[(int)jsRound(pv)] == P_A_PHASE));
-            if (kParams[id].structural || mixEnds || morphEnds || phaseEnds) structVersion.fetch_add(1);
+                                   (id == (ParamID)P_LFO2_TARGET && (kLfo2Role[(int)jsRound(old)] == ROLE_PHASE) != (kLfo2Role[(int)jsRound(pv)] == ROLE_PHASE));
+            if ((kParams[id].structural && id != (ParamID)P_OSC_VIEW) || levelEnds || morphEnds || phaseEnds) structVersion.fetch_add(1);
           }
         }
       }
@@ -497,7 +478,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
       const Display& d = engine.disp;
       for (int b = 0; b < NB; b++) shared->gains[b].store(d.gains[b], std::memory_order_relaxed);
       shared->center.store(d.center); shared->width.store(d.width); shared->depth.store(d.depth);
-      shared->note.store(d.note); shared->mode.store(d.mode); shared->voices.store(d.voices);
+      shared->note.store(d.note); shared->mode.store(d.mode); shared->view.store(d.view); shared->slotLive.store(d.slotLive); shared->voices.store(d.voices);
       float o = shared->peakL.load(); while (d.peakL > o && !shared->peakL.compare_exchange_weak(o, d.peakL)) {}
       o = shared->peakR.load(); while (d.peakR > o && !shared->peakR.compare_exchange_weak(o, d.peakR)) {}
       engine.disp.peakL = 0; engine.disp.peakR = 0;
@@ -632,36 +613,25 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     return kResultOk;
   }
   // Editor state: zoom, and the preset shown in the browser with its "modified" flag. The preset is stored by name
-  // ("WSC2") so that a new factory order keeps saved Live Sets right; "WSC1" states (index into the beta 0.1 order)
-  // are translated through kBeta01Order.
+  // ("WSC2") so that a new factory order keeps saved Live Sets right.
   tresult PLUGIN_API setState(IBStream* state) override {
     if (!state) return kInvalidArgument;
     uint32_t magic = 0; float z = 1; int32_t dt = 0;
-    if (readAll(state, &magic, 4) && (magic == kCtlMagic || magic == kCtlMagic2) && readAll(state, &z, 4)) {
+    if (readAll(state, &magic, 4) && magic == kCtlMagic2 && readAll(state, &z, 4)) {
       if (std::isfinite(z)) zoomFactor = std::min(2.0f, std::max(0.5f, z));
       int k = -1;
-      if (magic == kCtlMagic2) {
-        uint32_t len = 0; char name[512];
-        if (readAll(state, &dt, 4) && readAll(state, &len, 4) && len < sizeof name && (len == 0 || readAll(state, name, (int32)len))) {
-          name[len] = 0;
-          // a stored name never holds a NUL byte (a padded or hostile state is ignored, as with the old 128-byte limit)
-          if (std::strlen(name) == len) {
-            k = findPreset(name);
-            // a sound of the user bank (beta 0.3): its name only, the sound itself is in the processor state
-            if (k < 0 && std::strncmp(name, kUserPrefix, std::strlen(kUserPrefix)) == 0 && len > std::strlen(kUserPrefix)) {
-              userName = name; formerName.clear(); dirty = dt != 0;
-            } else if (k < 0 && leftOut(name)) {   // beta 0.5: a factory preset of an older version, left out since
-              formerName = name; userName.clear(); dirty = dt != 0;
-            }
-            int32_t closed = 0;
-            browserOpen_ = !(readAll(state, &closed, 4) && closed == 1);
+      uint32_t len = 0; char name[512];
+      if (readAll(state, &dt, 4) && readAll(state, &len, 4) && len < sizeof name && (len == 0 || readAll(state, name, (int32)len))) {
+        name[len] = 0;
+        // a stored name never holds a NUL byte (a padded or hostile state is ignored, as with the old 128-byte limit)
+        if (std::strlen(name) == len) {
+          k = findPreset(name);
+          // a sound of the user bank (beta 0.3): its name only, the sound itself is in the processor state
+          if (k < 0 && std::strncmp(name, kUserPrefix, std::strlen(kUserPrefix)) == 0 && len > std::strlen(kUserPrefix)) {
+            userName = name; formerName.clear(); dirty = dt != 0;
           }
-        }
-      } else {
-        int32_t pi = -1;
-        if (readAll(state, &pi, 4) && readAll(state, &dt, 4) && pi >= 0 && pi < (int32_t)(sizeof kBeta01Order / sizeof *kBeta01Order)) {
-          k = findPreset(kBeta01Order[pi]);
-          if (k < 0 && leftOut(kBeta01Order[pi])) { formerName = kBeta01Order[pi]; userName.clear(); dirty = dt != 0; }   // beta 0.5
+          int32_t closed = 0;
+          browserOpen_ = !(readAll(state, &closed, 4) && closed == 1);
         }
       }
       if (k >= 0) { presetIdx = k; dirty = dt != 0; userName.clear(); formerName.clear(); }
@@ -778,9 +748,9 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     double v = toNorm(kParams[id], pv);
     if (norm[id] == v) return;
     norm[id] = v; version++;
-    // the ENGINE tabs only choose the panel shown: switching them does not modify the sound; Okto MultiWave Synth: the chord keyboard's
+    // the OSC tabs only choose the panel shown: switching them does not modify the sound; the chord keyboard's
     // settings (perf) are not a sound either
-    if (!kParams[id].hidden && !kParams[id].perf && id != P_ENGINE && !dirty) { dirty = true; }
+    if (!kParams[id].hidden && !kParams[id].perf && id != P_OSC_VIEW && !dirty) { dirty = true; }
     if (handler) handler->performEdit(id, v);
   }
   void endEdit(int id) override { if (handler) handler->endEdit(id); }
@@ -840,13 +810,13 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     if (h2) { h2->finishGroupEdit(); h2->release(); }
   }
 
-  int exactPreset() const {   // the factory preset whose sound is exactly the current one (ENGINE = panel shown), or -1
+  int exactPreset() const {   // the factory preset whose sound is exactly the current one (OSC = panel shown), or -1
     std::vector<std::array<double, kNumParams>> lib(kNumPresets);   // as the player may have adjusted them
     for (int k = 0; k < kNumPresets; k++) Library::get().values(k, lib[k].data());
     for (int k = 0; k < kNumPresets; k++) {
       bool same = true;
       for (int i = 0; i < kNumParams && same; i++)
-        if (!kParams[i].hidden && !kParams[i].perf && i != P_ENGINE && std::fabs(toNorm(kParams[i], lib[k][i]) - norm[i]) > 1e-6) same = false;
+        if (!kParams[i].hidden && !kParams[i].perf && i != P_OSC_VIEW && std::fabs(toNorm(kParams[i], lib[k][i]) - norm[i]) > 1e-6) same = false;
       if (same) return k;
     }
     return -1;
@@ -854,10 +824,6 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
   static int findPreset(const char* name) {
     if (*name) return Library::get().find(name);   // its name now, else its built-in name
     return -1;
-  }
-  static bool leftOut(const char* name) {   // beta 0.5: a factory preset of an earlier version
-    for (int i = 0; i < kNumLeftOut; i++) if (std::strcmp(name, kLeftOutPresets[i]) == 0) return true;
-    return false;
   }
 };
 

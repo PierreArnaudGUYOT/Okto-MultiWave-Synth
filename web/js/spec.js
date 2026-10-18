@@ -3116,28 +3116,28 @@ var WS_SPEC = {
      "type": "seg",
      "param": "osc_view",
      "style": "engine",
-     "x": 290,
+     "x": 278,
      "y": 9,
-     "w": 264,
+     "w": 240,
      "h": 30
     },
     {
      "type": "presets",
-     "x": 566,
+     "x": 526,
      "y": 9,
-     "w": 236,
+     "w": 220,
      "h": 30
     },
     {
      "type": "evaluate",
-     "x": 808,
+     "x": 752,
      "y": 9,
      "w": 104,
      "h": 30
     },
     {
      "type": "manual",
-     "x": 918,
+     "x": 936,
      "y": 9,
      "w": 68,
      "h": 30

@@ -78,12 +78,12 @@ inline std::string bankNum(double v) {   // up to 6 decimals, no trailing zeros
   if (!s.empty() && s.back() == '.') s.pop_back();
   return s == "-0" ? "0" : s;
 }
-// the parameter lines of a sound: those that differ from the defaults, ENGINE and A/B MIX always
+// the parameter lines of a sound: those that differ from the defaults, OSC (the oscillator shown) always
 inline void paramLines(const double* v, std::string& s) {
   for (int i = 0; i < kNumParams; i++) {
     const ParamDef& d = kParams[i];
     if (d.hidden || d.perf) continue;   // Okto MultiWave Synth: the chord keyboard's settings are not a sound
-    if (i != P_ENGINE && i != P_AB_MIX && std::fabs(v[i] - d.def) <= 1e-9 * std::max(1.0, std::fabs(d.def))) continue;
+    if (i != P_OSC_VIEW && std::fabs(v[i] - d.def) <= 1e-9 * std::max(1.0, std::fabs(d.def))) continue;
     s += std::string("  ") + d.key + ": " + bankNum(v[i]) + "   (" + d.name + ": " + formatValue(d, v[i]) + ")\r\n";
   }
 }
