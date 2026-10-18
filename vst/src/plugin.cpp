@@ -35,6 +35,7 @@
 #include "pluginterfaces/vst/vsttypes.h"
 #include "common.h"
 #include "bank.h"
+#include "generated/vote_data.h"   // EVALUATE SOUNDS: the listening passage
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -291,7 +292,15 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
         uint32_t v = structVersion.load();
         int idx = claimFree();
         if (idx >= 0) {
-          buildTables(snap, true, sets[idx]);
+          try {
+            buildTables(snap, true, sets[idx]);
+          } catch (...) {   // out of memory: the host is told, it does not crash
+            setState_[idx].store(kFree);
+            return kResultFalse;
+          }
+          // a set the builder thread published for an older state must not replace this one at the next block
+          const int stale = pendingIdx.exchange(-1);
+          if (stale >= 0) setState_[stale].store(kFree);
           setState_[idx].store(kActive);
           engine.setTables(tableRef(sets[idx]));
           builtVersion.store(v);
@@ -427,9 +436,20 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
         else if (e.vel == 0) engine.keyOff(e.note);
         else engine.keyOn(e.note, e.vel / 127.0);
       }
+      // EVALUATE SOUNDS: the listening passage (commands from the editor)
+      const int stop = shared->seqStop.exchange(0);
+      if (stop) {
+        seqRelease();
+        if (stop == 2) engine.allSoundOff();
+        seqI = -1; seqWait = false; shared->seqTime.store(-1);
+      }
+      const uint32_t st = shared->seqStart.load();
+      if (st != seqSeen) { seqSeen = st; seqRelease(); seqI = 0; seqPos = 0; seqWait = true; shared->seqTime.store(-1); }
+      // it starts once the sound of the preset just loaded is ready (its tables built and in use)
+      if (seqWait && structVersion.load() == builtVersion.load() && pendingIdx.load() < 0) seqWait = false;
     }
 
-    // 4. audio with sample-accurate note events
+    // 4. audio with sample-accurate note events (from the host, and the listening passage)
     const int32 ns = data.numSamples;
     float* L = nullptr; float* R = nullptr;
     if (data.numOutputs > 0 && data.outputs && data.outputs[0].numChannels > 0 && ns > 0) {
@@ -442,17 +462,40 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     }
     IEventList* events = data.inputEvents;
     int32 ne = events ? events->getEventCount() : 0;
-    int32 pos = 0;
-    for (int32 i = 0; i < ne; i++) {
+    const bool seqOn = seqI >= 0 && !seqWait;
+    int32 pos = 0, hi = 0;
+    for (;;) {
+      // the next host event and the next passage event: the earlier first (the passage first on the same sample)
       Event e{};
-      if (events->getEvent(i, e) != kResultOk) continue;
-      int32 off = std::max(0, std::min(ns, e.sampleOffset));
+      int32 hOff = INT32_MAX, sOff = INT32_MAX;
+      while (hi < ne && events->getEvent(hi, e) != kResultOk) hi++;
+      if (hi < ne) hOff = std::max(0, std::min(ns, e.sampleOffset));
+      if (seqOn && seqI < kVotePassageN) {
+        const int64_t t = std::llround(kVotePassage[seqI].t * engine.sr) - seqPos;
+        if (t < ns) sOff = (int32)std::max<int64_t>(0, t);
+      }
+      if (hOff == INT32_MAX && sOff == INT32_MAX) break;
+      const int32 off = std::min(hOff, sOff);
       if (L && off > pos) { engine.process(L + pos, R + pos, off - pos); pos = off; }
-      if (e.type == Event::kNoteOnEvent) engine.keyOn(e.noteOn.pitch, e.noteOn.velocity);   // Okto MultiWave Synth: the chord layer
-      else if (e.type == Event::kNoteOffEvent) engine.keyOff(e.noteOff.pitch);
+      if (sOff <= hOff) {
+        const VoteEv& v = kVotePassage[seqI++];
+        // the same pitch can be held twice by the score: it is released on its last note-off; the notes play as themselves (not
+        // through the chord layer)
+        if (v.vel > 0) { seqCount[v.note]++; engine.noteOn(v.note, v.vel); }
+        else if (seqCount[v.note] > 0 && --seqCount[v.note] == 0) engine.noteOff(v.note);
+      } else {
+        if (e.type == Event::kNoteOnEvent) engine.keyOn(e.noteOn.pitch, e.noteOn.velocity);   // Okto MultiWave Synth: the chord layer
+        else if (e.type == Event::kNoteOffEvent) engine.keyOff(e.noteOff.pitch);
+        hi++;
+      }
     }
     if (L && pos < ns) engine.process(L + pos, R + pos, ns - pos);
     if (L) data.outputs[0].silenceFlags = 0;
+    if (seqOn && shared) {
+      seqPos += ns;
+      if (seqI >= kVotePassageN) { seqI = -1; shared->seqDone.store(seqSeen); shared->seqTime.store(-1); }
+      else shared->seqTime.store((float)(seqPos / engine.sr));
+    }
     // Okto MultiWave Synth: a key of the selector octave chose a chord type: the parameter follows, the host and its controller are
     // told through the output parameter changes (and the editor through the shared state, for hosts that do not forward)
     if (engine.chordTypeChanged) {
@@ -534,6 +577,13 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
   IConnectionPoint* peer = nullptr;
   std::shared_ptr<SharedState> shared;
   int64_t sharedId = 0;
+  // EVALUATE SOUNDS: the listening passage
+  uint32_t seqSeen = 0;          // the last seqStart number handled
+  int seqI = -1;                 // next event of kVotePassage, -1 = not playing
+  bool seqWait = false;          // waiting for the sound of the preset just loaded
+  int64_t seqPos = 0;            // samples played since its first note
+  uint8_t seqCount[128] = {};    // passage notes held per pitch
+  void seqRelease() { for (int n = 0; n < 128; n++) if (seqCount[n]) { seqCount[n] = 0; engine.noteOff(n); } }
 
   int claimFree() {
     for (int s = 0; s < kSets; s++) { int f = kFree; if (setState_[s].compare_exchange_strong(f, kBuilding)) return s; }
@@ -551,7 +601,15 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
           int idx = claimFree();
           if (idx < 0) { lk.unlock(); std::this_thread::sleep_for(std::chrono::milliseconds(2)); continue; }
           double snap[kNumParams]; for (int i = 0; i < kNumParams; i++) snap[i] = plain[i].load();
-          buildTables(snap, true, sets[idx]);
+          try {
+            buildTables(snap, true, sets[idx]);
+          } catch (...) {   // out of memory: the sound keeps its tables, this state is given up (the next change tries again)
+            setState_[idx].store(kFree);
+            builtVersion.store(v);
+            lk.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+          }
           builtVersion.store(v);
           setState_[idx].store(kPending);
           int old = pendingIdx.exchange(idx);
@@ -774,6 +832,11 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
   void presetStored(int index) override {
     if (index >= 0 && index < kNumPresets) presetIdx = index;
     dirty = false; userName.clear(); formerName.clear(); version++;
+  }
+  void setSound(const double* pv, int index, bool modified) override {
+    applySound(pv);
+    if (index >= 0 && index < kNumPresets) presetIdx = index;
+    dirty = modified; userName.clear(); formerName.clear(); version++;
   }
   bool browserOpen() override { return browserOpen_; }
   void setBrowserOpen(bool open) override { browserOpen_ = open; }

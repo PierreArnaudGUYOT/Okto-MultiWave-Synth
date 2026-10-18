@@ -28,7 +28,7 @@ where node >nul 2>nul && (
   node "%ROOT%\tools\gen_spec.js" || exit /b 1
 )
 
-set "FLAGS=-std=c++17 -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-parameter -Wno-pragma-pack -Wno-format -DUNICODE -D_UNICODE -DNOMINMAX -I"%HERE%external" -I"%HERE%src""
+set "FLAGS=-std=c++17 -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-parameter -Wno-pragma-pack -Wno-format -DUNICODE -D_UNICODE -DNOMINMAX -ffp-contract=off -I"%HERE%external" -I"%HERE%src""
 echo [2/4] compiling
 for %%F in (plugin editor editor_win iids vst2) do (
   x86_64-w64-mingw32-clang++ %FLAGS% -c "%HERE%src\%%F.cpp" -o "%OBJ%\%%F.o" || exit /b 1

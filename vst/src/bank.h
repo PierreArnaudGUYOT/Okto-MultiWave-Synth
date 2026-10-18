@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -106,7 +107,7 @@ class Library {
 
   std::wstring path() { return pathOf(); }
   // reads the file again when it changed on disk (another instance or another editor wrote it)
-  void refresh() { std::lock_guard<std::mutex> l(m); refreshLocked(); }
+  void refresh() { std::lock_guard<std::mutex> l(m); refreshLocked(true); }
   uint32_t version() { return ver.load(); }   // changes with the content (the editor redraws)
 
   std::string name(int k) { std::lock_guard<std::mutex> l(m); refreshLocked(); return k >= 0 && k < kNumPresets ? s.names[k] : ""; }
@@ -129,7 +130,7 @@ class Library {
 
   // Edits: each one writes the whole file; on an error nothing changes and the Windows error text is returned.
   std::wstring adjust(int k, const std::string& newName, const double* v) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (k < 0 || k >= kNumPresets) return L"no such preset";
     State t = s;
     t.names[k] = newName;
@@ -138,7 +139,7 @@ class Library {
     return commit(t);
   }
   std::wstring restore(int k) {   // the built-in preset again
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (k < 0 || k >= kNumPresets) return L"no such preset";
     State t = s;
     t.names[k] = kPresets[k].name;
@@ -147,7 +148,7 @@ class Library {
     return commit(t);
   }
   std::wstring setDeleted(int k, bool del) {   // a factory preset hidden from the lists, or shown again
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (k < 0 || k >= kNumPresets) return L"no such preset";
     State t = s;
     t.del[k] = del ? 1 : 0;
@@ -155,7 +156,7 @@ class Library {
   }
   // adds p to the user bank, or replaces the sound (section, replaceName) / (p.section, p.name)
   std::wstring putUser(const BankPreset& p, const std::string& replaceName = "") {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     State t = s;
     const std::string key = replaceName.empty() ? p.name : replaceName;
     t.user.erase(std::remove_if(t.user.begin(), t.user.end(), [&](const BankPreset& q) {
@@ -167,7 +168,7 @@ class Library {
     return commit(t);
   }
   std::wstring removeUser(int section, const std::string& n) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     State t = s;
     t.user.erase(std::remove_if(t.user.begin(), t.user.end(), [&](const BankPreset& q) { return q.section == section && q.name == n; }), t.user.end());
     return commit(t);
@@ -181,7 +182,7 @@ class Library {
   }
   // MOVE UP (dir -1) / DOWN (+1): preset k swaps with the next one of list i that is not deleted
   std::wstring moveInList(int i, int k, int dir) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (i < 0 || i >= (int)s.lists.size()) return L"no such list";
     State t = s;
     std::vector<int>& v = t.lists[i];
@@ -202,7 +203,7 @@ class Library {
   // beta 0.5: preset k into the category list `to` (1..): at the end of it, or at its own place when it goes back to its
   // built-in category; "" when done or already there
   std::wstring moveToCategory(int k, int to) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (k < 0 || k >= kNumPresets || to < 1 || to >= (int)s.lists.size()) return L"no such preset or category";
     if (catOf(s, k) == to) return L"";
     State t = s;
@@ -216,7 +217,7 @@ class Library {
   }
   // beta 0.5: preset k added to TOP Sounds (at the end) or taken out of it
   std::wstring setTop(int k, bool on) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (k < 0 || k >= kNumPresets) return L"no such preset";
     State t = s;
     std::vector<int>& v = t.lists[0];
@@ -228,7 +229,7 @@ class Library {
   // beta 0.5: a sound of the user bank into another section (at its end); the editor checks first that no sound of that
   // section has its name
   std::wstring moveUserTo(int section, const std::string& n, int to) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     if (to < 0 || to >= kNumBankSections) return L"no such section";
     State t = s;
     auto it = std::find_if(t.user.begin(), t.user.end(), [&](const BankPreset& q) { return q.section == section && q.name == n; });
@@ -242,7 +243,7 @@ class Library {
   }
   // MOVE UP / DOWN in the user bank: the sound swaps with the next one of its section
   std::wstring moveUser(int section, const std::string& n, int dir) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     State t = s;
     int at = -1;
     for (int j = 0; j < (int)t.user.size(); j++) if (t.user[j].section == section && t.user[j].name == n) at = j;
@@ -252,7 +253,7 @@ class Library {
     return L"";
   }
   std::wstring exportTo(const std::wstring& to) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     return writeTextFile(to, text(s));
   }
   // IMPORT (beta 0.4): the presets of another file (an EXPORT, someone's "OKTOMULTIWAVE presets.txt", a beta 0.3 user bank)
@@ -260,7 +261,7 @@ class Library {
   // current file is then kept as "OKTOMULTIWAVE presets (backup <date> <time>).txt" next to it (`backup`, "" when there was
   // none). Returns "" or the error (the library is then unchanged).
   std::wstring importFrom(const std::wstring& from, std::wstring& backup) {
-    std::lock_guard<std::mutex> l(m); refreshLocked();
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
     backup.clear();
     bool found = false;
     const std::string all = readTextFile(from, found);
@@ -305,6 +306,8 @@ class Library {
   std::mutex m;
   State s;
   bool loaded = false, existed = false;
+  bool tooBig = false;   // the file is longer than 16 MB: it was read cut, so nothing is ever written over it
+  std::chrono::steady_clock::time_point checked{};   // when the file was last looked at (readers look at most every 500 ms)
   uint64_t stamp = 0, size = 0;   // the file's last write time and size when read or written
   std::atomic<uint32_t> ver{1};
 
@@ -343,16 +346,22 @@ class Library {
     for (size_t i = 1; i < t.lists.size(); i++) if (std::count(t.lists[i].begin(), t.lists[i].end(), k)) return (int)i;
     return -1;
   }
+  // the folder of the plug-in does not change while it runs: asked once (it takes the system a few calls)
+  static const std::wstring& folder() { static const std::wstring f = libraryFolder(); return f; }
   static std::wstring pathOf() {
     const std::wstring e = envPath(L"WS_PRESETS_FILE");
-    return e.empty() ? libraryFolder() + kPathSep + L"OKTOMULTIWAVE presets.txt" : e;
+    return e.empty() ? folder() + kPathSep + L"OKTOMULTIWAVE presets.txt" : e;
   }
   static std::wstring oldBankPath() {
     const std::wstring e = envPath(L"WS_PRESETS_FILE");
     if (!e.empty()) return e + L".oldbank";   // tests: never the player's files
-    return libraryFolder() + kPathSep + L"Okto MultiWave Synth user bank.txt";
+    return folder() + kPathSep + L"Okto MultiWave Synth user bank.txt";
   }
-  void refreshLocked() {
+  // hard: look at the file now (every edit does); otherwise at most every 500 ms
+  void refreshLocked(bool hard = false) {
+    const auto now = std::chrono::steady_clock::now();
+    if (!hard && loaded && now - checked < std::chrono::milliseconds(500)) return;
+    checked = now;
     uint64_t st = 0, sz = 0;
     const bool exists = fileStamp(pathOf(), st, sz);
     if (!exists) sz = 0;
@@ -361,15 +370,17 @@ class Library {
     if (exists) stamp = st;
     State t;
     builtIn(t);
-    bool found = false;
-    std::string all = readTextFile(pathOf(), found);
-    if (!found) all = readTextFile(oldBankPath(), found);   // the beta 0.3 user bank, before the library file existed
-    if (found) parse(all, t);
+    bool found = false, cut = false;
+    std::string all = readTextFile(pathOf(), found, &cut);
+    if (!found) all = readTextFile(oldBankPath(), found, &cut);   // the beta 0.3 user bank, before the library file existed
+    tooBig = cut;
+    if (found && !cut) parse(all, t);
     s = std::move(t);
     ver++;
   }
   // after a successful write the new content is the state, and the file stamp is taken (no reload)
   std::wstring commit(State& t) {
+    if (tooBig) return L"the presets file is longer than 16 MB: it is left as it is";
     const std::wstring e = writeTextFile(pathOf(), text(t));
     if (!e.empty()) return e;
     s = std::move(t);

@@ -25,6 +25,12 @@ function WSCoreFactory(SPEC) {
   const VOICE_GAIN = 0.4;   // about -8 dB per voice: headroom for chords
   const LIMIT_T = 0.7;      // output soft limiter: transparent below -3 dBFS, never above 0 dBFS
   const CH_BASE = 0.006, CH_DEPTH = 0.003, CH_FAST = 9.7;   // chorus: base delay, sweep per unit of depth (s), fast/slow LFO ratio
+  // the three chorus taps are 120 degrees apart: sin(a + 2*pi*c/3) = sin(a) * CH_COS[c] + cos(a) * CH_SIN[c]
+  const CH_COS = [1, -0.5, -0.5], CH_SIN = [0, 0.8660254037844386, -0.8660254037844386];
+  // an effect that has nothing left to give is skipped: no voice, and the output under QUIET_PEAK for a whole echo (see block)
+  const QUIET_PEAK = 1e-9, QUIET_EXTRA = 4096;
+  // the smoothing constants below are given per sample at 48 kHz (as in the earlier versions); other rates get the same time constant
+  const rateCoef = (a48, sr) => (sr === 48000 ? a48 : 1 - Math.pow(1 - a48, 48000 / sr));
   const DLY_MAX = 4;   // beta 0.6: the longest delay (s): a whole note at 60 BPM (tempo sync)
 
   const P = {};
@@ -110,7 +116,7 @@ function WSCoreFactory(SPEC) {
       const half = M >> 1, na = new Float64Array(half);
       for (let k = 0; k < half; k++) {
         let sa = 0, sd = 0;
-        for (let n = 0; n < f.L; n++) { const v = a[(2 * k + n) % M]; sa += f.h[n] * v; sd += f.g[n] * v; }
+        for (let n = 0; n < f.L; n++) { const v = a[(2 * k + n) & (M - 1)]; sa += f.h[n] * v; sd += f.g[n] * v; }
         na[k] = sa; c[half + k] = sd;
       }
       a = na; M = half;
@@ -125,7 +131,7 @@ function WSCoreFactory(SPEC) {
       for (let k = 0; k < half; k++) {
         const ak = a[k], dk = c[half + k];
         if (ak === 0 && dk === 0) continue;
-        for (let n = 0; n < f.L; n++) { const i = (2 * k + n) % M; x[i] += f.h[n] * ak + f.g[n] * dk; }
+        for (let n = 0; n < f.L; n++) { const i = (2 * k + n) & (M - 1); x[i] += f.h[n] * ak + f.g[n] * dk; }
       }
       a = x;
     }
@@ -363,7 +369,7 @@ function WSCoreFactory(SPEC) {
         else att = slope * softplus(Math.abs(d) - 0.5);
         const boost = res * Math.exp(-d * d / (2 * 0.36));
         att = Math.min(att, 140);
-        g = Math.pow(10, (boost - att) / 20);
+        g = Math.exp((boost - att) * (Math.LN10 / 20));
       }
       out[b] = g;
     }
@@ -521,12 +527,17 @@ function WSCoreFactory(SPEC) {
     this.dlyW = 0; this.dlyT = this.delaySec() * sr; this.lpL = 0; this.lpR = 0;
     const sc = sr / 44100;
     const cT = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617], aT = [556, 441, 341, 225];
-    this.combs = []; this.aps = [];
+    // the reverb's lines side by side: 16 combs (8 per channel) and 8 all-pass filters (4 per channel)
+    this.cB = []; this.cLen = new Int32Array(16); this.cI = new Int32Array(16); this.cF = new Float64Array(16);
+    this.aB = []; this.aLen = new Int32Array(8); this.aI = new Int32Array(8);
     for (let ch = 0; ch < 2; ch++) {
-      for (const t of cT) this.combs.push({ buf: new Float32Array(Math.round((t + ch * 23) * sc)), i: 0, f: 0, ch });
-      for (const t of aT) this.aps.push({ buf: new Float32Array(Math.round((t + ch * 23) * sc)), i: 0, ch });
+      for (let k = 0; k < 8; k++) { const len = Math.round((cT[k] + ch * 23) * sc); this.cB.push(new Float32Array(len)); this.cLen[ch * 8 + k] = len; }
+      for (let k = 0; k < 4; k++) { const len = Math.round((aT[k] + ch * 23) * sc); this.aB.push(new Float32Array(len)); this.aLen[ch * 4 + k] = len; }
     }
-    this.vol = Math.pow(10, this.p[P.master] / 20);
+    this.kDly = rateCoef(0.0005, sr); this.kLp = rateCoef(0.35, sr); this.kVol = rateCoef(0.002, sr);
+    this.damp = sr === 48000 ? 0.25 : Math.pow(0.25, 48000 / sr);
+    this.quiet = 0; this.quietNeed = 1 << 30;   // samples of silence so far, and how many an idle skip needs (set by every block)
+    this.vol = Math.exp(this.p[P.master] * (Math.LN10 / 20));
     this.dcR = 1 - 2 * Math.PI * 10 / sr; this.dcxL = 0; this.dcyL = 0; this.dcxR = 0; this.dcyR = 0;
     this.chLen = Math.ceil(sr * 0.03) + 4;
     this.chBuf = new Float32Array(this.chLen); this.chW = 0; this.chPh = 0; this.chPh2 = 0;
@@ -584,7 +595,9 @@ function WSCoreFactory(SPEC) {
   };
 
   E.noteOn = function (note, vel) {
-    if (vel <= 0) { this.noteOff(note); return; }
+    if (!(note >= 0 && note < 128)) return;
+    if (!(vel > 0)) { this.noteOff(note); return; }   // also a NaN
+    if (vel > 1) vel = 1;
     let othersHeld = false;
     for (let k = 0; k < 128; k++) if (k !== note && this.keys[k]) { othersHeld = true; break; }
     const porta = Math.round(this.p[P.v_porta]);
@@ -663,9 +676,11 @@ function WSCoreFactory(SPEC) {
     this.stack.length = 0; this.keys.fill(0); this.chordClear();
     for (const vc of this.voices) { vc.active = false; vc.gate = false; vc.held = false; vc.amp.stage = 0; vc.amp.level = 0; vc.mod.stage = 0; vc.mod.level = 0; }
     this.dlyL.fill(0); this.dlyR.fill(0); this.lpL = 0; this.lpR = 0;
-    for (const c of this.combs) { c.buf.fill(0); c.f = 0; }
-    for (const a of this.aps) a.buf.fill(0);
+    for (const b of this.cB) b.fill(0);
+    this.cF.fill(0);
+    for (const b of this.aB) b.fill(0);
     this.chBuf.fill(0);
+    this.quiet = 0;
   };
 
   // ---------------------------------------------------------------- Okto MultiWave Synth: the chord layer
@@ -686,7 +701,7 @@ function WSCoreFactory(SPEC) {
   E.holdOff = function (note) { if (this.holdCnt[note] > 0 && --this.holdCnt[note] === 0) this.noteOff(note); };
   E.keyOn = function (note, vel) {
     if (note < 0 || note > 127) return;
-    if (vel <= 0) { this.keyOff(note); return; }
+    if (!(vel > 0)) { this.keyOff(note); return; }
     if (this.p[P.chord_mode] < 0.5) { this.noteOn(note, vel); return; }
     const base = this.chordBase();
     if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
@@ -1074,13 +1089,37 @@ function WSCoreFactory(SPEC) {
     }
   };
 
+  E.anyVoice = function () { for (let k = 0; k < MAXV; k++) if (this.voices[k].active) return true; return false; };
+
+  // The oscillator shown on the panel, and the level meters
+  E.publish = function (pkL, pkR, voices) {
+    const d = this.disp, view = Math.round(this.p[P.osc_view]);
+    d.peakL = pkL; d.peakR = pkR; d.voices = voices;
+    d.view = view; d.mode = SLOTS[view].mode;
+    const lv = this.lastVoice >= 0 ? this.voices[this.lastVoice] : null;
+    if (lv && lv.active && lv.sl[view].live) {
+      const sl = lv.sl[view];
+      for (let b = 0; b < NB; b++) d.gains[b] = sl.g[b];
+      d.center = sl.pc; d.width = sl.pw; d.depth = sl.pd; d.note = lv.note; d.slotLive = true;
+    } else { d.note = lv && lv.active ? lv.note : -1; d.slotLive = false; }
+  };
+
   E.block = function (outL, outR, o, n) {
     const p = this.p, L = this.bufL, R = this.bufR;
     this.strumTick(); this.clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
-    L.fill(0, 0, n); R.fill(0, 0, n);
     this.started = true;
     this.lfoTick(n);
     this.lfo2Tick(n);
+    // Idle: no voice, no table fade, and the output has been silent for longer than any echo takes to come back (the delay's time
+    // while it is on, the reverb's lines and the chorus's 4096 more samples): the effects have nothing left to give, so the block
+    // is not computed. The master level and the delay time take their values at once, as they would have by the next note.
+    if (this.quiet >= this.quietNeed && !this.prev && !this.anyVoice()) {
+      outL.fill(0, o, o + n); outR.fill(0, o, o + n);
+      this.vol = Math.exp(p[P.master] * (Math.LN10 / 20)); this.dlyT = this.delaySec() * this.sr;
+      this.publish(this.disp.peakL, this.disp.peakR, 0);
+      return;
+    }
+    L.fill(0, 0, n); R.fill(0, 0, n);
     let voices = 0;
     const fading = !!this.prev, fadeInc = fading ? 1 / 512 : 0, fade0 = fading ? this.fade : 1;
     this.prepBlock(n, fading);
@@ -1116,15 +1155,26 @@ function WSCoreFactory(SPEC) {
     if (fading) { this.fade += n * fadeInc; if (this.fade >= 1) { this.fade = 1; this.prev = null; } }
 
     // ---- effects
-    const drive = p[P.fx_drive], k = Math.pow(10, drive * 24 / 20), comp = 0.5 / Math.tanh(0.5 * k);
+    const drive = p[P.fx_drive], k = Math.exp(drive * 24 * (Math.LN10 / 20)), comp = 0.5 / Math.tanh(0.5 * k);
     const fb = p[P.fx_dfb], dmix = p[P.fx_dmix], rmix = p[P.fx_rmix];
     const dTarget = this.delaySec() * this.sr, dlen = this.dlyLen;
-    const feedback = 0.7 + 0.28 * p[P.fx_rsize], damp = 0.25;
-    const volT = Math.pow(10, p[P.master] / 20);
+    const feedback = 0.7 + 0.28 * p[P.fx_rsize], damp = this.damp;
+    const volT = Math.exp(p[P.master] * (Math.LN10 / 20));
+    const kDly = this.kDly, kLp = this.kLp, kVol = this.kVol;
     const chMix = p[P.ch_mix], chLen = this.chLen, chBuf = this.chBuf;
     const chBase = CH_BASE * this.sr, chDepth = p[P.ch_depth] * CH_DEPTH * this.sr;
     const chInc = p[P.ch_rate] / this.sr, chInc2 = chInc * CH_FAST;
-    let pkL = this.disp.peakL, pkR = this.disp.peakR;
+    // the chorus's two LFOs as rotating vectors (sin and cos of the phase, turned by one step per sample): two sines and two
+    // cosines per block instead of six sines per sample
+    let sa = 0, ca = 0, sb = 0, cb = 0, cosA = 1, sinA = 0, cosB = 1, sinB = 0;
+    if (chMix > 0) {
+      sa = Math.sin(2 * Math.PI * this.chPh); ca = Math.cos(2 * Math.PI * this.chPh);
+      sb = Math.sin(2 * Math.PI * this.chPh2); cb = Math.cos(2 * Math.PI * this.chPh2);
+      cosA = Math.cos(2 * Math.PI * chInc); sinA = Math.sin(2 * Math.PI * chInc);
+      cosB = Math.cos(2 * Math.PI * chInc2); sinB = Math.sin(2 * Math.PI * chInc2);
+    }
+    const cB = this.cB, cLen = this.cLen, cI = this.cI, cF = this.cF, aB = this.aB, aLen = this.aLen, aI = this.aI;
+    let pkL = this.disp.peakL, pkR = this.disp.peakR, bpk = 0;
     for (let i = 0; i < n; i++) {
       let l = L[i], r = R[i];
       if (drive > 0) {
@@ -1137,11 +1187,13 @@ function WSCoreFactory(SPEC) {
       if (chMix > 0) {
         this.chPh += chInc; if (this.chPh >= 1) this.chPh -= 1;
         this.chPh2 += chInc2; if (this.chPh2 >= 1) this.chPh2 -= 1;
+        let t = sa * cosA + ca * sinA; ca = ca * cosA - sa * sinA; sa = t;
+        t = sb * cosB + cb * sinB; cb = cb * cosB - sb * sinB; sb = t;
         let v0 = 0, v1 = 0, v2 = 0;
         for (let c = 0; c < 3; c++) {
-          const mo = 0.8 * Math.sin(2 * Math.PI * (this.chPh + c / 3)) + 0.2 * Math.sin(2 * Math.PI * (this.chPh2 + c / 3));
+          const mo = 0.8 * (sa * CH_COS[c] + ca * CH_SIN[c]) + 0.2 * (sb * CH_COS[c] + cb * CH_SIN[c]);
           let rp = this.chW - (chBase + chDepth * (1 + mo)); if (rp < 0) rp += chLen;
-          const i0 = Math.floor(rp), fr = rp - i0, i1 = (i0 + 1) % chLen;
+          const i0 = Math.floor(rp), fr = rp - i0; let i1 = i0 + 1; if (i1 >= chLen) i1 = 0;
           const v = chBuf[i0] + fr * (chBuf[i1] - chBuf[i0]);
           if (c === 0) v0 = v; else if (c === 1) v1 = v; else v2 = v;
         }
@@ -1150,13 +1202,13 @@ function WSCoreFactory(SPEC) {
       }
       if (++this.chW >= chLen) this.chW = 0;
       // ping-pong delay
-      this.dlyT += (dTarget - this.dlyT) * 0.0005;
+      this.dlyT += (dTarget - this.dlyT) * kDly;
       if (dmix > 0 || fb > 0) {
         let rp = this.dlyW - this.dlyT; if (rp < 0) rp += dlen;
-        const i0 = rp | 0, fr = rp - i0, i1 = (i0 + 1) % dlen;
+        const i0 = rp | 0, fr = rp - i0; let i1 = i0 + 1; if (i1 >= dlen) i1 = 0;
         const dl = this.dlyL[i0] + fr * (this.dlyL[i1] - this.dlyL[i0]);
         const dr = this.dlyR[i0] + fr * (this.dlyR[i1] - this.dlyR[i0]);
-        this.lpL += (dl - this.lpL) * 0.35; this.lpR += (dr - this.lpR) * 0.35;
+        this.lpL += (dl - this.lpL) * kLp; this.lpR += (dr - this.lpR) * kLp;
         this.dlyL[this.dlyW] = 0.5 * (L[i] + R[i]) + fb * this.lpR;
         this.dlyR[this.dlyW] = fb * this.lpL;
         l += dmix * dl; r += dmix * dr;
@@ -1166,40 +1218,35 @@ function WSCoreFactory(SPEC) {
       if (rmix > 0) {
         const inp = (l + r) * 0.015;
         let wl = 0, wr = 0;
-        for (const c of this.combs) {
-          const y = c.buf[c.i];
-          c.f = y * (1 - damp) + c.f * damp;
-          c.buf[c.i] = inp + c.f * feedback;
-          if (++c.i >= c.buf.length) c.i = 0;
-          if (c.ch === 0) wl += y; else wr += y;
+        for (let q = 0; q < 16; q++) {
+          const buf = cB[q], ci = cI[q], y = buf[ci];
+          const f = y * (1 - damp) + cF[q] * damp; cF[q] = f;
+          buf[ci] = inp + f * feedback;
+          cI[q] = ci + 1 >= cLen[q] ? 0 : ci + 1;
+          if (q < 8) wl += y; else wr += y;
         }
-        for (const a of this.aps) {
-          const bo = a.buf[a.i], x = a.ch === 0 ? wl : wr;
-          a.buf[a.i] = x + bo * 0.5;
-          if (++a.i >= a.buf.length) a.i = 0;
-          if (a.ch === 0) wl = bo - x; else wr = bo - x;
+        for (let q = 0; q < 8; q++) {
+          const buf = aB[q], ai = aI[q], bo = buf[ai], x = q < 4 ? wl : wr;
+          buf[ai] = x + bo * 0.5;
+          aI[q] = ai + 1 >= aLen[q] ? 0 : ai + 1;
+          if (q < 4) wl = bo - x; else wr = bo - x;
         }
         l += rmix * wl * 1.5; r += rmix * wr * 1.5;
       }
       // DC blocker (10 Hz), master volume, soft limiter
       const yl = l - this.dcxL + this.dcR * this.dcyL; this.dcxL = l; this.dcyL = Math.abs(yl) < 1e-20 ? 0 : yl; l = this.dcyL;
       const yr = r - this.dcxR + this.dcR * this.dcyR; this.dcxR = r; this.dcyR = Math.abs(yr) < 1e-20 ? 0 : yr; r = this.dcyR;
-      this.vol += (volT - this.vol) * 0.002;
+      this.vol += (volT - this.vol) * kVol;
       l = softLimit(l * this.vol); r = softLimit(r * this.vol);
       outL[o + i] = l; outR[o + i] = r;
       const al = Math.abs(l), ar = Math.abs(r);
       if (al > pkL) pkL = al; if (ar > pkR) pkR = ar;
+      if (al > bpk) bpk = al; if (ar > bpk) bpk = ar;
     }
-    // ---- display state: the oscillator shown on the panel
-    const d = this.disp, view = Math.round(p[P.osc_view]);
-    d.peakL = pkL; d.peakR = pkR; d.voices = voices;
-    d.view = view; d.mode = SLOTS[view].mode;
-    const lv = this.lastVoice >= 0 ? this.voices[this.lastVoice] : null;
-    if (lv && lv.active && lv.sl[view].live) {
-      const sl = lv.sl[view];
-      for (let b = 0; b < NB; b++) d.gains[b] = sl.g[b];
-      d.center = sl.pc; d.width = sl.pw; d.depth = sl.pd; d.note = lv.note; d.slotLive = true;
-    } else { d.note = lv && lv.active ? lv.note : -1; d.slotLive = false; }
+    // how long the output has been silent, and how long it must stay so before the block is skipped
+    if (voices === 0 && !fading && bpk < QUIET_PEAK) this.quiet += n; else this.quiet = 0;
+    this.quietNeed = Math.ceil(1.5 * (dmix > 0 || fb > 0 ? Math.max(dTarget, this.dlyT) : 0)) + QUIET_EXTRA;
+    this.publish(pkL, pkR, voices);
   };
 
   // Static gains for displays when no voice is playing (reference note C4, full velocity): the oscillator shown.

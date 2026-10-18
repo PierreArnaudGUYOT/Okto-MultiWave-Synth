@@ -644,7 +644,14 @@ class SynthUI {
       else set(sl.k.seed, Math.round(this.host.get(sl.k.pattern)) === 5);
     }
   }
-  setLive(d) { this.live = d; }
+  // The live data arrives about 30 times a second. liveVer changes only when something the canvases show has changed: the animated
+  // canvases are drawn again then (and at least twice a second, in case a state they show changed without it), not on every frame.
+  setLive(d) {
+    this.live = d;
+    const sig = d.note + '|' + d.voices + '|' + d.slotLive + '|' + d.view + '|' + d.peakL.toFixed(4) + '|' + d.peakR.toFixed(4) + '|' + d.center + '|' + d.width + '|' + d.depth + '|' +
+      d.keys.join(',') + '|' + (d.chord ? d.chord.root + ',' + d.chord.last + ',' + d.chord.notes.join(',') : '') + '|' + (d.slotLive ? d.gains.join(',') : '');
+    if (sig !== this.liveSig) { this.liveSig = sig; this.liveVer = (this.liveVer || 0) + 1; }
+  }
 
   // ------------------------------------------------------------------ demo support
   // Highlights the controls of the parameters being animated by the demo.
@@ -701,13 +708,16 @@ class SynthUI {
 
   // ------------------------------------------------------------------ drawing
   frame() {
+    const now = performance.now();
     for (const c of this.canvases) {
       if (c.sec && this.secHidden(c.sec)) { c.dirty = true; continue; }
       const t = c.w.type;
       const animated = t === 'scope' || t === 'scalogram' || t === 'meter' || t === 'leds' || t === 'keyboard' || t === 'window' ||
         t === 'chordname' || t === 'strumplate';   // Okto MultiWave Synth: they show the chord sounding
-      if (!c.dirty && !animated) continue;
-      c.dirty = false;
+      // an animated canvas: when the live data changed, while the meter falls back, and every half second anyway
+      const moving = animated && (c.liveVer !== this.liveVer || (t === 'meter' && (this.mL > 1e-4 || this.mR > 1e-4)) || !(now - (c.drawn || 0) < 500));
+      if (!c.dirty && !moving) continue;
+      c.dirty = false; c.liveVer = this.liveVer; c.drawn = now;
       const ctx = c.ctx;
       ctx.setTransform(c.pr, 0, 0, c.pr, 0, 0);
       ctx.clearRect(0, 0, c.w.w, c.w.h);

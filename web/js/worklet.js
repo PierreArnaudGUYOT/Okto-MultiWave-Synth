@@ -18,8 +18,8 @@ function WSWorkletMain() {
       this.port.onmessage = (e) => {
         const m = e.data, eng = this.eng;
         switch (m.t) {
-          case 'p': eng.setParam(m.i, m.v); break;
-          case 'all': for (let i = 0; i < m.v.length; i++) eng.setParam(i, m.v[i]); break;
+          case 'p': if (Number.isFinite(m.v)) eng.setParam(m.i, m.v); break;   // a NaN would stay in the engine's state
+          case 'all': for (let i = 0; i < m.v.length; i++) if (Number.isFinite(m.v[i])) eng.setParam(i, m.v[i]); break;
           case 'tables': eng.setTables(m.tables); break;   // { needs, slots: [A1, A2, B1, B2] }: per oscillator { mode, mips, rms, ph?, w2? } or null
           case 'on': eng.keyOn(m.n, m.v); break;      // Okto MultiWave Synth: the player's keys go through the chord layer
           case 'off': eng.keyOff(m.n); break;
@@ -64,7 +64,8 @@ function WSWorkletMain() {
         }
         if (s.i >= s.ev.length) { this.seq = null; this.seqDone = true; }
       }
-      if (pos < n) eng.process(L.subarray(pos), R.subarray(pos), n - pos);
+      if (pos === 0) eng.process(L, R, n);   // no sequencer: the buffers as they are (no view created per quantum)
+      else if (pos < n) eng.process(L.subarray(pos), R.subarray(pos), n - pos);
       this.since += n;
       if (this.since >= this.dispEvery) {
         this.since = 0;

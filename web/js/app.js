@@ -238,6 +238,12 @@
       const url = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(src);
       await actx.audioWorklet.addModule(url);
       node = new AudioWorkletNode(actx, 'wavelet-synth', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { spec: SPEC } });
+      // the processor threw (a bug, or a broken state): the audio stops for good; say so rather than stay silent
+      node.onprocessorerror = () => {
+        $('st-audio').classList.remove('on');
+        $('st-audio').lastElementChild.textContent = 'Audio engine stopped by an error: reload the page';
+        try { node.disconnect(); } catch (e) { /* already gone */ }
+      };
       const ready = new Promise(res => { node.port.onmessage = (e) => { if (e.data.t === 'ready') { sampleRate = e.data.sr; res(); } else onWorklet(e.data); }; });
       node.connect(actx.destination);
       await ready;

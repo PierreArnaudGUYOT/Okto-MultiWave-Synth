@@ -3,14 +3,14 @@
 // C++ <-> JS cross-check of the engine. The cases are in tools/dsp_cases.js.
 //   node tools/dsp_compare.js --list <dir>   writes <dir>/cases.txt (read by vst/devtest/dsp_render.cpp)
 //   node tools/dsp_compare.js <dir>          renders the cases with the JS core and compares them with <dir>/cpp_NNN.raw
-// Every case must match within TOL (1e-5 of full scale): the C++ and JS engines do the same operations in the same order, the
+// Every case must match within TOL (2e-6 of full scale): the C++ and JS engines do the same operations in the same order, the
 // remaining differences are float rounding of the buffers and the maths libraries.
 'use strict';
 const fs = require('fs'), path = require('path');
 const SPEC = require('../web/js/spec.js');
 const C = require('../web/js/core.js')(SPEC);
 const cases = require('./dsp_cases.js')(SPEC, C);
-const TOL = 1e-5;
+const TOL = 2e-6;
 if (process.argv[2] === '--list') {
   const dir = process.argv[3];
   // one case per line: kind tempo value x NP | name   (the values with 17 digits: the exact doubles)

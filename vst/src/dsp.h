@@ -35,6 +35,12 @@ constexpr double VOICE_GAIN = 0.4;   // about -8 dB per voice: headroom for chor
 constexpr double LIMIT_T = 0.7;      // output soft limiter: transparent below -3 dBFS, never above 0 dBFS
 constexpr double PI = 3.14159265358979323846;
 constexpr double CH_BASE = 0.006, CH_DEPTH = 0.003, CH_FAST = 9.7;   // chorus: base delay, sweep per unit of depth (s), fast/slow LFO ratio
+// the three chorus taps are 120 degrees apart: sin(a + 2*pi*c/3) = sin(a) * CH_COS[c] + cos(a) * CH_SIN[c]
+constexpr double CH_COS[3] = {1, -0.5, -0.5}, CH_SIN[3] = {0, 0.8660254037844386, -0.8660254037844386};
+// an effect that has nothing left to give is skipped: no voice, and the output under QUIET_PEAK for a whole echo (see block)
+constexpr double QUIET_PEAK = 1e-9, QUIET_EXTRA = 4096;
+// the smoothing constants below are given per sample at 48 kHz (as in the earlier versions); other rates get the same time constant
+inline double rateCoef(double a48, double sr) { return sr == 48000 ? a48 : 1 - std::pow(1 - a48, 48000 / sr); }
 constexpr double DLY_MAX = 4;   // beta 0.6: the longest delay (s): a whole note at 60 BPM (tempo sync)
 
 inline double jsRound(double x) { return std::floor(x + 0.5); }  // Math.round semantics
@@ -135,7 +141,7 @@ inline void dwt(const double* x, const Filter& f, double* c) {
     int half = M >> 1;
     for (int k = 0; k < half; k++) {
       double sa = 0, sd = 0;
-      for (int n = 0; n < f.L; n++) { double v = a[(2 * k + n) % M]; sa += f.h[n] * v; sd += f.g[n] * v; }
+      for (int n = 0; n < f.L; n++) { double v = a[(2 * k + n) & (M - 1)]; sa += f.h[n] * v; sd += f.g[n] * v; }
       na[k] = sa; c[half + k] = sd;
     }
     std::copy(na.begin(), na.begin() + half, a.begin());
@@ -152,7 +158,7 @@ inline void idwt(const double* c, const Filter& f, double* out) {
     for (int k = 0; k < half; k++) {
       double ak = a[k], dk = c[half + k];
       if (ak == 0 && dk == 0) continue;
-      for (int n = 0; n < f.L; n++) { int i = (2 * k + n) % M; x[i] += f.h[n] * ak + f.g[n] * dk; }
+      for (int n = 0; n < f.L; n++) { int i = (2 * k + n) & (M - 1); x[i] += f.h[n] * ak + f.g[n] * dk; }
     }
     std::copy(x.begin(), x.begin() + M, a.begin());
   }
@@ -406,7 +412,7 @@ inline void filterGains(int type, double cut, double slope, double res, double* 
       else att = slope * softplus(std::fabs(d) - 0.5);
       double boost = res * std::exp(-d * d / (2 * 0.36));
       att = std::min(att, 140.0);
-      g = std::pow(10.0, (boost - att) / 20);
+      g = std::exp((boost - att) * (LN10 / 20));
     }
     out[b] = g;
   }
@@ -616,7 +622,10 @@ class Engine {
       for (int k = 0; k < 8; k++) { Comb& c = combs[ch * 8 + k]; c.buf.assign((size_t)std::lround((cT[k] + ch * 23) * sc), 0.0f); c.i = 0; c.f = 0; }
       for (int k = 0; k < 4; k++) { AP& a = aps[ch * 4 + k]; a.buf.assign((size_t)std::lround((aT[k] + ch * 23) * sc), 0.0f); a.i = 0; }
     }
-    vol = std::pow(10.0, p[P_MASTER] / 20);
+    kDly = rateCoef(0.0005, sr); kLp = rateCoef(0.35, sr); kVol = rateCoef(0.002, sr);
+    damp = sr == 48000 ? 0.25 : std::pow(0.25, 48000 / sr);
+    quiet = 0; quietNeed = 1e18;   // samples of silence so far, and how many an idle skip needs (set by every block)
+    vol = std::exp(p[P_MASTER] * (LN10 / 20));
     dcR = 1 - 2 * PI * 10 / sr; dcxL = dcyL = dcxR = dcyR = 0;
     chLen = (int)std::ceil(sr * 0.03) + 4;
     chBuf.assign(chLen, 0.0f); chW = 0; chPh = 0; chPh2 = 0;
@@ -637,6 +646,7 @@ class Engine {
     for (auto& a : aps) std::fill(a.buf.begin(), a.buf.end(), 0.0f);
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
     dcxL = dcyL = dcxR = dcyR = 0;
+    quiet = 0;
     started = false;
     for (int s = 0; s < NS; s++) lvlSm[s] = p[kSlots[s].lvl];
   }
@@ -663,7 +673,8 @@ class Engine {
 
   void noteOn(int note, double vel) {
     if (note < 0 || note > 127) return;
-    if (vel <= 0) { noteOff(note); return; }
+    if (!(vel > 0)) { noteOff(note); return; }   // also a NaN
+    if (vel > 1) vel = 1;
     bool othersHeld = false;
     for (int k = 0; k < 128; k++) if (k != note && keys[k]) { othersHeld = true; break; }
     const int porta = (int)jsRound(p[P_V_PORTA]);
@@ -746,6 +757,7 @@ class Engine {
     for (auto& c : combs) { std::fill(c.buf.begin(), c.buf.end(), 0.0f); c.f = 0; }
     for (auto& a : aps) std::fill(a.buf.begin(), a.buf.end(), 0.0f);
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
+    quiet = 0;
   }
 
   // ---------------------------------------------------------------- Okto MultiWave Synth: the chord layer (core.js keyOn, 1:1)
@@ -758,7 +770,7 @@ class Engine {
   void holdOff(int note) { if (holdCnt[note] > 0 && --holdCnt[note] == 0) noteOff(note); }
   void keyOn(int note, double vel) {
     if (note < 0 || note > 127) return;
-    if (vel <= 0) { keyOff(note); return; }
+    if (!(vel > 0)) { keyOff(note); return; }
     if (p[P_CHORD_MODE] < 0.5) { noteOn(note, vel); return; }
     const int base = chordBase();
     if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
@@ -860,6 +872,8 @@ class Engine {
   std::vector<float> dlyL, dlyR; int dlyLen = 0, dlyW = 0; double dlyT = 0, lpL = 0, lpR = 0;
   Comb combs[16]; AP aps[8];
   double vol = 0.5, dcR = 0.999, dcxL = 0, dcyL = 0, dcxR = 0, dcyR = 0;
+  double kDly = 0.0005, kLp = 0.35, kVol = 0.002, damp = 0.25;   // smoothing per sample (setSampleRate)
+  double quiet = 0, quietNeed = 1e18;   // the idle rule (block)
   std::vector<float> chBuf; int chLen = 0, chW = 0; double chPh = 0, chPh2 = 0;   // triple chorus
   float bufL[CTRL], bufR[CTRL];
   double fg[NB], tmpB[NB], lg[NB], panL[4], panR[4], inc[4], detMul[4];
@@ -1194,12 +1208,35 @@ class Engine {
     renderTable(vc, n, s, t.w2, t.hasW2Ph ? t.w2ph : nullptr, fade0, fadeInc, invert, b0, (b1 - b0) / n);
   }
 
+  bool anyVoice() const { for (int k = 0; k < MAXV; k++) if (voices[k].active) return true; return false; }
+
+  // The oscillator shown on the panel, and the level meters
+  void publish(float pkL, float pkR, uint32_t vmask) {
+    const int view = (int)jsRound(p[P_OSC_VIEW]);
+    disp.peakL = pkL; disp.peakR = pkR; disp.voices = vmask;
+    disp.view = view; disp.mode = kSlots[view].mode;
+    if (lastVoice >= 0 && voices[lastVoice].active && voices[lastVoice].sl[view].live) {
+      const Voice& lv = voices[lastVoice]; const Slot& sl = lv.sl[view];
+      for (int b = 0; b < NB; b++) disp.gains[b] = (float)sl.g[b];
+      disp.center = (float)sl.pc; disp.width = (float)sl.pw; disp.depth = (float)sl.pd; disp.note = lv.note; disp.slotLive = true;
+    } else { disp.note = lastVoice >= 0 && voices[lastVoice].active ? voices[lastVoice].note : -1; disp.slotLive = false; }
+  }
+
   void block(float* outL, float* outR, int o, int n) {
     strumTick(); clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
-    std::fill(bufL, bufL + n, 0.0f); std::fill(bufR, bufR + n, 0.0f);
     started = true;
     lfoTick(n);
     lfo2Tick(n);
+    // Idle: no voice, no table fade, and the output has been silent for longer than any echo takes to come back (the delay's time
+    // while it is on, the reverb's lines and the chorus's 4096 more samples): the effects have nothing left to give, so the block
+    // is not computed. The master level and the delay time take their values at once, as they would have by the next note.
+    if (quiet >= quietNeed && !hasPrev && !anyVoice()) {
+      std::fill(outL + o, outL + o + n, 0.0f); std::fill(outR + o, outR + o + n, 0.0f);
+      vol = std::exp(p[P_MASTER] * (LN10 / 20)); dlyT = delaySec() * sr;
+      publish(disp.peakL, disp.peakR, 0);
+      return;
+    }
+    std::fill(bufL, bufL + n, 0.0f); std::fill(bufR, bufR + n, 0.0f);
     uint32_t vmask = 0;
     const bool fading = hasPrev;
     const double fadeInc = fading ? 1.0 / 512 : 0, fade0 = fading ? fade : 1;
@@ -1239,14 +1276,24 @@ class Engine {
     }
 
     // effects
-    const double drive = p[P_FX_DRIVE], kd = std::pow(10.0, drive * 24 / 20), comp = 0.5 / std::tanh(0.5 * kd);
+    const double drive = p[P_FX_DRIVE], kd = std::exp(drive * 24 * (LN10 / 20)), comp = 0.5 / std::tanh(0.5 * kd);
     const double fb = p[P_FX_DFB], dmix = p[P_FX_DMIX], rmix = p[P_FX_RMIX];
     const double dTarget = delaySec() * sr;
-    const double feedback = 0.7 + 0.28 * p[P_FX_RSIZE], damp = 0.25;
-    const double volT = std::pow(10.0, p[P_MASTER] / 20);
+    const double feedback = 0.7 + 0.28 * p[P_FX_RSIZE];
+    const double volT = std::exp(p[P_MASTER] * (LN10 / 20));
     const double chMix = p[P_CH_MIX], chBase = CH_BASE * sr, chDepth = p[P_CH_DEPTH] * CH_DEPTH * sr;
     const double chInc = p[P_CH_RATE] / sr, chInc2 = chInc * CH_FAST;
+    // the chorus's two LFOs as rotating vectors (sin and cos of the phase, turned by one step per sample): two sines and two
+    // cosines per block instead of six sines per sample
+    double sa = 0, ca = 0, sb = 0, cb = 0, cosA = 1, sinA = 0, cosB = 1, sinB = 0;
+    if (chMix > 0) {
+      sa = std::sin(2 * PI * chPh); ca = std::cos(2 * PI * chPh);
+      sb = std::sin(2 * PI * chPh2); cb = std::cos(2 * PI * chPh2);
+      cosA = std::cos(2 * PI * chInc); sinA = std::sin(2 * PI * chInc);
+      cosB = std::cos(2 * PI * chInc2); sinB = std::sin(2 * PI * chInc2);
+    }
     float pkL = disp.peakL, pkR = disp.peakR;
+    double bpk = 0;
     for (int i = 0; i < n; i++) {
       double l = bufL[i], r = bufR[i];
       if (drive > 0) {
@@ -1259,24 +1306,26 @@ class Engine {
       if (chMix > 0) {
         chPh += chInc; if (chPh >= 1) chPh -= 1;
         chPh2 += chInc2; if (chPh2 >= 1) chPh2 -= 1;
+        double t = sa * cosA + ca * sinA; ca = ca * cosA - sa * sinA; sa = t;
+        t = sb * cosB + cb * sinB; cb = cb * cosB - sb * sinB; sb = t;
         double v[3];
         for (int c = 0; c < 3; c++) {
-          const double mo = 0.8 * std::sin(2 * PI * (chPh + c / 3.0)) + 0.2 * std::sin(2 * PI * (chPh2 + c / 3.0));
+          const double mo = 0.8 * (sa * CH_COS[c] + ca * CH_SIN[c]) + 0.2 * (sb * CH_COS[c] + cb * CH_SIN[c]);
           double rp = chW - (chBase + chDepth * (1 + mo)); if (rp < 0) rp += chLen;
-          const int i0 = (int)std::floor(rp), i1 = (i0 + 1) % chLen; const double fr = rp - i0;
+          const int i0 = (int)std::floor(rp); int i1 = i0 + 1; if (i1 >= chLen) i1 = 0; const double fr = rp - i0;
           v[c] = chBuf[i0] + fr * (chBuf[i1] - chBuf[i0]);
         }
         l += chMix * ((2 * v[0] + v[1]) / 3 - l);
         r += chMix * ((2 * v[2] + v[1]) / 3 - r);
       }
       if (++chW >= chLen) chW = 0;
-      dlyT += (dTarget - dlyT) * 0.0005;
+      dlyT += (dTarget - dlyT) * kDly;
       if (dmix > 0 || fb > 0) {
         double rp = dlyW - dlyT; if (rp < 0) rp += dlyLen;
-        int i0 = (int)rp; double fr = rp - i0; int i1 = (i0 + 1) % dlyLen;
+        int i0 = (int)rp; double fr = rp - i0; int i1 = i0 + 1; if (i1 >= dlyLen) i1 = 0;
         double dl = dlyL[i0] + fr * (dlyL[i1] - dlyL[i0]);
         double dr = dlyR[i0] + fr * (dlyR[i1] - dlyR[i0]);
-        lpL += (dl - lpL) * 0.35; lpR += (dr - lpR) * 0.35;
+        lpL += (dl - lpL) * kLp; lpR += (dr - lpR) * kLp;
         dlyL[dlyW] = (float)(0.5 * (bufL[i] + bufR[i]) + fb * lpR);
         dlyR[dlyW] = (float)(fb * lpL);
         l += dmix * dl; r += dmix * dr;
@@ -1304,22 +1353,20 @@ class Engine {
       // DC blocker (10 Hz), master volume, soft limiter
       double yl = l - dcxL + dcR * dcyL; dcxL = l; dcyL = std::fabs(yl) < 1e-20 ? 0 : yl; l = dcyL;
       double yr = r - dcxR + dcR * dcyR; dcxR = r; dcyR = std::fabs(yr) < 1e-20 ? 0 : yr; r = dcyR;
-      vol += (volT - vol) * 0.002;
+      vol += (volT - vol) * kVol;
       l = softLimit(l * vol); r = softLimit(r * vol);
       if (!std::isfinite(l)) l = 0;
       if (!std::isfinite(r)) r = 0;
       outL[o + i] = (float)l; outR[o + i] = (float)r;
-      pkL = std::max(pkL, (float)std::fabs(l)); pkR = std::max(pkR, (float)std::fabs(r));
+      const double al = std::fabs(l), ar = std::fabs(r);
+      pkL = std::max(pkL, (float)al); pkR = std::max(pkR, (float)ar);
+      if (al > bpk) bpk = al;
+      if (ar > bpk) bpk = ar;
     }
-    // display state: the oscillator shown on the panel
-    const int view = (int)jsRound(p[P_OSC_VIEW]);
-    disp.peakL = pkL; disp.peakR = pkR; disp.voices = vmask;
-    disp.view = view; disp.mode = kSlots[view].mode;
-    if (lastVoice >= 0 && voices[lastVoice].active && voices[lastVoice].sl[view].live) {
-      const Voice& lv = voices[lastVoice]; const Slot& sl = lv.sl[view];
-      for (int b = 0; b < NB; b++) disp.gains[b] = (float)sl.g[b];
-      disp.center = (float)sl.pc; disp.width = (float)sl.pw; disp.depth = (float)sl.pd; disp.note = lv.note; disp.slotLive = true;
-    } else { disp.note = lastVoice >= 0 && voices[lastVoice].active ? voices[lastVoice].note : -1; disp.slotLive = false; }
+    // how long the output has been silent, and how long it must stay so before the block is skipped
+    if (vmask == 0 && !fading && bpk < QUIET_PEAK) quiet += n; else quiet = 0;
+    quietNeed = std::ceil(1.5 * (dmix > 0 || fb > 0 ? std::max(dTarget, dlyT) : 0)) + QUIET_EXTRA;
+    publish(pkL, pkR, vmask);
   }
 };
 

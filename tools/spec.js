@@ -452,8 +452,20 @@ PRESETS.forEach((p, i) => { p.rank = i; });   // the factory order is each categ
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
 const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new plugin instance opens
-// The preset tour of the demo (the default piece, about one preset every 4 s): the TOP Sounds, then the new presets (see tools/make_presets.js)
-const TOUR = PRESETS.map(p => p.name);
+// The preset tour of the demo (the default piece, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard):
+// the TOP Sounds mixed one by one with new presets that show the oscillators at work (a TOP Sound by its name, a new preset as
+// "new:<title>": the number of its name may change). 29 presets are heard.
+const TOUR_PICKS = ['A · Warm Pad', 'A · Wavelet Lead',
+  'A · Noise Wash Pad', 'new:Velvet Pad', 'B · Mirror Sub Bass', 'B · Theatre Organ', 'new:Tine E-Piano', 'B · Space Choir',
+  'new:Crystal Choir', 'A · Wavelet Lead', 'new:Classic Saw Lead', 'B · Flute Lead', 'new:Ensemble Strings', 'B · Choir Pad',
+  'new:Harp', 'A · Wave Brass', 'new:Silk Cloud', 'A · Wave Attack Lead', 'new:Marimba', 'A · Warm Pad', 'new:Rhodes Warm',
+  'AB · Glass Choir', 'new:Full Drawbar Organ', 'A · Dub Echo Lead', 'new:Solo Violin', 'A · Wave Pulse Lead', 'new:Brass Section',
+  'A · Cello Section', 'new:Dream Keys', 'AB · Silk Strings', 'new:Orchestra Swell'];
+const TOUR = TOUR_PICKS.map(n => {
+  const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.slice(4).split(' · ')[1] === n.slice(4)) : PRESETS.find(q => q.name === n);
+  if (!p) throw new Error('TOUR: preset not found: ' + n);
+  return p.name;
+});
 if (!PRESETS.some(p => p.name === DEFAULT_PRESET)) throw new Error('DEFAULT_PRESET not found: ' + DEFAULT_PRESET);
 
 // Validate preset keys and ranges at generation time.
