@@ -500,7 +500,7 @@ inline constexpr ParamDef kParams[kNumParams] = {
 inline constexpr WidgetDef kWidgets[] = {
   { W_LOGO, -1, 16.0f, 8.0f, 200.0f, 32.0f, 0, -1, -1, false, 0, nullptr },
   { W_ZOOM, -1, 222.0f, 14.0f, 50.0f, 20.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SEG, 0, 278.0f, 9.0f, 240.0f, 30.0f, 1, -1, -1, false, 0, nullptr },
+  { W_SEG, 0, 296.0f, 9.0f, 224.0f, 30.0f, 1, -1, -1, false, 0, nullptr },
   { W_PRESETS, -1, 526.0f, 9.0f, 220.0f, 30.0f, 0, -1, -1, false, 0, nullptr },
   { W_EVALUATE, -1, 752.0f, 9.0f, 104.0f, 30.0f, 0, -1, -1, false, 0, nullptr },
   { W_MANUAL, -1, 936.0f, 9.0f, 68.0f, 30.0f, 0, -1, -1, false, 0, nullptr },

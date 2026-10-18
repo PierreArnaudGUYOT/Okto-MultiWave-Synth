@@ -10,7 +10,7 @@ const wav = JSON.parse(fs.readFileSync(path.join(__dirname, 'wavelets.json'), 'u
 
 const root = path.join(__dirname, '..');
 const { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS,
-  CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT } = spec;
+  CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR } = spec;
 // the fields of an oscillator, in the order of the C++ SlotDef (a field an oscillator lacks is -1: the subtractive ones have no
 // atom pattern, the additive ones no source wave)
 const SLOT_FIELDS = ['lvl', 'wavelet', 'wave', 'width', 'sparsity', 'phase', 'pattern', 'seed', 'tilt', 'bar1', 'atk', 'spread', 'body', 'bright', 'sus',
@@ -28,7 +28,7 @@ const wavelets = wav.order.map((n, i) => ({ id: n, name: PARAMS[INDEX.wavelet].c
 
 // ---------------------------------------------------------------- web
 const web = {
-  DEVICE, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, NEW_FIRST, NEW_COUNT, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
+  DEVICE, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
   PRESETS: presetValues,
   LFO2_TARGETS: LFO2_TARGETS.map(k => INDEX[k]),   // beta 0.3: the parameters LFO 2 can move (lfo2_target order, the parameters of A1)
   ROLES, LFO2_ROLE: LFO2_ROLE.map(r => ROLES.indexOf(r)),   // the role (index in ROLES) of each target: LFO 2 moves it in every oscillator

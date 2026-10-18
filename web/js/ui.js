@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.1.
 // Panel UI built from WS_SPEC (same layout as the VST editor).
 'use strict';
 
@@ -9,6 +9,10 @@ const noteName = n => NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
 const KB_LO = 36, KB_HI = 96;
 const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+// A preset name: an optional number (the new presets, "012 "), the letters of its engine(s) or oscillators ("A", "AB", "A1B1"), " · ", its title
+const splitName = (name) => { const m = /^(\d{3} )?((?:[AB][12]?)+) · (.*)$/.exec(name); return m ? { num: m[1] || '', eng: m[2], title: m[3] } : null; };
+// the letters in their colours: A teal, B orange (the digits stay dim)
+const engHTML = (eng) => eng.replace(/[AB]/g, c => `<span class="${c.toLowerCase()}">${c}</span>`).replace(/[12]/g, d => `<span class="d">${d}</span>`);
 const SVGNS = 'http://www.w3.org/2000/svg';
 // beta 0.6: where the free plug-in is published (the header's DOWNLOAD VST; index.html's welcome window links there too)
 const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases';
@@ -59,7 +63,8 @@ class SynthUI {
     this.canvases = [];
     this.sections = [];
     this.scale = 1;
-    this.mode = 0;
+    this.mode = 0; this.view = 0;   // the oscillator shown (A1 A2 B1 B2) and its engine
+    this.chordOn = false;           // CHORD MODE: the chord card is shown and the panel is taller
     this.live = null;
     this.tip = el('div', 'tip', document.body, { display: 'none' });
     this.atomCache = new Map();
@@ -90,6 +95,7 @@ class SynthUI {
       }
       this.sections.push({ spec: s, el: se });
       for (const w of s.widgets) this.makeWidget(w, se, s);
+      this.sections[this.sections.length - 1].canvases = this.canvases.filter(c => c.sec === s);
     }
   }
 
@@ -119,7 +125,7 @@ class SynthUI {
     // widgets they replace (`vis`) are therefore always shown: RATE in hertz, the delay TIME in seconds.
     if (w.only === 'vst') return;
     const box = el('div', 'w ' + w.type, parent, { left: w.x + 'px', top: w.y + 'px', width: w.w + 'px', height: w.h + 'px' });
-    const ab = { x: sec.x + w.x, y: sec.y + w.y };
+    const ab = { x: sec.x + w.x, y: sec.y + w.y, sec };
     switch (w.type) {
       case 'knobL': case 'knobM': case 'knobS': case 'knobT': return this.knob(w, box);
       case 'seg': return this.seg(w, box);
@@ -133,6 +139,14 @@ class SynthUI {
         b.innerHTML = 'USER<b>MANUAL</b>';
         b.onclick = () => this.host.openManual(this.mode === 1 ? 'B' : 'A');
         this.manualBtn = b;
+        return;
+      }
+      case 'evaluate': {   // Okto MultiWave Synth: the listening test of the new presets
+        const b = el('button', 'hbtn evalbtn', box, { width: '100%', height: '100%' });
+        b.innerHTML = 'EVALUATE<b>SOUNDS</b>';
+        b.title = 'Listen to the new presets on a piece of music and rate each from 1 to 10 stars; export the ratings as a .txt file';
+        b.onclick = () => this.host.evaluate();
+        this.evalBtn = b;
         return;
       }
       case 'download': {   // beta 0.6, web only: the plug-in's releases on GitHub
@@ -358,7 +372,7 @@ class SynthUI {
     const mark = el('div', 'mark', box);
     mark.innerHTML = '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M3 16h5l3-9 4 18 4-13 3 7h7" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
     const t = el('div', 'txt', box);
-    t.innerHTML = '<b>OKTOMULTIWAVE</b><span>WAVELET CHORD SYNTHESIZER</span>';   // Okto MultiWave Synth
+    t.innerHTML = '<b>OKTOMULTIWAVE</b><span>WAVELET SYNTHESIZER</span>';   // Okto MultiWave Synth
   }
 
   presets(box) {
@@ -409,11 +423,12 @@ class SynthUI {
       }
       const it = el('div', 'it' + (item.current ? ' cur' : ''), body);
       const n = el('span', '', it);
-      const mm = /^(AB|A|B) · (.*)$/.exec(item.name);   // engine letters in their colours (AB = both engines mixed)
+      const mm = splitName(item.name);   // the number (new presets), the engine letters in their colours (AB = both engines mixed)
       if (mm) {
+        if (mm.num) n.appendChild(document.createTextNode(mm.num));
         const e = el('b', 'eng', n);
-        for (const ch of mm[1]) el('span', ch.toLowerCase(), e).textContent = ch;
-        n.appendChild(document.createTextNode(mm[2]));
+        e.innerHTML = engHTML(mm.eng);
+        n.appendChild(document.createTextNode(' · ' + mm.title));
       } else n.textContent = item.name;
       if (item.deletable) {
         const d = el('span', 'del', it); d.textContent = '✕'; d.title = 'Delete user preset';
@@ -432,7 +447,7 @@ class SynthUI {
     const screen = ['scope', 'scalogram', 'atom', 'source', 'window', 'adsr'].includes(w.type);
     if (screen) box.classList.add('screen');
     const cv = el('canvas', 'disp', box);
-    const c = { w, box, cv, ctx: cv.getContext('2d'), ab, dirty: true };
+    const c = { w, box, cv, ctx: cv.getContext('2d'), ab, sec: ab.sec, dirty: true };
     this.canvases.push(c);
     if (w.type === 'keyboard') this.keyboardInput(c);
     if (w.type === 'wheels') this.wheelInput(c);
@@ -454,12 +469,13 @@ class SynthUI {
 
   fit() {
     const stage = this.dev.parentElement;
-    const DH = this.SPEC.DEVICE.h;   // Okto MultiWave Synth: 840 (the chord card)
+    const DH = this.SPEC.DEVICE.h + (this.chordOn ? this.SPEC.CHORD_H : 0);   // CHORD MODE adds the chord card
     const W = 1100 + (this.browser && this.bOpen ? 360 : 0);   // the panel, and the preset browser at its right
     const aw = stage.clientWidth - 24, ah = stage.clientHeight - 24;
     const s = clamp(Math.min(aw / W, ah / DH), 0.45, 2.5);
     this.scale = s;
     const left = Math.max(0, (stage.clientWidth - W * s) / 2), top = Math.max(0, (stage.clientHeight - DH * s) / 2);
+    this.dev.style.height = DH + 'px';
     this.dev.style.transform = `scale(${s})`;
     this.dev.style.left = left + 'px';
     this.dev.style.top = top + 'px';
@@ -556,7 +572,7 @@ class SynthUI {
       r.onclick = () => { this.bCat = i; this.renderBrowser(); };
     });
     const items = this.bTab === 0
-      ? (lists[this.bCat] || lists[0]).presets.map(k => ({ id: 'f:' + k, name: P[k].name, fav: k < this.SPEC.TOP, stars: P[k].stars || 0 }))
+      ? (lists[this.bCat] || lists[0]).presets.map(k => ({ id: 'f:' + k, name: P[k].name, fav: k < this.SPEC.TOP, stars: 0 }))
       : user.map(x => ({ id: x.id, name: x.name, fav: false, stars: 0 }));
     b.querySelector('.bhd').textContent = `${(this.bTab === 0 ? (lists[this.bCat] || lists[0]).label : 'My presets').toUpperCase()}  ·  ${items.length}`;
     const list = b.querySelector('.blist');
@@ -565,11 +581,11 @@ class SynthUI {
     let curRow = null;
     for (const it of items) {
       const r = el('div', 'bsnd' + (cur && cur.id === it.id ? ' cur' : ''), list);
-      const m = /^(A|B|AB) · (.*)$/.exec(it.name);
-      const eng = m ? `<span class="eng">${m[1].split('').map(c => `<span class="${c.toLowerCase()}">${c}</span>`).join('')} · </span>` : '';
+      const m = splitName(it.name);
+      const eng = m ? `${esc(m.num)}<span class="eng">${engHTML(m.eng)} · </span>` : '';
       const mark = it.fav ? '<span class="mk" title="In TOP Sounds, OktoPierre’s selection">★</span>'
         : it.stars ? `<span class="mk vote" title="OktoPierre’s vote in his listening test">${it.stars} ★</span>` : '';
-      r.innerHTML = `${eng}<span class="nm">${esc(m ? m[2] : it.name)}</span>${mark}`;
+      r.innerHTML = `${eng}<span class="nm">${esc(m ? m.title : it.name)}</span>${mark}`;
       r.title = it.name;
       r.onclick = () => this.host.loadPreset(it.id);
       if (cur && cur.id === it.id) curRow = r;
@@ -593,32 +609,40 @@ class SynthUI {
   refresh(i) {
     const ws = this.byParam.get(i);
     if (ws) for (const w of ws) w.update();
-    if (i === this.P.engine) this.setMode(Math.round(this.host.get(i)));
+    if (i === this.P.osc_view) this.setView(Math.round(this.host.get(i)));
+    if (i === this.P.chord_mode) { this.chordOn = this.host.get(i) >= 0.5; this.setView(this.view); this.fit(); }
     this.updateEnables();
     for (const c of this.canvases) c.dirty = true;
   }
   refreshAll() {
     for (const [, ws] of this.byParam) for (const w of ws) w.update();
-    this.setMode(Math.round(this.host.get(this.P.engine)));
+    this.chordOn = this.host.get(this.P.chord_mode) >= 0.5;
+    this.setView(Math.round(this.host.get(this.P.osc_view)));
+    this.fit();
     this.updateEnables();
     for (const c of this.canvases) c.dirty = true;
   }
-  setMode(m) {
-    this.mode = m;
+  // the oscillator shown (0..3 = A1 A2 B1 B2): the cards of the other oscillators and a hidden chord card are not shown
+  setView(v) {
+    const m = this.SPEC.SLOTS[v].mode;
+    this.view = v; this.mode = m;
     this.dev.classList.toggle('mode-a', m === 0);
     this.dev.classList.toggle('mode-b', m === 1);
     if (this.browser) this.browser.classList.toggle('mode-b', m === 1);
-    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'Engine B user manual — wavelet additive (engine B is shown)' : 'Engine A user manual — wavelet subtractive (engine A is shown)';
-    for (const s of this.sections) {
-      const hide = (s.spec.mode === 'A' && m !== 0) || (s.spec.mode === 'B' && m !== 1);
-      s.el.classList.toggle('hidden', hide);
-    }
+    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'Engine B user manual — wavelet additive (an additive oscillator is shown)' : 'Engine A user manual — wavelet subtractive (a subtractive oscillator is shown)';
+    for (const s of this.sections) s.el.classList.toggle('hidden', this.secHidden(s.spec));
+  }
+  secHidden(spec) {
+    if (spec.view >= 0 && spec.view !== this.view) return true;
+    return !!spec.vis && (this.host.get(this.P[spec.vis]) >= 0.5) !== !!spec.visOn;
   }
   updateEnables() {
-    const P = this.P, wave = Math.round(this.host.get(P.a_wave)), pat = Math.round(this.host.get(P.b_pattern));
-    const set = (key, on) => { const ws = this.byParam.get(P[key]); if (ws) ws.forEach(w => w.el && w.el.classList.toggle('disabled', !on)); };
-    set('a_width', wave === 2 || wave === 3);
-    set('b_seed', pat === 5);
+    const P = this.P;
+    const set = (i, on) => { const ws = this.byParam.get(i); if (ws) ws.forEach(w => w.el && w.el.classList.toggle('disabled', !on)); };
+    for (const sl of this.SPEC.SLOTS) {   // the source width only means something for PULSE and TRIANGLE, the seed for RANDOM
+      if (sl.mode === 0) { const wave = Math.round(this.host.get(sl.k.wave)); set(sl.k.width, wave === 2 || wave === 3); }
+      else set(sl.k.seed, Math.round(this.host.get(sl.k.pattern)) === 5);
+    }
   }
   setLive(d) { this.live = d; }
 
@@ -667,6 +691,7 @@ class SynthUI {
     document.addEventListener('pointerdown', (e) => { if (this.dmenu && !this.dmenu.contains(e.target) && e.target !== arrow) close(); });
     this.demoBtn = b;
   }
+  setEvaluating(on) { if (this.evalBtn) this.evalBtn.classList.toggle('running', on); }
   setDemoRunning(on) {
     if (!this.demoBtn) return;
     this.demoBtn.classList.toggle('running', on);
@@ -677,6 +702,7 @@ class SynthUI {
   // ------------------------------------------------------------------ drawing
   frame() {
     for (const c of this.canvases) {
+      if (c.sec && this.secHidden(c.sec)) { c.dirty = true; continue; }
       const t = c.w.type;
       const animated = t === 'scope' || t === 'scalogram' || t === 'meter' || t === 'leds' || t === 'keyboard' || t === 'window' ||
         t === 'chordname' || t === 'strumplate';   // Okto MultiWave Synth: they show the chord sounding
@@ -695,10 +721,10 @@ class SynthUI {
 
   currentGains() {
     const C = this.C, live = this.live;
-    if (live && live.note >= 0 && live.mode === this.mode) return { g: live.gains, center: live.center, width: live.width, depth: live.depth, note: live.note };
-    const vals = this.host.values();
+    if (live && live.note >= 0 && live.slotLive && live.view === this.view) return { g: live.gains, center: live.center, width: live.width, depth: live.depth, note: live.note };
+    const vals = this.host.values(), k = C.K[this.view];
     const g = C.staticGains(vals, new Float64Array(C.NB));
-    return { g, center: vals[this.P.p_center], width: vals[this.P.p_width], depth: vals[this.P.p_depth], note: -1 };
+    return { g, center: vals[k.pcen], width: vals[k.pwid], depth: vals[k.pdep], note: -1 };
   }
 
   draw_scope(ctx, W, H) {
@@ -793,7 +819,7 @@ class SynthUI {
   }
 
   draw_atom(ctx, W, H) {
-    const C = this.C, wi = Math.round(this.host.get(this.P.wavelet));
+    const C = this.C, wi = Math.round(this.host.get(C.K[this.view].wavelet));
     if (!this.atomCache.has(wi)) this.atomCache.set(wi, C.atomShape(wi));
     const a = this.atomCache.get(wi);
     const span = a.hi - a.lo + 1, margin = Math.max(4, span * 0.15), lo = a.lo - margin, hi = a.hi + margin;
@@ -822,7 +848,8 @@ class SynthUI {
     const C = this.C, tb = this.tables;
     if (!tb || tb.mode !== 0) return;
     const vals = this.host.values();
-    const raw = C.sourceCycle(Math.round(vals[this.P.a_wave]), vals[this.P.a_width], vals[this.P.a_phase]);   // shifted by SOURCE PHASE
+    const k = C.K[this.view];
+    const raw = C.sourceCycle(Math.round(vals[k.wave]), vals[k.width], vals[k.phase]);   // shifted by SOURCE PHASE
     const dry = tb.layers[C.DRY];
     let peak = 1; for (let i = 0; i < C.N; i++) peak = Math.max(peak, Math.abs(dry[i]));
     const sy = (H / 2 - 8) / peak;
@@ -847,8 +874,10 @@ class SynthUI {
   }
 
   draw_adsr(ctx, W, H, c) {
-    const P = this.P, pre = c.w.env === 'amp' ? 'amp_' : 'mod_';
-    const a = this.host.get(P[pre + 'a']), d = this.host.get(P[pre + 'd']), s = this.host.get(P[pre + 's']), r = this.host.get(P[pre + 'r']);
+    const P = this.P;
+    // the AMP and MOD envelopes, or an oscillator's own envelope (its four parameters in a row from the widget's param)
+    const i0 = c.w.env === 'amp' ? P.amp_a : c.w.env === 'mod' ? P.mod_a : P[c.w.param];
+    const a = this.host.get(i0), d = this.host.get(i0 + 1), s = this.host.get(i0 + 2), r = this.host.get(i0 + 3);
     const f = t => 0.06 + Math.log10(1 + t * 100) / Math.log10(1001);
     const wa = f(a), wd = f(d), wr = f(r), hold = 0.35, tot = wa + wd + hold + wr;
     const X = v => 4 + v / tot * (W - 8), Y = v => H - 4 - v * (H - 8);

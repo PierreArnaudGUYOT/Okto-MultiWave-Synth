@@ -4,15 +4,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Okto MultiWave Synth · Wavelet Chord Synthesizer</title>
+<title>Okto MultiWave Synth</title>
 <meta name="author" content="Pierre Arnaud GUYOT (OktoPierre)">
-<!-- Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1 (see RELEASE_HISTORY.md). -->
+<!-- Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.1 (see RELEASE_HISTORY.md). -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316191f'/%3E%3Cpath d='M4 16h5l3-9 4 18 4-13 3 7h5' fill='none' stroke='%232fd4c6' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/synth.css">
 </head>
 <body>
 <div id="stage">
-  <div id="device" class="mode-a" aria-label="Okto MultiWave Synth — wavelet chord synthesizer"></div>
+  <div id="device" class="mode-a" aria-label="Okto MultiWave Synth — a wavelet synthesizer with four oscillators"></div>
 </div>
 
 <div id="statusbar">
@@ -31,8 +31,8 @@
      message in place of the sub-title when another window takes the audio (app.js showOverlay). -->
 <div id="start-overlay">
   <div class="welcome" role="dialog" aria-modal="true" aria-labelledby="w-title" aria-describedby="w-sub">
-    <h1 id="w-title"><span>OKTOMULTIWAVE</span> · Wavelet Chord Synthesizer</h1>
-    <p id="w-sub" class="sub">One-finger chords on a wavelet synthesizer: the left hand chooses the chord, one finger of the right hand plays it whole — by OktoPierre, built on his Wavelet Synthesizer.</p>
+    <h1 id="w-title"><span>OKTOMULTIWAVE</span> · Wavelet Synthesizer</h1>
+    <p id="w-sub" class="sub">A wavelet synthesizer with two oscillators per engine (A1 A2 subtractive, B1 B2 additive), a chord mode and 200 new presets to rate — by OktoPierre, built on his Wavelet Synthesizer.</p>
     <div class="choices">
       <button id="w-demo" class="choice">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
@@ -68,6 +68,7 @@
 <script src="js/midi.js"></script>
 <script src="js/demo_data.js"></script>
 <script src="js/demo.js"></script>
+<script src="js/evaluate.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

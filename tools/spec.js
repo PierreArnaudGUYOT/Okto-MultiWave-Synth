@@ -290,7 +290,7 @@ const CHORD_H = 120;   // the chord card (shown by CHORD MODE) adds this much to
 section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'logo', x: 16, y: 8, w: 200, h: 32 },
   { type: 'zoom', x: 222, y: 14, w: 50, h: 20 },
-  { type: 'seg', param: 'osc_view', style: 'engine', x: 278, y: 9, w: 240, h: 30 },   // the four oscillators: A1 A2 | B1 B2
+  { type: 'seg', param: 'osc_view', style: 'engine', x: 296, y: 9, w: 224, h: 30 },   // the four oscillators: A1 A2 | B1 B2
   { type: 'presets', x: 526, y: 9, w: 220, h: 30 },
   { type: 'evaluate', x: 752, y: 9, w: 104, h: 30 },   // (the plug-in's SAVE PRESET is at 862)
   { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
@@ -438,6 +438,8 @@ function convertLegacy(v0) {
 // numbered in their names ("012 A1A2 · Glass Bell": the oscillators they use) for the listening test (EVALUATE SOUNDS).
 let NEW_RAW = [];
 try { NEW_RAW = require('./presets_new.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
+for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
 // Categories (preset menu groups, like the banks of a hardware synthesizer), in menu order.
 const CATEGORIES = ['Bass', 'Lead', 'Keys', 'Organ', 'Pad', 'Strings', 'Brass & Wind', 'Pluck', 'Bells & Mallets', 'FX', 'Drums & Perc'];
@@ -450,6 +452,8 @@ PRESETS.forEach((p, i) => { p.rank = i; });   // the factory order is each categ
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
 const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new plugin instance opens
+// The preset tour of the demo (the default piece, about one preset every 4 s): the TOP Sounds, then the new presets (see tools/make_presets.js)
+const TOUR = PRESETS.map(p => p.name);
 if (!PRESETS.some(p => p.name === DEFAULT_PRESET)) throw new Error('DEFAULT_PRESET not found: ' + DEFAULT_PRESET);
 
 // Validate preset keys and ranges at generation time.
@@ -469,4 +473,4 @@ for (const s of S) {
 }
 
 module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, CATEGORIES,
-  LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length };
+  LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };

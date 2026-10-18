@@ -1,7 +1,7 @@
 /* Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
    SPDX-License-Identifier: GPL-3.0-or-later */
-/* Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
-   Web UI. The device is a fixed 1100×720 panel scaled to fit. */
+/* Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.1.
+   Web UI. The device is a fixed 1100×860 panel (+ 120 with CHORD MODE) scaled to fit. */
 :root {
   --page: #0b0d10;
   --panel: #171a20;
@@ -26,7 +26,7 @@ button { font-family: inherit; }
 
 #stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; }
 #device {
-  position: absolute; left: 0; top: 0; width: 1100px; height: 840px; transform-origin: 0 0;   /* Okto MultiWave Synth: 840 (the chord card) */
+  position: absolute; left: 0; top: 0; width: 1100px; height: 860px; transform-origin: 0 0;   /* ui.js sets 980 with CHORD MODE (the chord card) */
   background: linear-gradient(180deg, #1c2027 0%, var(--panel) 9%, #14171c 100%);
   border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
   user-select: none; -webkit-user-select: none; touch-action: none;
@@ -34,7 +34,7 @@ button { font-family: inherit; }
 #device.mode-b { --accent: var(--accent-b); --accent-soft: rgba(255, 174, 66, 0.16); }
 
 /* beta 0.3: the preset browser at the right of the panel (as in the VST plug-in), selection only */
-#browser { position: absolute; left: 0; top: 0; width: 348px; height: 704px; transform-origin: 0 0; display: flex; flex-direction: column;
+#browser { position: absolute; left: 0; top: 0; width: 348px; height: 844px; transform-origin: 0 0; display: flex; flex-direction: column;
   padding: 6px 12px 10px; background: linear-gradient(180deg, var(--card) 0%, #1a1e25 100%); border: 1px solid var(--card-edge);
   border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04); user-select: none; -webkit-user-select: none; }
 #browser.mode-b { --accent: var(--accent-b); }
@@ -103,8 +103,10 @@ button { font-family: inherit; }
 .seg button.on { color: #0d1014; background: var(--accent); box-shadow: 0 0 12px var(--accent-soft); }
 .seg.engine { padding: 3px; border-radius: 9px; }
 .seg.engine button { font-size: 11px; letter-spacing: 0.1em; }
-.seg.engine button:nth-child(1).on { background: var(--accent-a); }
-.seg.engine button:nth-child(2).on { background: var(--accent-b); }
+.seg.engine button:nth-child(1).on, .seg.engine button:nth-child(2).on { background: var(--accent-a); }   /* A1 A2 */
+.seg.engine button:nth-child(3).on, .seg.engine button:nth-child(4).on { background: var(--accent-b); }   /* B1 B2 */
+.seg.engine button:nth-child(2), .seg.engine button:nth-child(4) { margin-right: 4px; }   /* the two engines apart */
+.seg.engine button:nth-child(1), .seg.engine button:nth-child(3) { color: var(--text); }
 
 /* beta 0.3: drop-down menu widget (LFO 2 TARGET) */
 .menu button { width: 100%; height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 6px;
@@ -161,7 +163,8 @@ canvas.disp { position: absolute; left: 0; top: 0; border-radius: 6px; }
 .pmenu .it { padding: 6px 14px; font-size: 12.5px; cursor: pointer; display: flex; justify-content: space-between; }
 .pmenu .it:hover { background: rgba(255,255,255,0.06); }
 .pmenu .it.cur { color: var(--accent); }
-.pmenu .eng { display: inline-block; width: 24px; font-weight: 800; }
+.pmenu .eng { display: inline-block; min-width: 24px; font-weight: 800; }
+.pmenu .eng .d, #browser .bsnd .eng .d { color: var(--dim); font-weight: 600; }
 .pmenu .eng .a { color: var(--accent-a); }
 .pmenu .eng .b { color: var(--accent-b); }
 .pmenu .it .del { color: var(--faint); visibility: hidden; }
@@ -173,6 +176,9 @@ canvas.disp { position: absolute; left: 0; top: 0; border-radius: 6px; }
 .hbtn b { display: block; font-size: 12px; color: var(--accent-a); }
 /* beta 0.6: MANUAL in the colour of the engine shown (its manual opens); DOWNLOAD VST is a link styled as a button */
 .hbtn.manual b { color: var(--accent); }
+.hbtn.evalbtn b { color: #ffcf4a; }
+.hbtn.evalbtn.running { color: #0d1014; background: #ffcf4a; border-color: #ffcf4a; }
+.hbtn.evalbtn.running b { color: #0d1014; }
 a.hbtn { display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; }
 .hbtn.dl { letter-spacing: 0.04em; }   /* DOWNLOAD fills the 68 px button otherwise */
 .hbtn.dl b { color: #f2b04a; letter-spacing: 0.1em; }

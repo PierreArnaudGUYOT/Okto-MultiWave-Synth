@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // Web application: audio, parameters, presets, MIDI, keyboard, manuals, demo.
 (function () {
@@ -16,7 +16,7 @@
   let kbBase = 60;
   let presetId = 'f:' + SPEC.DEFAULT_PRESET, presetName = SPEC.PRESETS[SPEC.DEFAULT_PRESET].name, dirty = false;
   let buildTimer = null, lastBuild = 0;
-  let demo = null;
+  let demo = null, evaluator = null;
 
   // ---------------------------------------------------------------- storage (optional)
   const store = {
@@ -41,42 +41,89 @@
     v = Math.min(p.max, Math.max(p.min, v));
     if (p.curve === 'int' || p.curve === 'choice') v = Math.round(v);
     if (values[i] === v) return;
-    const needs = i === P.ab_mix ? C.tableNeeds(values) : 0, morph = C.morphNeeded(values), phm = C.phaseModNeeded(values);
+    const needs = C.tableNeeds(values), morph = C.morphNeeded(values), phm = C.phaseModNeeded(values);
     values[i] = v;
     post({ t: 'p', i, v });
     ui.refresh(i);
-    // A/B MIX rebuilds the tables only when it reaches or leaves one end (engine A or B alone); the WAVELET MORPH when
-    // it starts or stops needing the WAVELET 2 tables; LFO 2 when it starts or stops moving the SOURCE PHASE (beta 0.4)
-    if (p.structural || (i === P.ab_mix && C.tableNeeds(values) !== needs) || C.morphNeeded(values) !== morph ||
+    // an oscillator's level rebuilds the tables only when it reaches or leaves 0 (it plays or not); the WAVELET MORPH when it
+    // starts or stops needing the WAVELET 2 tables; LFO 2 when it starts or stops moving the SOURCE PHASE (beta 0.4); the
+    // OSC tabs only choose the oscillator shown (its display is built again, the sound does not change)
+    if (p.structural) scheduleDisplay();
+    if ((p.structural && i !== P.osc_view) || C.tableNeeds(values) !== needs || C.morphNeeded(values) !== morph ||
         C.phaseModNeeded(values) !== phm) scheduleBuild();
-    // the ENGINE tabs only choose the panel shown: switching them does not modify the sound
-    if (user && !p.hidden && !p.perf && i !== P.engine) { if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
+    // the OSC tabs only choose the panel shown: switching them does not modify the sound
+    if (user && !p.hidden && !p.perf && i !== P.osc_view) { if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
     if (user && !p.hidden) saveStateSoon();
   }
 
-  function scheduleBuild() {
-    if (buildTimer) return;
-    buildTimer = setTimeout(build, Math.max(0, 45 - (performance.now() - lastBuild)));
+  // Table building (the sound's tables, up to four oscillators each with its morph and phase sets): in a Worker when the browser
+  // lets this page start one (the page stays free to move, 7 to 200 ms of work), else here. A build asked for by a preset
+  // load (build()) is made at once on this thread, so that the notes that follow find their tables; a knob being moved asks for
+  // a build in the Worker (scheduleBuild), which does at most one at a time and then the latest request. Every request
+  // has a number: a result older than the last one delivered is dropped.
+  let worker = null, workerReady = false, workerBusy = false, workerAgain = false, buildSeq = 0, deliveredSeq = 0, heldTables = null;
+  function startWorker() {
+    try {
+      const src = 'const WSCoreFactory = ' + WSCoreFactory.toString() + ';\n' +
+        'let C = null;\n' +
+        'onmessage = (e) => {\n' +
+        '  const m = e.data;\n' +
+        '  if (m.spec) { C = WSCoreFactory(m.spec); postMessage({ ready: 1 }); return; }\n' +
+        '  const tb = C.buildTables(m.values, true), tr = [];\n' +
+        '  const add = s => { if (!s) return; tr.push(s.mips.buffer, s.rms.buffer); if (s.ph) s.ph.forEach(add); if (s.w2) add(s.w2); };\n' +
+        '  tb.slots.forEach(add);\n' +
+        '  postMessage({ seq: m.seq, tb }, tr);\n' +
+        '};\n';
+      worker = new Worker('data:text/javascript;charset=utf-8,' + encodeURIComponent(src));
+      worker.onmessage = (e) => {
+        if (e.data.ready) { workerReady = true; return; }
+        workerBusy = false;
+        if (e.data.seq > deliveredSeq) { deliveredSeq = e.data.seq; deliver(e.data.tb); }
+        if (workerAgain) { workerAgain = false; build(true); }
+      };
+      worker.onerror = () => { worker = null; workerReady = false; workerBusy = false; };   // not allowed here (file:// in some browsers): build on this thread
+      worker.postMessage({ spec: SPEC });
+    } catch (_) { worker = null; workerReady = false; }
   }
-  function build() {
-    buildTimer = null;
-    lastBuild = performance.now();
-    const tb = C.buildTables(values, true);
-    // a table set for the worklet: its arrays are transferred (with the SOURCE PHASE sets, beta 0.4, when LFO 2 moves it)
+  startWorker();
+
+  // the tables to the worklet (their arrays are transferred); held until the audio has started
+  function deliver(tb) {
+    if (!node) { heldTables = tb; return; }
     const transfer = [];
     const pack = s => {
       if (!s) return null;
       transfer.push(s.mips.buffer, s.rms.buffer);
       const o = { mode: s.mode, mips: s.mips, rms: s.rms };
       if (s.ph) o.ph = s.ph.map(pack);
+      if (s.w2) o.w2 = pack(s.w2);
       return o;
     };
-    const main = pack(tb), alt = pack(tb.alt);
-    // WAVELET MORPH: the tables of WAVELET 2 (with their own alt set when engines A and B are mixed)
-    const w2 = tb.w2 ? Object.assign(pack(tb.w2), { alt: pack(tb.w2.alt) }) : null;
-    if (node) post({ t: 'tables', mode: tb.mode, mips: tb.mips, rms: tb.rms, ph: main.ph || null, alt, w2 }, transfer);
-    // the displays show the engine of the panel; with A/B MIX at the other engine the sound uses other tables
-    ui.setTables(tb.mode === Math.round(values[P.engine]) ? tb : C.buildTables(values, false));
+    post({ t: 'tables', tables: { needs: tb.needs, slots: tb.slots.map(pack) } }, transfer);
+  }
+  let buildTimer2 = null;
+  function scheduleBuild() {
+    if (buildTimer) return;
+    buildTimer = setTimeout(() => { buildTimer = null; build(true); }, Math.max(0, 45 - (performance.now() - lastBuild)));
+  }
+  // the display of the oscillator shown (its source, its atoms, the scope and the scalogram)
+  function scheduleDisplay() {
+    if (buildTimer2) return;
+    buildTimer2 = setTimeout(() => { buildTimer2 = null; ui.setTables(C.buildTables(values, false)); }, 20);
+  }
+  // inWorker: a knob being moved (the Worker builds, if it can); else at once, here
+  function build(inWorker) {
+    lastBuild = performance.now();
+    const seq = ++buildSeq;
+    if (inWorker === true && worker && workerReady) {
+      if (workerBusy) workerAgain = true;
+      else { workerBusy = true; worker.postMessage({ seq, values: Float64Array.from(values) }); }
+    } else {
+      deliveredSeq = seq;
+      deliver(C.buildTables(values, true));
+    }
+    if (buildTimer2) { clearTimeout(buildTimer2); buildTimer2 = null; }
+    ui.setTables(C.buildTables(values, false));
   }
 
   let saveTimer = null;
@@ -86,8 +133,6 @@
   }
 
   function applyKeyed(obj) {
-    // presets and states saved before beta 0.2 have no A/B MIX: they play the engine they were made for
-    if (obj && obj.ab_mix === undefined && obj.engine !== undefined) obj = Object.assign({}, obj, { ab_mix: obj.engine });
     PARAMS.forEach((p, i) => {
       if (p.hidden) return;
       if (p.perf && !(obj && obj[p.key] !== undefined)) return;   // Okto MultiWave Synth: a preset leaves the chord keyboard as it is
@@ -198,7 +243,7 @@
       await ready;
       node.port.onmessage = (e) => onWorklet(e.data);
       post({ t: 'all', v: Array.from(values) });
-      build();
+      if (heldTables) { const tb = heldTables; heldTables = null; deliver(tb); } else build();
       for (const n of localKeys) post({ t: 'on', n, v: 0.8 });
       if (actx.state !== 'running') await actx.resume();
       $('st-audio').classList.add('on');
@@ -455,7 +500,7 @@
     restore: (s) => { applyKeyed(s.values); presetId = s.presetId; presetName = s.presetName; dirty = s.dirty; ui.setPresetName(presetName, dirty); },
     setPresetLabel: (txt, modified) => ui.setPresetName(txt, !!modified),
   });
-  const playDemo = (i) => demo.start(i).catch(() => {});
+  const playDemo = (i) => { if (evaluator && evaluator.running()) evaluator.stop(); return demo.start(i).catch(() => {}); };
   ui.makeDemoButton({
     running: () => demo.running(),
     stop: () => demo.stop(),
@@ -463,6 +508,24 @@
     play: playDemo,
     loadFile: () => $('file-midi').click(),
   });
+  // Okto MultiWave Synth: EVALUATE SOUNDS, the listening test of the new presets (evaluate.js)
+  evaluator = WSEvaluate({
+    C, P, PARAMS, ui, post,
+    startAudio: () => startAudio(),
+    stopDemo: () => { if (demo.running()) demo.stop(); },
+    setParam: (i, v) => setParam(i, v, false),
+    values: () => values,
+    applyPreset: (name) => {
+      const k = SPEC.PRESETS.findIndex(p => p.name === name);
+      if (k < 0) return;
+      const o = {}; PARAMS.forEach((p, i) => { if (!p.perf) o[p.key] = SPEC.PRESETS[k].values[i]; });
+      applyKeyed(o);
+    },
+    snapshot: () => ({ values: toKeyed(), presetId, presetName, dirty }),
+    restore: (s) => { applyKeyed(s.values); presetId = s.presetId; presetName = s.presetName; dirty = s.dirty; ui.setPresetName(presetName, dirty); },
+    setPresetLabel: (txt, modified) => ui.setPresetName(txt, !!modified),
+  });
+  host.evaluate = () => { if (evaluator.running()) evaluator.stop(); else evaluator.start(); };
   $('file-midi').onchange = (e) => {
     const f = e.target.files[0];
     e.target.value = '';
@@ -513,6 +576,7 @@
     demoTour: (i) => demo.tourPlan(i || 0),
     demoStop: () => demo.stop(),
     demoState: () => demo.state(),
+    evaluate: evaluator ? { start: () => evaluator.start(), stop: () => evaluator.stop(), phase: () => evaluator.phase(), votes: () => evaluator.votes(), text: () => evaluator.fileText() } : null,
     midi: (bytes) => onMIDI({ data: bytes }),
     chord: () => (live && live.chord ? Object.assign({}, live.chord) : null),   // Okto MultiWave Synth: the chord sounding
     plateOn: (n, v) => plateOn(n, v == null ? 0.8 : v),
