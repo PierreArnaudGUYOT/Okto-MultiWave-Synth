@@ -14,11 +14,11 @@ tests/
     check_params.js          params.csv  <->  tools/spec.js
     selftest/                reference plug-in used only to validate the host
   web/           headless-Edge tests for the web app
-    cdp.js, png.js, smoke.js, test_web.js, test_demo.js, selftest_cdp.js, dummy/index.html
+    cdp.js, png.js, smoke.js, test_web.js, test_demo.js, test_evaluate.js, selftest_cdp.js, dummy/index.html
 ```
 
 **Status for Okto MultiWave Synth beta 0.1.** Maintained and passing: `quick.js`, `regress_v07.js`, `idle_skip.js`, `web/smoke.js`
-(the four oscillator views and CHORD MODE), `web/test_web.js` (about 10 minutes: it plays all 222 presets) and `web/test_demo.js`,
+(the four oscillator views and CHORD MODE), `web/test_evaluate.js` (an EVALUATE SOUNDS session: stars, the question, a recorded change, the text), `web/test_web.js` (about 10 minutes: it plays all 222 presets) and `web/test_demo.js`,
 `tools/dsp_selftest.js` (12 sections), the C++ cross-check (`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp`, 251 cases) and the
 developer checks `vst/devtest/vote_session.cpp` (EVALUATE SOUNDS and CHORD MODE in the plug-in's window), `library_test.cpp` (the
 presets file) and `vst2_smoke.cpp`. The VST3 host below is the Wavelet Synthesizer's: its sections that do not look at the editor

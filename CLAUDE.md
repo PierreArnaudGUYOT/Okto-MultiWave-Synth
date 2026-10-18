@@ -441,7 +441,7 @@ runs from `file://`); GitHub Actions pinned by tag.
 ## 8. Tests
 Okto MultiWave Synth beta 0.1 status. **Maintained and passing**: `tests/quick.js` (20 s: syntax, generated files up to date, JS engine
 on the 222 presets + chord layer + hostile MIDI, the VST3 host's `params,audio,offline,attrlist` sections, the web app's first
-checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (four oscillator views, CHORD MODE, no console error),
+checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (four oscillator views, CHORD MODE, no console error), `tests/web/test_evaluate.js` (a web EVALUATE SOUNDS session end to end),
 `tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp` (251 cases), `vst/devtest/vote_session.cpp` (the plug-in's EVALUATE SOUNDS
 window and CHORD MODE in an off-screen window: the host-side parameters, the audio, the ratings file, screenshots; build line at its
 top; it needs `MW_VOTES_DIR`, which it sets itself, so it never touches the player's file), `tests/web/test_web.js` (adapted: the
