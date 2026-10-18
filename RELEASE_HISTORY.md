@@ -31,7 +31,8 @@ A **test version**: the sound engine, the panel and the presets are new, and the
   `OKTOMULTIWAVE presets.txt`, web storage keys. Windows and web only: no macOS build was made.
 
 **CPU remarks of the load study applied** (`Revue.md`, `CPU Load test`; the C++ and JavaScript engines still agree: 251 cases
-within 1.8e-7, the limit of the cross-check is now 2e-6):
+within 1.8e-7, the limit of the cross-check is now 2e-6). Measured with the JavaScript engines on the 22 TOP Sounds, twelve held notes
+each, 3 s of audio: 2.65 s for the beta 0.7 engine, 2.15 s for this one (−19 %), although it can run four oscillators:
 - *P1, P7*: the terms that do not depend on the voice (oscillator levels, unison, the additive bands' bars, decays and tilt,
   LFO 2) are computed once per block; an oscillator at level 0, or a morph or phase share at 0, is not rendered.
 - *P2*: `exp` instead of `pow(10, ·)` in the filter gains, the drive and the master level (differences of the last bit).

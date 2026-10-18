@@ -41,7 +41,8 @@ The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; thi
   finger plays the whole chord. With CHORD MODE off the panel is the plain synthesizer and none of it is shown.
 - **LFO 2** moves the scale filter, the position window or the source phase of **every** oscillator at once (and the
   wavelet morph and the phase LFO act on each oscillator).
-- **Lighter on the CPU**: the review of the Wavelet Synthesizer's load (`Revue.md` of the CPU study) is applied: `exp`
+- **Lighter on the CPU**: playing the same 22 TOP Sounds with twelve held notes takes about **20 % less time** than in the Wavelet
+  Synthesizer beta 0.7 (JavaScript engine, measured: 2.65 s → 2.15 s for 3 s of audio each). The review of its load (`Revue.md` of the CPU study) is applied: `exp`
   instead of `pow(10, ·)`, a two-sine chorus, no `%` in the wavelet transform, idle instances skip their silent blocks, the
   smoothing constants no longer depend on the host's sample rate, table builds run in a Web Worker, the plug-in's builder
   thread and library are safer. What was left out, and why, is in [RELEASE_HISTORY.md](RELEASE_HISTORY.md).
