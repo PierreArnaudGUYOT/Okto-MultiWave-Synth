@@ -4,19 +4,20 @@
 var WS_SPEC = {
  "DEVICE": {
   "w": 1100,
-  "h": 720
+  "h": 840
  },
  "APP": {
-  "name": "Wavelet Synthesizer",
+  "name": "WaveChord Synth",
   "author": "Pierre Arnaud GUYOT",
   "credit": "created by OktoPierre",
   "panelCredit": "By OktoPierre",
   "copyright": "Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)",
   "license": "GPL v3",
-  "version": "beta 0.7",
-  "versionNum": "0.7.0",
+  "version": "beta 0.1",
+  "versionNum": "0.1.0",
   "date": "2026-10-18",
-  "doi": "10.5281/zenodo.23431760"
+  "doi": "",
+  "base": "Wavelet Synthesizer beta 0.7"
  },
  "DEFAULT_PRESET": 11,
  "TOP": 22,
@@ -44,6 +45,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0,
@@ -64,6 +66,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 6,
    "def": 2,
@@ -94,6 +97,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 5,
    "def": 0,
@@ -122,6 +126,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0.02,
    "max": 0.98,
    "def": 0.5
@@ -134,6 +139,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -146,6 +152,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 5,
    "def": 0,
@@ -174,6 +181,7 @@ var WS_SPEC = {
    "fmt": "int",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 99,
    "def": 1
@@ -186,6 +194,7 @@ var WS_SPEC = {
    "fmt": "dbband",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -24,
    "max": 12,
    "def": -6
@@ -198,6 +207,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -210,6 +220,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -222,6 +233,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -234,6 +246,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -246,6 +259,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -258,6 +272,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -270,6 +285,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -282,6 +298,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -294,6 +311,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -306,6 +324,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -318,6 +337,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -330,6 +350,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 5,
    "def": 0.005
@@ -342,6 +363,7 @@ var WS_SPEC = {
    "fmt": "bipct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -1,
    "max": 1,
    "def": 0
@@ -354,6 +376,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.01,
    "max": 20,
    "def": 20
@@ -366,6 +389,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.01,
    "max": 20,
    "def": 20
@@ -378,6 +402,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -390,6 +415,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 3,
    "def": 0,
@@ -414,6 +440,7 @@ var WS_SPEC = {
    "fmt": "band",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 12,
    "def": 12
@@ -426,6 +453,7 @@ var WS_SPEC = {
    "fmt": "dbband",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 6,
    "max": 96,
    "def": 24
@@ -438,6 +466,7 @@ var WS_SPEC = {
    "fmt": "db",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 24,
    "def": 0
@@ -450,6 +479,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 1
@@ -462,6 +492,7 @@ var WS_SPEC = {
    "fmt": "band",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -11,
    "max": 11,
    "def": 0
@@ -474,6 +505,7 @@ var WS_SPEC = {
    "fmt": "band",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -6,
    "max": 6,
    "def": 0
@@ -486,6 +518,7 @@ var WS_SPEC = {
    "fmt": "deg",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -498,6 +531,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.05,
    "max": 1,
    "def": 0.5
@@ -510,6 +544,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -522,6 +557,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 10,
    "def": 0.003
@@ -534,6 +570,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 10,
    "def": 0.4
@@ -546,6 +583,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0.8
@@ -558,6 +596,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 10,
    "def": 0.3
@@ -570,6 +609,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0.5
@@ -582,6 +622,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 10,
    "def": 0.003
@@ -594,6 +635,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 10,
    "def": 0.5
@@ -606,6 +648,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0.3
@@ -618,6 +661,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.001,
    "max": 10,
    "def": 0.5
@@ -630,6 +674,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 4,
    "def": 0,
@@ -656,6 +701,7 @@ var WS_SPEC = {
    "fmt": "hz",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.05,
    "max": 20,
    "def": 4
@@ -668,6 +714,7 @@ var WS_SPEC = {
    "fmt": "cents",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 100,
    "def": 0
@@ -680,6 +727,7 @@ var WS_SPEC = {
    "fmt": "bandamt",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 6,
    "def": 0
@@ -692,6 +740,7 @@ var WS_SPEC = {
    "fmt": "cyc",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 0.5,
    "def": 0
@@ -704,6 +753,7 @@ var WS_SPEC = {
    "fmt": "int",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -3,
    "max": 3,
    "def": 0
@@ -716,6 +766,7 @@ var WS_SPEC = {
    "fmt": "cents",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -100,
    "max": 100,
    "def": 0
@@ -728,6 +779,7 @@ var WS_SPEC = {
    "fmt": "int",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 1,
    "max": 16,
    "def": 8
@@ -740,6 +792,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 2,
    "def": 0
@@ -752,6 +805,7 @@ var WS_SPEC = {
    "fmt": "int",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 1,
    "max": 4,
    "def": 1
@@ -764,6 +818,7 @@ var WS_SPEC = {
    "fmt": "cents",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 50,
    "def": 12
@@ -776,6 +831,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0.7
@@ -788,6 +844,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -800,6 +857,7 @@ var WS_SPEC = {
    "fmt": "sec",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.01,
    "max": 1,
    "def": 0.35
@@ -812,6 +870,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 0.9,
    "def": 0.35
@@ -824,6 +883,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -836,6 +896,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0.6
@@ -848,6 +909,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -860,6 +922,7 @@ var WS_SPEC = {
    "fmt": "db",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -36,
    "max": 6,
    "def": -3
@@ -872,6 +935,7 @@ var WS_SPEC = {
    "fmt": "bipct",
    "hidden": true,
    "structural": false,
+   "perf": false,
    "min": -1,
    "max": 1,
    "def": 0
@@ -884,6 +948,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": true,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -896,6 +961,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": true,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -908,6 +974,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -920,6 +987,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0,
@@ -940,6 +1008,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 2,
    "def": 0,
@@ -962,6 +1031,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 2,
    "def": 1,
@@ -984,6 +1054,7 @@ var WS_SPEC = {
    "fmt": "abmix",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -996,6 +1067,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -1008,6 +1080,7 @@ var WS_SPEC = {
    "fmt": "hz",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.1,
    "max": 3,
    "def": 0.7
@@ -1020,6 +1093,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0.6
@@ -1032,6 +1106,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 6,
    "def": 0,
@@ -1062,6 +1137,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -1074,6 +1150,7 @@ var WS_SPEC = {
    "fmt": "pct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -1086,6 +1163,7 @@ var WS_SPEC = {
    "fmt": "bipct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -1,
    "max": 1,
    "def": 0
@@ -1098,6 +1176,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 4,
    "def": 0,
@@ -1124,6 +1203,7 @@ var WS_SPEC = {
    "fmt": "hz",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0.05,
    "max": 20,
    "def": 1
@@ -1136,6 +1216,7 @@ var WS_SPEC = {
    "fmt": "bipct",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": -1,
    "max": 1,
    "def": 0
@@ -1148,6 +1229,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 9,
    "def": 0,
@@ -1184,6 +1266,7 @@ var WS_SPEC = {
    "fmt": "deg",
    "hidden": false,
    "structural": true,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0
@@ -1196,6 +1279,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0,
@@ -1216,6 +1300,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 13,
    "def": 5,
@@ -1260,6 +1345,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0,
@@ -1280,6 +1366,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 15,
    "def": 7,
@@ -1328,6 +1415,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 1,
    "def": 0,
@@ -1348,6 +1436,7 @@ var WS_SPEC = {
    "fmt": "choice",
    "hidden": false,
    "structural": false,
+   "perf": false,
    "min": 0,
    "max": 15,
    "def": 7,
@@ -1387,6 +1476,170 @@ var WS_SPEC = {
     "1/16T",
     "1/32"
    ]
+  },
+  {
+   "key": "chord_mode",
+   "name": "Chord Keyboard",
+   "short": "CHORD",
+   "curve": "choice",
+   "fmt": "choice",
+   "hidden": false,
+   "structural": false,
+   "perf": true,
+   "min": 0,
+   "max": 1,
+   "def": 0,
+   "choices": [
+    "Off",
+    "On"
+   ],
+   "choiceShort": [
+    "OFF",
+    "ON"
+   ]
+  },
+  {
+   "key": "chord_type",
+   "name": "Chord Type",
+   "short": "TYPE",
+   "curve": "choice",
+   "fmt": "choice",
+   "hidden": false,
+   "structural": false,
+   "perf": true,
+   "min": 0,
+   "max": 21,
+   "def": 0,
+   "choices": [
+    "Major",
+    "Minor",
+    "Dominant 7",
+    "Minor 7",
+    "Major 7",
+    "Sus2",
+    "Sus4",
+    "Diminished",
+    "Augmented",
+    "Power chord",
+    "Add 9",
+    "Single note",
+    "Major 6",
+    "Minor 6",
+    "Half-diminished",
+    "Diminished 7",
+    "Dominant 9",
+    "Minor 9",
+    "Major 9",
+    "7 sus4",
+    "Minor-major 7",
+    "6/9"
+   ],
+   "choiceShort": [
+    "Maj",
+    "Min",
+    "7",
+    "m7",
+    "Maj7",
+    "Sus2",
+    "Sus4",
+    "Dim",
+    "Aug",
+    "5",
+    "Add9",
+    "Note",
+    "6",
+    "m6",
+    "m7b5",
+    "Dim7",
+    "9",
+    "m9",
+    "Maj9",
+    "7sus4",
+    "mMaj7",
+    "6/9"
+   ]
+  },
+  {
+   "key": "chord_oct",
+   "name": "Chord Keys Octave",
+   "short": "KEYS OCT",
+   "curve": "choice",
+   "fmt": "choice",
+   "hidden": false,
+   "structural": false,
+   "perf": true,
+   "min": 0,
+   "max": 4,
+   "def": 2,
+   "choices": [
+    "C1–B1",
+    "C2–B2",
+    "C3–B3",
+    "C4–B4",
+    "C5–B5"
+   ],
+   "choiceShort": [
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C5"
+   ]
+  },
+  {
+   "key": "chord_voicing",
+   "name": "Chord Voicing",
+   "short": "VOICING",
+   "curve": "choice",
+   "fmt": "choice",
+   "hidden": false,
+   "structural": false,
+   "perf": true,
+   "min": 0,
+   "max": 1,
+   "def": 1,
+   "choices": [
+    "Stacked",
+    "Folded"
+   ],
+   "choiceShort": [
+    "STACKED",
+    "FOLDED"
+   ]
+  },
+  {
+   "key": "chord_bass",
+   "name": "Chord Bass",
+   "short": "BASS",
+   "curve": "choice",
+   "fmt": "choice",
+   "hidden": false,
+   "structural": false,
+   "perf": true,
+   "min": 0,
+   "max": 1,
+   "def": 0,
+   "choices": [
+    "Off",
+    "On"
+   ],
+   "choiceShort": [
+    "OFF",
+    "BASS"
+   ]
+  },
+  {
+   "key": "chord_strum",
+   "name": "Chord Strum",
+   "short": "STRUM",
+   "curve": "lin",
+   "fmt": "sec",
+   "hidden": false,
+   "structural": false,
+   "perf": true,
+   "min": 0,
+   "max": 0.1,
+   "def": 0
   }
  ],
  "SECTIONS": [
@@ -2409,6 +2662,88 @@ var WS_SPEC = {
      "h": 60
     }
    ]
+  },
+  {
+   "id": "chord",
+   "title": "CHORD KEYBOARD",
+   "x": 12,
+   "y": 728,
+   "w": 1076,
+   "h": 104,
+   "mode": "",
+   "widgets": [
+    {
+     "type": "toggle",
+     "param": "chord_mode",
+     "text": "ON",
+     "x": 140,
+     "y": 5,
+     "w": 42,
+     "h": 17
+    },
+    {
+     "type": "chordpads",
+     "x": 12,
+     "y": 26,
+     "w": 364,
+     "h": 70
+    },
+    {
+     "type": "chordname",
+     "x": 388,
+     "y": 26,
+     "w": 170,
+     "h": 70
+    },
+    {
+     "type": "label",
+     "text": "KEYS OCT",
+     "x": 570,
+     "y": 8,
+     "w": 110,
+     "h": 14
+    },
+    {
+     "type": "step",
+     "param": "chord_oct",
+     "x": 570,
+     "y": 26,
+     "w": 110,
+     "h": 26
+    },
+    {
+     "type": "seg",
+     "param": "chord_voicing",
+     "x": 570,
+     "y": 64,
+     "w": 110,
+     "h": 24
+    },
+    {
+     "type": "toggle",
+     "param": "chord_bass",
+     "text": "BASS",
+     "x": 692,
+     "y": 64,
+     "w": 48,
+     "h": 24
+    },
+    {
+     "type": "knobM",
+     "param": "chord_strum",
+     "x": 746,
+     "y": 22,
+     "w": 52,
+     "h": 60
+    },
+    {
+     "type": "strumplate",
+     "x": 812,
+     "y": 26,
+     "w": 252,
+     "h": 70
+    }
+   ]
   }
  ],
  "WAVELETS": [
@@ -2652,7 +2987,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -2748,7 +3089,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -2844,7 +3191,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -2940,7 +3293,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3035,7 +3394,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3130,7 +3495,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3225,7 +3596,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3321,7 +3698,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3417,7 +3800,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3513,7 +3902,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3609,7 +4004,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3704,7 +4105,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3800,7 +4207,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3895,7 +4308,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -3991,7 +4410,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4087,7 +4512,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4183,7 +4614,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4279,7 +4716,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4375,7 +4818,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4471,7 +4920,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4567,7 +5022,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4662,7 +5123,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4758,7 +5225,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4853,7 +5326,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -4948,7 +5427,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5043,7 +5528,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5138,7 +5629,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5234,7 +5731,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5329,7 +5832,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5424,7 +5933,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5519,7 +6034,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5614,7 +6135,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5709,7 +6236,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5804,7 +6337,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5899,7 +6438,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -5994,7 +6539,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6089,7 +6640,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6184,7 +6741,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6279,7 +6842,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6374,7 +6943,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6469,7 +7044,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6564,7 +7145,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6660,7 +7247,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6755,7 +7348,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6850,7 +7449,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -6945,7 +7550,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7040,7 +7651,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7135,7 +7752,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7230,7 +7853,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7325,7 +7954,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7420,7 +8055,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7515,7 +8156,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7610,7 +8257,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7705,7 +8358,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7801,7 +8460,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7896,7 +8561,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -7992,7 +8663,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8087,7 +8764,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8183,7 +8866,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8279,7 +8968,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8374,7 +9069,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8469,7 +9170,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8564,7 +9271,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8659,7 +9372,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8754,7 +9473,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8849,7 +9574,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -8945,7 +9676,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9040,7 +9777,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9136,7 +9879,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9232,7 +9981,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9327,7 +10082,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9422,7 +10183,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9517,7 +10284,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9612,7 +10385,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9708,7 +10487,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9803,7 +10588,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9898,7 +10689,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -9994,7 +10791,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10089,7 +10892,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10184,7 +10993,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10280,7 +11095,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10375,7 +11196,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10470,7 +11297,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10565,7 +11398,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10661,7 +11500,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10756,7 +11601,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10851,7 +11702,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -10946,7 +11803,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11041,7 +11904,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11136,7 +12005,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11231,7 +12106,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11327,7 +12208,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11422,7 +12309,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11518,7 +12411,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11613,7 +12512,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11708,7 +12613,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11803,7 +12714,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11898,7 +12815,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -11993,7 +12916,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12088,7 +13017,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12183,7 +13118,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12278,7 +13219,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12373,7 +13320,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12468,7 +13421,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12563,7 +13522,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12658,7 +13623,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12753,7 +13724,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12848,7 +13825,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -12943,7 +13926,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13038,7 +14027,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13133,7 +14128,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13228,7 +14229,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13323,7 +14330,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13418,7 +14431,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13513,7 +14532,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13608,7 +14633,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13703,7 +14734,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13798,7 +14835,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13893,7 +14936,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -13988,7 +15037,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14083,7 +15138,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14178,7 +15239,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14273,7 +15340,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14368,7 +15441,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14463,7 +15542,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14558,7 +15643,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14653,7 +15744,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14748,7 +15845,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14843,7 +15946,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -14938,7 +16047,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15033,7 +16148,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15128,7 +16249,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15223,7 +16350,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15318,7 +16451,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15413,7 +16552,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15508,7 +16653,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15603,7 +16754,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15698,7 +16855,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15793,7 +16956,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15888,7 +17057,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -15983,7 +17158,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16078,7 +17259,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16173,7 +17360,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16268,7 +17461,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16363,7 +17562,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16458,7 +17663,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16553,7 +17764,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16648,7 +17865,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16743,7 +17966,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   },
   {
@@ -16838,7 +18067,13 @@ var WS_SPEC = {
     0,
     7,
     0,
-    7
+    7,
+    0,
+    0,
+    2,
+    1,
+    0,
+    0
    ]
   }
  ],
@@ -16887,6 +18122,257 @@ var WS_SPEC = {
   0.25,
   0.16666666666666666,
   0.125
+ ],
+ "CHORDS": [
+  {
+   "label": "Maj",
+   "name": "Major",
+   "suffix": "",
+   "iv": [
+    0,
+    4,
+    7
+   ]
+  },
+  {
+   "label": "Min",
+   "name": "Minor",
+   "suffix": "m",
+   "iv": [
+    0,
+    3,
+    7
+   ]
+  },
+  {
+   "label": "7",
+   "name": "Dominant 7",
+   "suffix": "7",
+   "iv": [
+    0,
+    4,
+    7,
+    10
+   ]
+  },
+  {
+   "label": "m7",
+   "name": "Minor 7",
+   "suffix": "m7",
+   "iv": [
+    0,
+    3,
+    7,
+    10
+   ]
+  },
+  {
+   "label": "Maj7",
+   "name": "Major 7",
+   "suffix": "maj7",
+   "iv": [
+    0,
+    4,
+    7,
+    11
+   ]
+  },
+  {
+   "label": "Sus2",
+   "name": "Sus2",
+   "suffix": "sus2",
+   "iv": [
+    0,
+    2,
+    7
+   ]
+  },
+  {
+   "label": "Sus4",
+   "name": "Sus4",
+   "suffix": "sus4",
+   "iv": [
+    0,
+    5,
+    7
+   ]
+  },
+  {
+   "label": "Dim",
+   "name": "Diminished",
+   "suffix": "dim",
+   "iv": [
+    0,
+    3,
+    6
+   ]
+  },
+  {
+   "label": "Aug",
+   "name": "Augmented",
+   "suffix": "aug",
+   "iv": [
+    0,
+    4,
+    8
+   ]
+  },
+  {
+   "label": "5",
+   "name": "Power chord",
+   "suffix": "5",
+   "iv": [
+    0,
+    7
+   ]
+  },
+  {
+   "label": "Add9",
+   "name": "Add 9",
+   "suffix": "add9",
+   "iv": [
+    0,
+    4,
+    7,
+    14
+   ]
+  },
+  {
+   "label": "Note",
+   "name": "Single note",
+   "suffix": "",
+   "iv": [
+    0
+   ]
+  },
+  {
+   "label": "6",
+   "name": "Major 6",
+   "suffix": "6",
+   "iv": [
+    0,
+    4,
+    7,
+    9
+   ]
+  },
+  {
+   "label": "m6",
+   "name": "Minor 6",
+   "suffix": "m6",
+   "iv": [
+    0,
+    3,
+    7,
+    9
+   ]
+  },
+  {
+   "label": "m7b5",
+   "name": "Half-diminished",
+   "suffix": "m7b5",
+   "iv": [
+    0,
+    3,
+    6,
+    10
+   ]
+  },
+  {
+   "label": "Dim7",
+   "name": "Diminished 7",
+   "suffix": "dim7",
+   "iv": [
+    0,
+    3,
+    6,
+    9
+   ]
+  },
+  {
+   "label": "9",
+   "name": "Dominant 9",
+   "suffix": "9",
+   "iv": [
+    0,
+    4,
+    7,
+    10,
+    14
+   ]
+  },
+  {
+   "label": "m9",
+   "name": "Minor 9",
+   "suffix": "m9",
+   "iv": [
+    0,
+    3,
+    7,
+    10,
+    14
+   ]
+  },
+  {
+   "label": "Maj9",
+   "name": "Major 9",
+   "suffix": "maj9",
+   "iv": [
+    0,
+    4,
+    7,
+    11,
+    14
+   ]
+  },
+  {
+   "label": "7sus4",
+   "name": "7 sus4",
+   "suffix": "7sus4",
+   "iv": [
+    0,
+    5,
+    7,
+    10
+   ]
+  },
+  {
+   "label": "mMaj7",
+   "name": "Minor-major 7",
+   "suffix": "mMaj7",
+   "iv": [
+    0,
+    3,
+    7,
+    11
+   ]
+  },
+  {
+   "label": "6/9",
+   "name": "6/9",
+   "suffix": "6/9",
+   "iv": [
+    0,
+    4,
+    7,
+    9,
+    14
+   ]
+  }
+ ],
+ "CHORD_KEYS": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  7,
+  6,
+  8,
+  10,
+  9,
+  11
  ]
 };
 if (typeof module !== 'undefined') module.exports = WS_SPEC;

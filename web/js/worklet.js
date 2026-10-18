@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // AudioWorklet processor. This function is serialised with toString() and loaded
 // from a data: URL together with WSCoreFactory, so the app also works from file://.
@@ -21,8 +21,10 @@ function WSWorkletMain() {
           case 'p': eng.setParam(m.i, m.v); break;
           case 'all': for (let i = 0; i < m.v.length; i++) eng.setParam(i, m.v[i]); break;
           case 'tables': eng.setTables({ mode: m.mode, mips: m.mips, rms: m.rms, ph: m.ph || null, alt: m.alt || null, w2: m.w2 || null }); break;
-          case 'on': eng.noteOn(m.n, m.v); break;
-          case 'off': eng.noteOff(m.n); break;
+          case 'on': eng.keyOn(m.n, m.v); break;      // WaveChord Synth: the player's keys go through the chord layer
+          case 'off': eng.keyOff(m.n); break;
+          case 'plateon': eng.plateOn(m.n, m.v); break;   // the strum plate
+          case 'plateoff': eng.plateOff(m.n); break;
           case 'alloff': eng.allNotesOff(); break;
           case 'soundoff': eng.allSoundOff(); break;
           case 'seq': this.startSeq(m.notes, m.delay); break;
@@ -68,8 +70,14 @@ function WSWorkletMain() {
         this.since = 0;
         const d = eng.disp, keys = [];
         for (let k = 0; k < 128; k++) if (eng.keys[k]) keys.push(k);
+        // WaveChord Synth: the chord sounding (root, its notes started so far), the last root, and the chord type (a selector key
+        // may have changed it: the app then updates its panel)
+        const notes = [];
+        for (let k = 0; k < eng.chordN; k++) if (eng.chordOn[k]) notes.push(eng.chordNote[k]);
+        const chord = { root: eng.chordRoot, last: eng.chordLastRoot, notes, type: eng.p[this.C.P.chord_type], changed: eng.chordTypeChanged };
+        eng.chordTypeChanged = false;
         this.port.postMessage({ t: 'disp', gains: Array.from(d.gains), mode: d.mode, voices: d.voices, peakL: d.peakL, peakR: d.peakR,
-          center: d.center, width: d.width, depth: d.depth, note: d.note, keys,
+          center: d.center, width: d.width, depth: d.depth, note: d.note, keys, chord,
           seqTime: this.seq ? (currentFrame - this.seq.start) / sampleRate : -1, seqDone: this.seqDone });
         d.peakL = 0; d.peakR = 0;
       }

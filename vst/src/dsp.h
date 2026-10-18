@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // DSP core (C++ port of web/js/core.js, same algorithm 1:1).
 #pragma once
@@ -543,6 +543,22 @@ inline TableRef tableRef(const Tables& t) {
   return r;
 }
 
+// ---------------------------------------------------------------- WaveChord Synth: chord names and the strum plate (core.js, 1:1)
+inline constexpr const char* kNoteNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+inline std::string chordName(int root, int type) { return std::string(kNoteNames[((root % 12) + 12) % 12]) + kChords[type].suffix; }
+// the notes of the strum plate, lowest first: the chord's pitch classes over the three octaves above the C..B octave
+// holding the root, at most 12 strings; returns their number
+inline int plateNotes(int root, int type, int* out) {
+  const int win = 12 * (int)std::floor(root / 12.0) + 12;
+  const ChordDef& c = kChords[type];
+  int pcs[kMaxChordNotes]; int np = 0;
+  for (int i = 0; i < c.n; i++) { const int pc = (root + c.iv[i]) % 12; bool dup = false; for (int k = 0; k < np; k++) if (pcs[k] == pc) dup = true; if (!dup) pcs[np++] = pc; }
+  std::sort(pcs, pcs + np);
+  int n = 0;
+  for (int o = 0; o < 3 && n < 12; o++) for (int k = 0; k < np; k++) { const int x = win + 12 * o + pcs[k]; if (x <= 127 && n < 12) out[n++] = x; }
+  return n;
+}
+
 struct Display {
   float gains[NB] = {}; int mode = 0; uint32_t voices = 0; float peakL = 0, peakR = 0;
   float center = 0, width = 1, depth = 0; int note = -1;
@@ -562,6 +578,14 @@ class Engine {
   Display disp; int lastVoice = -1;
   double sr = 48000, fmax = 29000;
   double tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
+  // WaveChord Synth: the chord layer (keyOn / keyOff, see there)
+  uint8_t holdCnt[128] = {};    // how many held keys and chord notes want each note sounding (reference count)
+  uint8_t plainHeld[128] = {};  // keys played as themselves (below the selector octave, or over the chord)
+  uint8_t plateHeld[128] = {};  // notes of the strum plate being touched
+  int chordRoot = -1, chordN = 0, chordLastRoot = 60; double chordVel = 0;
+  int16_t chordNote[MAXV] = {}; uint8_t chordOn[MAXV] = {}; double strumDue[MAXV] = {};
+  double clock = 0;   // samples rendered since the start (the strum's timing)
+  bool chordTypeChanged = false;   // a selector key set chord_type: the host reads it and tells its controller / panel
 
   explicit Engine(double sampleRate = 48000) {
     for (int i = 0; i < kNumParams; i++) p[i] = kParams[i].def;
@@ -606,7 +630,7 @@ class Engine {
   void reset() {
     for (auto& v : voices) { v.active = false; v.gate = false; v.held = false; v.amp = Env(); v.mod = Env(); v.age = 0; v.pitch = v.target = 60; }
     counter = 0; lastPitch = 60;
-    stackN = 0; std::memset(keys, 0, sizeof keys);
+    stackN = 0; std::memset(keys, 0, sizeof keys); chordClear();
     std::fill(dlyL.begin(), dlyL.end(), 0.0f); std::fill(dlyR.begin(), dlyR.end(), 0.0f);
     for (auto& c : combs) { std::fill(c.buf.begin(), c.buf.end(), 0.0f); c.f = 0; }
     for (auto& a : aps) std::fill(a.buf.begin(), a.buf.end(), 0.0f);
@@ -620,6 +644,9 @@ class Engine {
     p[id] = v;
     if (id == P_HOLD && old >= 0.5 && v < 0.5)
       for (auto& vc : voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
+    // WaveChord Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
+    // are released first (nothing generated stays behind)
+    if ((id == P_CHORD_MODE || id == P_CHORD_OCT) && old != v) chordReset();
   }
 
   // Switch tables with a short crossfade. A table that is dropped is reported in released[].
@@ -702,18 +729,118 @@ class Engine {
   }
 
   void allNotesOff() {
-    stackN = 0; std::memset(keys, 0, sizeof keys);
+    stackN = 0; std::memset(keys, 0, sizeof keys); chordClear();
     for (auto& vc : voices) if (vc.active) { vc.gate = false; vc.held = false; vc.amp.gate(false); vc.mod.gate(false); }
   }
 
   // MIDI CC120: silence immediately (voices and effect tails)
   void allSoundOff() {
     for (auto& vc : voices) { vc.active = vc.gate = vc.held = false; vc.amp = Env(); vc.mod = Env(); }
-    stackN = 0; std::memset(keys, 0, sizeof keys);
+    stackN = 0; std::memset(keys, 0, sizeof keys); chordClear();
     std::fill(dlyL.begin(), dlyL.end(), 0.0f); std::fill(dlyR.begin(), dlyR.end(), 0.0f); lpL = lpR = 0;
     for (auto& c : combs) { std::fill(c.buf.begin(), c.buf.end(), 0.0f); c.f = 0; }
     for (auto& a : aps) std::fill(a.buf.begin(), a.buf.end(), 0.0f);
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
+  }
+
+  // ---------------------------------------------------------------- WaveChord Synth: the chord layer (core.js keyOn, 1:1)
+  // Every key a player presses comes here (MIDI, the on-screen keyboard); CHORD off: keyOn is exactly noteOn. CHORD on:
+  // the selector octave sets chord_type and makes no sound; above it, a key pressed while no root is held becomes the root
+  // and the whole chord sounds, other keys play as themselves; below it, keys play as themselves. Notes are reference-
+  // counted (holdCnt) so that a note shared by the chord and a held key keeps sounding until both release it.
+  int chordBase() const { return 24 + 12 * (int)jsRound(p[P_CHORD_OCT]); }
+  void holdOn(int note, double vel) { holdCnt[note]++; noteOn(note, vel); }
+  void holdOff(int note) { if (holdCnt[note] > 0 && --holdCnt[note] == 0) noteOff(note); }
+  void keyOn(int note, double vel) {
+    if (note < 0 || note > 127) return;
+    if (vel <= 0) { keyOff(note); return; }
+    if (p[P_CHORD_MODE] < 0.5) { noteOn(note, vel); return; }
+    const int base = chordBase();
+    if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
+      const int t = kChordKeys[note - base];
+      if (p[P_CHORD_TYPE] != t) { p[P_CHORD_TYPE] = t; chordTypeChanged = true; }
+      return;
+    }
+    if (note == chordRoot) {   // the root pressed again (a host repeating a note on): the chord notes start again
+      for (int k = 0; k < chordN; k++) if (chordOn[k]) noteOn(chordNote[k], vel);
+      return;
+    }
+    if (plainHeld[note]) { noteOn(note, vel); return; }   // a key repeated without its release: once in the count
+    if (note >= base + 12 && chordRoot < 0) { startChord(note, vel); return; }
+    plainHeld[note] = 1; holdOn(note, vel);
+  }
+  void keyOff(int note) {
+    if (note < 0 || note > 127) return;
+    if (p[P_CHORD_MODE] < 0.5) { noteOff(note); return; }
+    if (note == chordRoot) { endChord(); return; }
+    if (plainHeld[note]) { plainHeld[note] = 0; holdOff(note); return; }
+    const int base = chordBase();
+    if (note >= base && note < base + 12) return;
+    noteOff(note);   // a key held since before CHORD was switched on
+  }
+  // The chord's notes for a root, ascending, into out (MAXV); returns their number (core.js chordNotes)
+  int chordNotes(int root, int16_t* out) const {
+    const ChordDef& c = kChords[(int)jsRound(p[P_CHORD_TYPE])];
+    const bool folded = p[P_CHORD_VOICING] >= 0.5;
+    const int win = 12 * (int)std::floor(root / 12.0), rootNote = folded ? win + root % 12 : root, bassNote = rootNote - 12;
+    int list[kMaxChordNotes]; int ln = 0;
+    for (int i = 0; i < c.n; i++) {
+      const int n = folded ? win + (root + c.iv[i]) % 12 : root + c.iv[i];
+      bool dup = false; for (int k = 0; k < ln; k++) if (list[k] == n) dup = true;
+      if (n <= 127 && !dup) list[ln++] = n;
+    }
+    std::sort(list, list + ln);
+    const int maxV = std::max(1, (int)jsRound(p[P_V_VOICES]));
+    const bool withBass = p[P_CHORD_BASS] >= 0.5 && bassNote >= 0 && maxV >= 2;
+    while (ln + (withBass ? 1 : 0) > maxV) {
+      int k = ln - 1;
+      while (k > 0 && list[k] == rootNote) k--;
+      if (list[k] == rootNote) break;
+      for (int i = k; i + 1 < ln; i++) list[i] = list[i + 1];
+      ln--;
+    }
+    int n = 0;
+    if (withBass) out[n++] = (int16_t)bassNote;
+    for (int i = 0; i < ln; i++) if (n < MAXV) out[n++] = (int16_t)list[i];
+    return n;
+  }
+  void startChord(int root, double vel) {
+    const int n = chordNotes(root, chordNote);
+    chordRoot = root; chordLastRoot = root; chordN = n; chordVel = vel;
+    const double strum = p[P_CHORD_STRUM] * sr;   // STRUM: samples between two notes, lowest first
+    for (int k = 0; k < n; k++) { chordOn[k] = 0; strumDue[k] = clock + k * strum; }
+    strumTick();   // the first note starts now (all of them without STRUM)
+  }
+  void strumTick() {   // at every block: the chord notes whose time has come
+    if (chordRoot < 0) return;
+    for (int k = 0; k < chordN; k++) if (!chordOn[k] && strumDue[k] <= clock) { chordOn[k] = 1; holdOn(chordNote[k], chordVel); }
+  }
+  void endChord() {   // the root released: its notes (pending ones are forgotten)
+    if (chordRoot < 0) return;
+    for (int k = 0; k < chordN; k++) if (chordOn[k]) holdOff(chordNote[k]);
+    chordRoot = -1; chordN = 0;
+  }
+  void chordReset() {   // the chord and the counted keys released (CHORD or KEYS OCT changed)
+    endChord();
+    for (int n = 0; n < 128; n++) {
+      if (plainHeld[n]) { plainHeld[n] = 0; holdOff(n); }
+      if (plateHeld[n]) { plateHeld[n] = 0; holdOff(n); }
+      holdCnt[n] = 0;
+    }
+  }
+  void chordClear() {   // allNotesOff / allSoundOff: the layer forgets everything (the voices are released there)
+    chordRoot = -1; chordN = 0;
+    std::memset(holdCnt, 0, sizeof holdCnt); std::memset(plainHeld, 0, sizeof plainHeld); std::memset(plateHeld, 0, sizeof plateHeld);
+  }
+  // The strum plate: its notes play as themselves, whatever CHORD says, counted like held keys
+  void plateOn(int note, double vel) {
+    if (note < 0 || note > 127) return;
+    if (plateHeld[note]) { noteOn(note, vel); return; }
+    plateHeld[note] = 1; holdOn(note, vel);
+  }
+  void plateOff(int note) {
+    if (note < 0 || note > 127 || !plateHeld[note]) return;
+    plateHeld[note] = 0; holdOff(note);
   }
 
   // Process n samples (any n) into outL/outR (overwrites).
@@ -987,6 +1114,7 @@ class Engine {
   }
 
   void block(float* outL, float* outR, int o, int n) {
+    strumTick(); clock += n;   // WaveChord Synth: the strummed chord notes whose time has come
     std::fill(bufL, bufL + n, 0.0f); std::fill(bufR, bufR + n, 0.0f);
     lfoTick(n);
     lfo2Tick(n);

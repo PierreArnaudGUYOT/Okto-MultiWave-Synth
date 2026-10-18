@@ -1,7 +1,10 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — single source of truth.
+// Okto MultiWave Synth — single source of truth (based on the Wavelet Synthesizer beta 0.7).
 // Created by Pierre Arnaud GUYOT ("OktoPierre"). Release history: see RELEASE_HISTORY.md
+// WaveChord Synth beta 0.1 (2026-10-18) — the Wavelet Synthesizer beta 0.6 with a CHORD KEYBOARD: one octave of the keyboard
+//   (or the chord pads) chooses a chord type, every key above it plays the whole chord (chord-harp-style), with a
+//   voicing choice, a bass note, a strum, and a strum plate on the panel. The history below is the base synthesizer's.
 //   beta 0.1 (2026-10-14) — first release.
 //   beta 0.2 (2026-10-15) — engines A and B mixed (A/B MIX), triple chorus, 107 presets by category.
 //   beta 0.4 (2026-10-17) — SOURCE PHASE (engine A, also an LFO 2 target), 100 presets in the Source Phase section.
@@ -17,25 +20,28 @@
 // Parameter order defines the VST3 ParamIDs: append only, never reorder.
 'use strict';
 
-const DEVICE = { w: 1100, h: 720 };
+const DEVICE = { w: 1100, h: 840 };   // WaveChord Synth: the CHORD KEYBOARD card below the keyboard row (840 = 720 + 120)
 const APP = {
-  name: 'Wavelet Synthesizer',
+  name: 'WaveChord Synth',
   author: 'Pierre Arnaud GUYOT',
   credit: 'created by OktoPierre',   // the vendor line (manuals)
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: 'beta 0.7',
-  versionNum: '0.7.0',
+  version: 'beta 0.1',
+  versionNum: '0.1.0',
   date: '2026-10-18',
-  doi: '10.5281/zenodo.23431760',   // the Zenodo record of the code (https://zenodo.org/records/23431760)
+  doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
+  base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
 };
 const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new plugin instance opens (first preset)
 
 // curve: lin | exp | pow2 | int | choice
 // fmt:   pct | db | sec | hz | cents | band | dbband | int | choice | deg | cyc | semi | bipct | bandamt
 const P = [];
-function add(key, name, short, o) { P.push(Object.assign({ key, name, short, curve: 'lin', fmt: 'pct', hidden: false, structural: false }, o)); }
+// perf: a performance setting (WaveChord Synth): on the panel and automatable, but never stored in a preset, never marking the
+// preset modified; the plug-in's state and the web app's saved state keep it (like the keyboard, it is not a sound).
+function add(key, name, short, o) { P.push(Object.assign({ key, name, short, curve: 'lin', fmt: 'pct', hidden: false, structural: false, perf: false }, o)); }
 
 add('engine', 'Engine', 'ENGINE', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 0, structural: true,
   choices: ['A · Subtractive', 'B · Additive'], choiceShort: ['A · SUBTRACTIVE', 'B · ADDITIVE'] });
@@ -163,6 +169,47 @@ add('lfo_sync', 'LFO 1 Sync', 'SYNC', syncChoice);
 add('lfo_div', 'LFO 1 Rate (sync)', 'RATE', notes(LFO_NOTES, '1/4'));
 add('lfo2_sync', 'LFO 2 Sync', 'SYNC', syncChoice);
 add('lfo2_div', 'LFO 2 Rate (sync)', 'RATE', notes(LFO_NOTES, '1/4'));
+
+// ---------------------------------------------------------------- WaveChord Synth: the chord keyboard (beta 0.1)
+// The chord types: label (the pads, the selector keys), suffix (the chord name after the root; "" = major), iv = the
+// notes in semitones above the root. Append only: chord_type stores the index. The first twelve are on the selector keys.
+const CHORDS = [
+  { label: 'Maj', name: 'Major', suffix: '', iv: [0, 4, 7] },
+  { label: 'Min', name: 'Minor', suffix: 'm', iv: [0, 3, 7] },
+  { label: '7', name: 'Dominant 7', suffix: '7', iv: [0, 4, 7, 10] },
+  { label: 'm7', name: 'Minor 7', suffix: 'm7', iv: [0, 3, 7, 10] },
+  { label: 'Maj7', name: 'Major 7', suffix: 'maj7', iv: [0, 4, 7, 11] },
+  { label: 'Sus2', name: 'Sus2', suffix: 'sus2', iv: [0, 2, 7] },
+  { label: 'Sus4', name: 'Sus4', suffix: 'sus4', iv: [0, 5, 7] },
+  { label: 'Dim', name: 'Diminished', suffix: 'dim', iv: [0, 3, 6] },
+  { label: 'Aug', name: 'Augmented', suffix: 'aug', iv: [0, 4, 8] },
+  { label: '5', name: 'Power chord', suffix: '5', iv: [0, 7] },
+  { label: 'Add9', name: 'Add 9', suffix: 'add9', iv: [0, 4, 7, 14] },
+  { label: 'Note', name: 'Single note', suffix: '', iv: [0] },
+  { label: '6', name: 'Major 6', suffix: '6', iv: [0, 4, 7, 9] },
+  { label: 'm6', name: 'Minor 6', suffix: 'm6', iv: [0, 3, 7, 9] },
+  { label: 'm7b5', name: 'Half-diminished', suffix: 'm7b5', iv: [0, 3, 6, 10] },
+  { label: 'Dim7', name: 'Diminished 7', suffix: 'dim7', iv: [0, 3, 6, 9] },
+  { label: '9', name: 'Dominant 9', suffix: '9', iv: [0, 4, 7, 10, 14] },
+  { label: 'm9', name: 'Minor 9', suffix: 'm9', iv: [0, 3, 7, 10, 14] },
+  { label: 'Maj9', name: 'Major 9', suffix: 'maj9', iv: [0, 4, 7, 11, 14] },
+  { label: '7sus4', name: '7 sus4', suffix: '7sus4', iv: [0, 5, 7, 10] },
+  { label: 'mMaj7', name: 'Minor-major 7', suffix: 'mMaj7', iv: [0, 3, 7, 11] },
+  { label: '6/9', name: '6/9', suffix: '6/9', iv: [0, 4, 7, 9, 14] },
+];
+// The chord type of each key of the selector octave, C to B: the white keys carry the major / bright family, the black keys
+// the minor, altered or bare chords, so the left hand finds them without looking (C Maj, C# Min, D 7, D# m7, E Maj7,
+// F Sus2, F# Dim, G Sus4, G# Aug, A Add9, A# 5, B Note).
+const CHORD_KEYS = [0, 1, 2, 3, 4, 5, 7, 6, 8, 10, 9, 11];
+const CHORD_OCTAVES = ['C1–B1', 'C2–B2', 'C3–B3', 'C4–B4', 'C5–B5'];   // selector octave k = MIDI 24 + 12 k .. + 11
+add('chord_mode', 'Chord Keyboard', 'CHORD', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 0, perf: true, choices: ['Off', 'On'], choiceShort: ['OFF', 'ON'] });
+add('chord_type', 'Chord Type', 'TYPE', { curve: 'choice', fmt: 'choice', min: 0, max: CHORDS.length - 1, def: 0, perf: true,
+  choices: CHORDS.map(c => c.name), choiceShort: CHORDS.map(c => c.label) });
+add('chord_oct', 'Chord Keys Octave', 'KEYS OCT', { curve: 'choice', fmt: 'choice', min: 0, max: CHORD_OCTAVES.length - 1, def: 2, perf: true,
+  choices: CHORD_OCTAVES, choiceShort: CHORD_OCTAVES.map(s => s.slice(0, 2)) });
+add('chord_voicing', 'Chord Voicing', 'VOICING', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 1, perf: true, choices: ['Stacked', 'Folded'], choiceShort: ['STACKED', 'FOLDED'] });
+add('chord_bass', 'Chord Bass', 'BASS', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 0, perf: true, choices: ['Off', 'On'], choiceShort: ['OFF', 'BASS'] });
+add('chord_strum', 'Chord Strum', 'STRUM', { fmt: 'sec', min: 0, max: 0.1, def: 0, perf: true });
 const DELAY_BEATS = DELAY_NOTES.map(noteBeats), LFO_BEATS = LFO_NOTES.map(noteBeats);
 for (const b of [DELAY_BEATS, LFO_BEATS]) for (let i = 1; i < b.length; i++)
   if ((b === DELAY_BEATS) !== (b[i] > b[i - 1])) throw new Error('note values must be listed by length');
@@ -178,6 +225,7 @@ if (LFO2_TARGETS.length !== P[idx.lfo2_target].choices.length || LFO2_TARGETS.so
 // Sections are cards; widget coordinates are relative to their section.
 // widget types: knobL knobM knobS knobT seg step drawbar scope scalogram atom source
 //               window adsr leds fxheads keyboard wheels logo presets manual download meter zoom credit menu toggle label
+//               chordpads chordname strumplate (WaveChord Synth)
 // beta 0.6 widget fields: only 'web' / 'vst' (shown in one of them), vis + visOn (shown while that parameter is on / off,
 // the plug-in's SYNC), style 'value' (a knob labelled with its value: note values), text (toggle, label, menu caption)
 const S = [];
@@ -284,6 +332,20 @@ section('voice', 'VOICE', 12, 608, 416, 92, '', [
   { type: 'seg', param: 'v_porta', x: 76, y: 6, w: 150, h: 18 },
   { type: 'leds', x: 236, y: 6, w: 170, h: 18 },
   ...row(['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'], 26, 30),
+]);
+// WaveChord Synth: the CHORD KEYBOARD card. The ON button in the title row; the twelve chord pads (the white-key family above,
+// the black-key family below, as on the selector octave); the chord shown (name and notes); KEYS OCT, VOICING, BASS,
+// STRUM; and the strum plate: drag across it to strum the chord, as on an electronic chord harp.
+section('chord', 'CHORD KEYBOARD', 12, 728, 1076, 104, '', [
+  { type: 'toggle', param: 'chord_mode', text: 'ON', x: 140, y: 5, w: 42, h: 17 },
+  { type: 'chordpads', x: 12, y: 26, w: 364, h: 70 },
+  { type: 'chordname', x: 388, y: 26, w: 170, h: 70 },
+  { type: 'label', text: 'KEYS OCT', x: 570, y: 8, w: 110, h: 14 },
+  { type: 'step', param: 'chord_oct', x: 570, y: 26, w: 110, h: 26 },
+  { type: 'seg', param: 'chord_voicing', x: 570, y: 64, w: 110, h: 24 },
+  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 692, y: 64, w: 48, h: 24 },
+  kn('chord_strum', 746, 22),
+  { type: 'strumplate', x: 812, y: 26, w: 252, h: 70 },
 ]);
 
 // ---------------------------------------------------------------- presets
@@ -911,4 +973,4 @@ for (const s of S) for (const w of s.widgets) {
 }
 
 module.exports = { DEVICE, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_SOUNDS.length, CATEGORIES,
-  LFO2_TARGETS, LEFT_OUT, DELAY_BEATS, LFO_BEATS };
+  LFO2_TARGETS, LEFT_OUT, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS };

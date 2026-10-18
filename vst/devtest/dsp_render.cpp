@@ -6,6 +6,33 @@
 #include "../src/dsp.h"
 #include <chrono>
 using namespace ws;
+// WaveChord Synth: the chord layer and the strum plate driven as a player would (keys through keyOn / keyOff, the plate's notes),
+// the same events as tools/dsp_compare.js: offset (a multiple of the 128-sample block), kind, note, velocity
+struct KeyEv { int o, kind, note; double vel; };   // kind 0 keyOn, 1 keyOff, 2 plateOn, 3 plateOff, 4 allNotesOff
+static const KeyEv kChordScript[] = {
+  {0, 0, 48, 1}, {0, 0, 67, 0.9}, {12800, 0, 64, 0.7}, {19200, 2, 74, 0.8}, {22400, 3, 74, 0}, {22400, 2, 79, 0.8},
+  {25600, 3, 79, 0}, {25600, 1, 67, 0}, {38400, 1, 64, 0}, {38400, 0, 55, 1}, {38400, 0, 60, 0.8}, {64000, 1, 60, 0},
+  {70400, 0, 72, 0.85}, {70400, 0, 40, 0.6}, {105600, 4, 0, 0}};
+static void renderChord(const double* params, int idx, const char* name, const char* outdir) {
+  const int sr = 48000, n = sr * 3, blk = 128;
+  Engine eng(sr);
+  for (int i = 0; i < kNumParams; i++) eng.setParam(i, params[i]);
+  Tables t; buildTables(params, true, t);
+  eng.setTables(tableRef(t));
+  std::vector<float> L(n), R(n);
+  for (int o = 0; o < n; o += blk) {
+    for (const KeyEv& e : kChordScript) if (e.o == o) {
+      if (e.kind == 0) eng.keyOn(e.note, e.vel); else if (e.kind == 1) eng.keyOff(e.note);
+      else if (e.kind == 2) eng.plateOn(e.note, e.vel); else if (e.kind == 3) eng.plateOff(e.note); else eng.allNotesOff();
+    }
+    eng.process(L.data() + o, R.data() + o, std::min(blk, n - o));
+  }
+  char path[512]; std::snprintf(path, sizeof path, "%s/cpp_%02d.raw", outdir, idx);
+  FILE* f = std::fopen(path, "wb");
+  for (int i = 0; i < n; i++) { std::fwrite(&L[i], 4, 1, f); std::fwrite(&R[i], 4, 1, f); }
+  std::fclose(f);
+  std::printf("%-24s (chord keyboard)\n", name);
+}
 static void render(const double* params, int idx, const char* name, const char* outdir, double tempo = 0) {
   const int sr = 48000, n = sr * 3, blk = 128;
   Engine eng(sr);
@@ -72,6 +99,19 @@ int main(int argc, char** argv) {
     for (int i = 0; i < kNumParams; i++) params[i] = kPresets[0].v[i];
     for (const Set& s : synced[j]) params[s.p] = s.v;
     render(params, kNumPresets + targets + (int)variants.size() + (int)j, snames[j], outdir, tempos[j]);
+  }
+  // WaveChord Synth: the chord keyboard (folded voicing with the bass; stacked with a strum and 4 voices; mono with a long strum),
+  // the same variants as tools/dsp_compare.js, on the first preset
+  const std::vector<std::vector<Set>> chords = {
+    {{P_CHORD_MODE, 1}, {P_CHORD_VOICING, 1}, {P_CHORD_BASS, 1}},
+    {{P_CHORD_MODE, 1}, {P_CHORD_VOICING, 0}, {P_CHORD_STRUM, 0.02}, {P_V_VOICES, 4}, {P_CHORD_TYPE, 2}},
+    {{P_CHORD_MODE, 1}, {P_V_VOICES, 1}, {P_CHORD_STRUM, 0.05}},
+  };
+  const char* cnames[] = {"chord folded + bass", "chord stacked, strum, 4 voices", "chord mono, strum 50 ms"};
+  for (size_t j = 0; j < chords.size(); j++) {
+    for (int i = 0; i < kNumParams; i++) params[i] = kPresets[0].v[i];
+    for (const Set& s : chords[j]) params[s.p] = s.v;
+    renderChord(params, kNumPresets + targets + (int)variants.size() + (int)synced.size() + (int)j, cnames[j], outdir);
   }
   return 0;
 }

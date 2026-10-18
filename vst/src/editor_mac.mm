@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Mac port (beta 0.3): the editor's macOS side — an NSView drawn with Core Graphics and Core Text, its pop-up menus and
 // dialogs (Cocoa). The panel itself is editor.cpp, shared with Windows (editor_win.cpp). Compiled with ARC.
 // The view's Objective-C class is created at run time under a name unique to this copy of the plug-in binary, so that two
@@ -299,7 +299,7 @@ class MacWindow : public EditorWindow {
   }
   void message(const std::wstring& text, bool warning) override {
     NSAlert* a = [[NSAlert alloc] init];
-    a.messageText = @"Wavelet Synthesizer";
+    a.messageText = @"WaveChord Synth";
     a.informativeText = ns(text);
     a.alertStyle = warning ? NSAlertStyleWarning : NSAlertStyleInformational;
     [a addButtonWithTitle:@"OK"];
@@ -307,7 +307,7 @@ class MacWindow : public EditorWindow {
   }
   bool ask(const std::wstring& text) override {
     NSAlert* a = [[NSAlert alloc] init];
-    a.messageText = @"Wavelet Synthesizer";
+    a.messageText = @"WaveChord Synth";
     a.informativeText = ns(text);
     [a addButtonWithTitle:@"Yes"];
     [a addButtonWithTitle:@"No"];
@@ -439,7 +439,7 @@ static Class viewClass() {
   static Class cls = nil;
   if (cls) return cls;
   char name[96];
-  std::snprintf(name, sizeof name, "OktoWaveletEditorView_%llx", (unsigned long long)(uintptr_t)&viewClass);
+  std::snprintf(name, sizeof name, "WaveChordSynthEditorView_%llx", (unsigned long long)(uintptr_t)&viewClass);
   Class c = objc_getClass(name);
   if (!c) {
     c = objc_allocateClassPair([NSView class], name, 0);
@@ -471,7 +471,7 @@ static id menuTarget() {
   static id target = nil;
   if (target) return target;
   char name[96];
-  std::snprintf(name, sizeof name, "OktoWaveletMenuTarget_%llx", (unsigned long long)(uintptr_t)&menuTarget);
+  std::snprintf(name, sizeof name, "WaveChordSynthMenuTarget_%llx", (unsigned long long)(uintptr_t)&menuTarget);
   Class c = objc_getClass(name);
   if (!c) {
     c = objc_allocateClassPair([NSObject class], name, 0);

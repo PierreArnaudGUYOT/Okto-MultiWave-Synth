@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // Plugin editor: the panel, the same on every system. It draws through editor_platform.h: a Win32 window drawn with GDI+
 // (editor_win.cpp) or a Cocoa view drawn with Core Graphics (editor_mac.mm, Mac port of beta 0.3).
@@ -30,17 +30,17 @@ static const uint32_t kAccentA = 0x2fd4c6, kAccentB = 0xffae42;
 
 struct Item { const WidgetDef* w; int section; R r; };
 
-static const char* kNoteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+// kNoteNames: dsp.h (WaveChord Synth: shared with the chord names)
 static std::wstring noteName(int n) { return toW(std::string(kNoteNames[n % 12]) + std::to_string(n / 12 - 1)); }
 static bool isBlack(int n) { int k = n % 12; return k == 1 || k == 3 || k == 6 || k == 8 || k == 10; }
 static const int KB_LO = 36, KB_HI = 96;
 
 // where the presets file must be writable (the message of a failed save)
 #ifdef _WIN32
-static const wchar_t* kFolderNote = L"The presets file is kept next to the WaveletSynthesizer.vst3 folder: that folder must allow "
+static const wchar_t* kFolderNote = L"The presets file is kept next to the WaveChordSynth.vst3 folder: that folder must allow "
                                     L"writing (the VST3 system folder, C:\\Program Files\\Common Files\\VST3, needs administrator rights).";
 #else
-static const wchar_t* kFolderNote = L"The presets file is kept next to the WaveletSynthesizer.vst3 folder: that folder must allow "
+static const wchar_t* kFolderNote = L"The presets file is kept next to the WaveChordSynth.vst3 folder: that folder must allow "
                                     L"writing (the system folder /Library/Audio/Plug-Ins/VST3 needs administrator rights: install the "
                                     L"plug-in in your own folder, ~/Library/Audio/Plug-Ins/VST3).";
 #endif
@@ -150,6 +150,10 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // live data
   float liveGains[NB] = {}; float liveC = 0, liveW = 1, liveD = 0; int liveNote = -1, liveMode = 0; uint32_t liveVoices = 0;
   uint32_t liveKeys[4] = {}; float meterL = 0, meterR = 0;
+  // WaveChord Synth: the chord sounding (root, notes), the last root, the selector-key edits seen; the pad under the mouse, the
+  // string of the strum plate being touched (a note)
+  int liveChordRoot = -1, liveChordLast = 60; uint32_t liveChordBits[4] = {}; uint32_t liveChordEdits = 0;
+  int padHover = -1, plateTouch = -1;
   // interaction
   int hover = -1, drag = -1; float dragY = 0; double dragNorm = 0; bool dragShift = false, dragMoved = false;   // hover -2 = SAVE PRESET
   int mouseNote = -1; int wheelDrag = -1;  // 0 bend, 1 mod
@@ -169,6 +173,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   void cleanup() {
     if (win) {
       if (mouseNote >= 0) noteOff(mouseNote);
+      if (plateTouch >= 0) { plateOff(plateTouch); plateTouch = -1; }
       delete win; win = nullptr;   // the timer, the window and its drawing resources
     }
   }
@@ -222,6 +227,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         lastPlain[i] = v; any = true;
         if (kParams[i].structural) structural = true;
         for (size_t k = 0; k < items.size(); k++) if (items[k].w->param == i || items[k].w->vis == i) invalidateItem((int)k);
+        // WaveChord Synth: the pads, the chord shown, the strum plate and the keyboard's selector octave follow these
+        if (i == P_CHORD_MODE || i == P_CHORD_TYPE || i == P_CHORD_OCT) for (int t : {W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_KEYBOARD}) invalidateType(t);
       }
       if (any) {
         rebuildDisplay(false);
@@ -251,7 +258,20 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       if (vo != liveVoices) { liveVoices = vo; invalidateType(W_LEDS); }
       bool kc = false;
       for (int k = 0; k < 4; k++) { uint32_t b = sh->keys[k].load(); if (b != liveKeys[k]) kc = true; liveKeys[k] = b; }
-      if (kc) invalidateType(W_KEYBOARD);
+      if (kc) { invalidateType(W_KEYBOARD); invalidateType(W_STRUMPLATE); }
+      // WaveChord Synth: the chord sounding, and a chord type chosen by a selector key in the processor (hosts that do not
+      // forward the processor's parameter changes to the controller: the editor does it here, once per edit)
+      const int cr = sh->chordRoot.load(), cl = sh->chordLast.load();
+      bool cc = cr != liveChordRoot || cl != liveChordLast;
+      for (int k = 0; k < 4; k++) { uint32_t b = sh->chordBits[k].load(); if (b != liveChordBits[k]) cc = true; liveChordBits[k] = b; }
+      liveChordRoot = cr; liveChordLast = cl;
+      if (cc) { invalidateType(W_CHORDNAME); invalidateType(W_STRUMPLATE); }
+      const uint32_t ce = sh->chordTypeEdits.load();
+      if (ce != liveChordEdits) {
+        liveChordEdits = ce;
+        const int ct = sh->chordType.load();
+        if (ct >= 0 && ct < kNumChords && ct != (int)jsRound(host->getPlain(P_CHORD_TYPE))) { host->setPlainGesture(P_CHORD_TYPE, ct); }
+      }
       float pl = sh->peakL.exchange(0), pr = sh->peakR.exchange(0);
       float nl = std::max(pl, meterL * 0.86f), nr = std::max(pr, meterR * 0.86f);
       if (std::fabs(nl - meterL) > 1e-5f || std::fabs(nr - meterR) > 1e-5f) { meterL = nl; meterR = nr; invalidateType(W_METER); }
@@ -344,6 +364,9 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       case W_CREDIT: drawCredit(g, it.r); break;
       case W_TOGGLE: drawToggle(g, idx); break;
       case W_LABEL: text(g, toW(it.w->text ? it.w->text : ""), it.r, 10.5f, true, rgb(kDim), 0); break;   // beta 0.6: SCALOGRAM
+      case W_CHORDPADS: drawChordPads(g, idx); break;   // WaveChord Synth
+      case W_CHORDNAME: drawChordName(g, it.r); break;
+      case W_STRUMPLATE: drawStrumPlate(g, it.r); break;
       default: break;
     }
   }
@@ -623,9 +646,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   void drawKeyboard(Canvas& g, R r) {
     std::vector<int> whites; for (int n = KB_LO; n <= KB_HI; n++) if (!isBlack(n)) whites.push_back(n);
     float ww = r.w / whites.size();
+    // WaveChord Synth: with CHORD on, the selector octave is tinted (its keys choose the chord type and make no sound)
+    const bool chordOn = plainOf(P_CHORD_MODE) >= 0.5; const int selBase = 24 + 12 * (int)jsRound(plainOf(P_CHORD_OCT));
+    auto sel = [&](int n) { return chordOn && n >= selBase && n < selBase + 12; };
     for (size_t k = 0; k < whites.size(); k++) {
       int n = whites[k]; float x = r.x + k * ww; bool on = keyDown(n);
-      g.fillRect(R{x + 0.5f, r.y, ww - 1, r.h}, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, on ? rgb(accent()) : rgb(0xd9dee5), on ? rgb(0xe9fbf9) : rgb(0xf6f8fa)));
+      g.fillRect(R{x + 0.5f, r.y, ww - 1, r.h}, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, on ? rgb(accent()) : sel(n) ? rgb(0x9d93e0) : rgb(0xd9dee5),
+                                                   on ? rgb(0xe9fbf9) : sel(n) ? rgb(0xcfc9f2) : rgb(0xf6f8fa)));
       g.fillRect(R{x + 0.5f, r.y + r.h - 3, ww - 1, 3.f}, argb(64, 0, 0, 0));
       if (n % 12 == 0) text(g, noteName(n), R{x, r.y + r.h - 22, ww, 14}, 9, true, on ? rgb(0x0d1014) : rgb(0x7a8594));
     }
@@ -633,10 +660,92 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       if (!isBlack(n)) continue;
       int k = (int)(std::find(whites.begin(), whites.end(), n - 1) - whites.begin());
       float x = r.x + (k + 1) * ww - ww * 0.31f, bw = ww * 0.62f, bh = r.h * 0.6f; bool on = keyDown(n);
-      g.fillRect(R{x, r.y, bw, bh}, Brush(Pt{0, r.y}, Pt{0, r.y + bh}, on ? rgb(accent()) : rgb(0x262b33), on ? rgb(0x0f5a54) : rgb(0x0d0f12)));
+      g.fillRect(R{x, r.y, bw, bh}, Brush(Pt{0, r.y}, Pt{0, r.y + bh}, on ? rgb(accent()) : sel(n) ? rgb(0x4a4280) : rgb(0x262b33),
+                                        on ? rgb(0x0f5a54) : sel(n) ? rgb(0x1e1a3a) : rgb(0x0d0f12)));
       g.fillRect(R{x + 2, r.y + bh - 5, bw - 4, 3.f}, argb(20, 255, 255, 255));
     }
   }
+
+  // ---------------------------------------------------------------- WaveChord Synth: the chord card
+  // The twelve chord pads, laid out like the selector octave: the white-key family (Maj, 7, Maj7, Sus2, Sus4, Add9, Note)
+  // above, the black-key family (Min, m7, Dim, Aug, 5) below, between them (the same geometry as web/js/ui.js padRects).
+  struct PadR { R r; int key; };
+  std::vector<PadR> padRects(R box) const {
+    std::vector<PadR> v; const float cw = box.w / 7, pw = cw - 4, ph = 32; int wi = 0;
+    for (int k = 0; k < 12; k++) {
+      const bool black = isBlack(k);
+      v.push_back(black ? PadR{R{box.x + (wi - 0.5f) * cw + 2, box.y + 36, pw, ph}, k} : PadR{R{box.x + wi * cw + 2, box.y, pw, ph}, k});
+      if (!black) wi++;
+    }
+    return v;
+  }
+  int padAt(R box, float x, float y) const { for (const PadR& p : padRects(box)) if (p.r.has(x, y)) return p.key; return -1; }
+  void drawChordPads(Canvas& g, int idx) {
+    const Item& it = items[idx];
+    const bool on = plainOf(P_CHORD_MODE) >= 0.5;
+    const int cur = (int)jsRound(plainOf(P_CHORD_TYPE)), base = 24 + 12 * (int)jsRound(plainOf(P_CHORD_OCT));
+    const int alpha = on ? 255 : 115;
+    for (const PadR& p : padRects(it.r)) {
+      const int type = kChordKeys[p.key];
+      const bool active = type == cur, black = isBlack(p.key), hot = hover == idx && padHover == p.key;
+      if (active) fillRR(g, R{p.r.x - 1, p.r.y - 1, p.r.w + 2, p.r.h + 2}, 7, rgb(accent(), alpha / 4));
+      fillRR(g, p.r, 6, rgb(active ? accent() : black ? (hot ? 0x1c2129 : 0x121519) : (hot ? 0x343b47 : 0x262c35), alpha));
+      if (!active) strokeRR(g, R{p.r.x + 0.5f, p.r.y + 0.5f, p.r.w - 1, p.r.h - 1}, 6, rgb(black ? 0x2a303a : 0x3a4250, alpha));
+      text(g, toW(kChords[type].label), R{p.r.x, p.r.y + 3, p.r.w, 14}, 11, true, rgb(active ? 0x0d1014 : black ? 0xaeb7c4 : 0xeef2f7, alpha));
+      text(g, noteName(base + p.key), R{p.r.x, p.r.y + 18, p.r.w, 11}, 8, true, active ? rgb(0x0d1014, alpha * 3 / 4) : rgb(0x566070, alpha));
+    }
+  }
+  // the chord sounding: its name (root and type) and its notes; the type chosen while no root is held
+  void drawChordName(Canvas& g, R r) {
+    screen(g, r);
+    pill(g, L"CHORD", r.x + 8, r.y + 14, false, argb(153, 200, 210, 225));
+    const bool on = plainOf(P_CHORD_MODE) >= 0.5;
+    const int type = std::max(0, std::min(kNumChords - 1, (int)jsRound(plainOf(P_CHORD_TYPE))));
+    if (!on) { text(g, L"OFF · THE KEYS PLAY AS USUAL", R{r.x, r.y + r.h / 2 - 2, r.w, 16}, 9.5f, true, rgb(kFaint)); return; }
+    const bool held = liveChordRoot >= 0;
+    const int root = held ? liveChordRoot : liveChordLast;
+    const std::string name = chordName(root, type);
+    const size_t ll = name.size() > 1 && name[1] == '#' ? 2 : 1;
+    const std::wstring letter = toW(name.substr(0, ll)), suffix = toW(name.substr(ll));
+    // textWidth counts the layout margins (1/6 em on each side): the suffix starts where the letter's ink ends
+    const float gap = 26.f / 6 + 15.f / 6 - 1.5f;
+    const float lw = g.textWidth(letter, 26, true), sw = suffix.empty() ? 0.f : g.textWidth(suffix, 15, true) - gap, x0 = r.x + (r.w - lw - sw) / 2;
+    const Col c = held ? rgb(accent()) : rgb(kDim);
+    text(g, letter, R{x0, r.y + 12, lw + 6, 34}, 26, true, c, 0);
+    if (!suffix.empty()) text(g, suffix, R{x0 + lw - gap, r.y + 22, sw + gap + 6, 22}, 15, true, c, 0);
+    std::wstring line;
+    if (held) {
+      for (int w = 0; w < 4; w++) for (int k = 0; k < 32; k++) if ((liveChordBits[w] >> k) & 1) { if (!line.empty()) line += L" \u00b7 "; line += noteName(w * 32 + k); }
+    } else line = toW(kParams[P_CHORD_TYPE].choices[type]) + L" \u00b7 play a key above " + noteName(24 + 12 * (int)jsRound(plainOf(P_CHORD_OCT)) + 11);
+    text(g, line, R{r.x + 4, r.y + 50, r.w - 8, 14}, 9.5f, true, held ? rgb(0xeef2f7) : rgb(kFaint));
+  }
+  // the strum plate: the chord's notes over three octaves as strings; drag across them (as on the touch plate of an electronic chord harp)
+  int plateList(int* notes) const {
+    const int type = std::max(0, std::min(kNumChords - 1, (int)jsRound(host->getPlain(P_CHORD_TYPE))));
+    return plateNotes(liveChordRoot >= 0 ? liveChordRoot : liveChordLast, type, notes);
+  }
+  void drawStrumPlate(Canvas& g, R r) {
+    int notes[12]; const int n = plateList(notes); const float sw = r.w / n;
+    g.fillRR(r, 7, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, rgb(0x0e1116), rgb(0x171b22)));
+    strokeRR(g, R{r.x + 0.5f, r.y + 0.5f, r.w - 1, r.h - 1}, 7, rgb(0x252b34));
+    for (int k = 0; k < n; k++) {
+      const float x = r.x + std::round((k + 0.5f) * sw) + 0.5f;
+      const bool lit = keyDown(notes[k]) || plateTouch == notes[k];
+      if (lit) g.line(Pt{x, r.y + 8}, Pt{x, r.y + r.h - 16}, Pen(rgb(accent(), 60), 6));
+      g.line(Pt{x, r.y + 8}, Pt{x, r.y + r.h - 16}, Pen(lit ? rgb(accent()) : argb(82, 200, 210, 225), lit ? 2.5f : 1.2f));
+      text(g, noteName(notes[k]), R{x - 12, r.y + r.h - 14, 24, 12}, 7.5f, true, lit ? rgb(accent()) : rgb(kFaint));
+    }
+    pill(g, L"STRUM PLATE", r.x + 8, r.y + 14, false, argb(128, 200, 210, 225));
+  }
+  int plateAt(R r, float px, float py, double& vel) {
+    int notes[12]; const int n = plateList(notes);
+    if (n <= 0) return -1;
+    const int k = std::max(0, std::min(n - 1, (int)((px - r.x) / (r.w / n))));
+    vel = std::min(1.0, std::max(0.2, 0.4 + 0.6 * (py - r.y) / r.h));
+    return notes[k];
+  }
+  void plateOn(int n, double vel) { auto sh = host->sharedState(); if (sh) sh->push(SharedState::Ev{(int16_t)n, (int16_t)std::max(1, (int)std::lround(vel * 127)), 1}); }
+  void plateOff(int n) { auto sh = host->sharedState(); if (sh) sh->push(SharedState::Ev{(int16_t)n, 0, 1}); }
 
   int keyAt(R r, float px, float py, double& vel) {
     std::vector<int> whites; for (int n = KB_LO; n <= KB_HI; n++) if (!isBlack(n)) whites.push_back(n);
@@ -675,8 +784,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     fillRR(g, m, 8, rgb(kInset)); strokeRR(g, m, 8, rgb(0x2a303a));
     const Pt pts[] = {{m.x + 3, m.y + 15}, {m.x + 8, m.y + 15}, {m.x + 11, m.y + 7}, {m.x + 15, m.y + 23}, {m.x + 19, m.y + 11}, {m.x + 22, m.y + 17}, {m.x + 27, m.y + 17}};
     g.lines(pts, 7, Pen(rgb(accent()), 2.2f).join().caps());
-    text(g, L"OKTOWAVE", R{r.x + 40, r.y + 1, 160, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // beta 0.3
-    text(g, L"WAVELET SYNTHESIZER", R{r.x + 40, r.y + 17, 160, 14}, 9, true, rgb(accent()), 0);
+    text(g, L"WAVECHORD", R{r.x + 40, r.y + 1, 160, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // WaveChord Synth
+    text(g, L"WAVELET CHORD SYNTHESIZER", R{r.x + 40, r.y + 17, 180, 14}, 9, true, rgb(accent()), 0);
   }
 
   void drawPresets(Canvas& g, R r) {
@@ -802,6 +911,21 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         wheelMove(it, y);
         return;
       }
+      case W_CHORDPADS: {   // WaveChord Synth: a pad chooses the chord type (and switches CHORD on)
+        const int k = padAt(it.r, x, y);
+        if (k < 0) return;
+        gesture(P_CHORD_TYPE, kChordKeys[k]);
+        if (plainOf(P_CHORD_MODE) < 0.5) gesture(P_CHORD_MODE, 1);
+        invalidateItem(idx);
+        return;
+      }
+      case W_STRUMPLATE: {   // WaveChord Synth: a string of the strum plate; dragging across the others strums
+        double vel; const int n = plateAt(it.r, x, y, vel);
+        if (n >= 0) { plateTouch = n; plateOn(n, vel); }
+        drag = idx; if (win) win->capture(true);
+        invalidateItem(idx);
+        return;
+      }
       default: return;
     }
   }
@@ -839,6 +963,11 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         return false;
       }
       if (it.w->type == W_WHEELS) { wheelMove(it, y); return false; }
+      if (it.w->type == W_STRUMPLATE) {   // WaveChord Synth: the string under the pointer
+        double vel; const int n = plateAt(it.r, std::max(it.r.x, std::min(it.r.x + it.r.w - 1, x)), std::max(it.r.y, std::min(it.r.y + it.r.h - 1, y)), vel);
+        if (n >= 0 && n != plateTouch) { if (plateTouch >= 0) plateOff(plateTouch); plateTouch = n; plateOn(n, vel); invalidateItem(drag); }
+        return false;
+      }
       const ParamDef& p = kParams[it.w->param];
       // beta 0.3: a knob with few positions (SUB OCT, shapes) moves 24 px per step; a click without moving steps to the
       // next value (mouseUp)
@@ -855,8 +984,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     int h = kSaveBtn.has(x, y) ? -2 : hit(x, y);
     if (h != hover) {
       int old = hover; hover = h;
+      padHover = -1;
       invalidateItem(old); invalidateItem(hover);
       if (old == -2 || h == -2) invalidateLogical(kSaveBtn);
+    }
+    if (hover >= 0 && items[hover].w->type == W_CHORDPADS) {   // WaveChord Synth: the pad under the pointer
+      const int pk = padAt(items[hover].r, x, y);
+      if (pk != padHover) { padHover = pk; invalidateItem(hover); }
     }
     const int bh = host->browserOpen() && x >= kDeviceW ? bHit(x, y) : -1;
     if (bh != bHover) { bHover = bh; invalidateLogical(bCard()); }
@@ -877,6 +1011,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (drag < 0) return;
     const Item& it = items[drag];
     if (it.w->type == W_KEYBOARD) { if (mouseNote >= 0) noteOff(mouseNote); mouseNote = -1; }
+    else if (it.w->type == W_STRUMPLATE) { if (plateTouch >= 0) plateOff(plateTouch); plateTouch = -1; }   // WaveChord Synth
     else if (it.w->type == W_WHEELS) {
       int id = wheelDrag == 0 ? P_BEND : P_MODWHEEL;
       if (wheelDrag == 0) setPlain(P_BEND, 0);
@@ -1224,7 +1359,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     std::wstring path = envPath(L"WS_PRESETS_EXPORT");   // developer test: no dialog
     if (path.empty()) {
       if (!win) return;
-      path = win->saveFileDialog(L"Export all presets (factory presets and user bank)", L"OKTOWAVE presets.txt");
+      path = win->saveFileDialog(L"Export all presets (factory presets and user bank)", L"WAVECHORD presets.txt");
       if (path.empty()) return;
     }
     Library::get().refresh();
@@ -1622,7 +1757,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (rowMoving) st = bTab == 0 ? L"Drop it on a category: it moves there (on TOP Sounds: added to it)." : L"Drop it on a section: it moves there.";
     if (st.empty())
       st = std::to_wstring(lib.adjustedCount()) + L" adjusted \u00B7 " + std::to_wstring(lib.deletedCount()) + L" deleted \u00B7 " +
-           std::to_wstring(menuBank.size()) + L" in the user bank \u00B7 OKTOWAVE presets.txt";
+           std::to_wstring(menuBank.size()) + L" in the user bank \u00B7 WAVECHORD presets.txt";
     g.textEllipsis(st, R{c.x + 12, c.y + 684, c.w - 24, 14}, 9, false, rgb(kFaint), false);
     if (rowMoving && rowDrag >= 0) {   // beta 0.5: the sound being dragged, under the pointer (inside the browser)
       const std::string nm = bTab == 0 ? lib.name(rowDrag) : rowDrag < (int)menuBank.size() ? menuBank[rowDrag].name : "";
@@ -1681,7 +1816,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     // <bundle>.vst3/Contents/<binary folder>/<binary>  ->  <bundle>.vst3/Contents/Resources/manual/<file>
     const std::wstring man = contentsFolder() + kPathSep + L"Resources" + kPathSep + L"manual" + kPathSep + file;
     if (!fileExists(man)) {
-      if (win) win->message(L"The manual was not found:\n" + man + L"\n\nInstall the complete WaveletSynthesizer.vst3 bundle folder.", false);
+      if (win) win->message(L"The manual was not found:\n" + man + L"\n\nInstall the complete WaveChordSynth.vst3 bundle folder.", false);
       return;
     }
     if (win) win->openDocument(man);

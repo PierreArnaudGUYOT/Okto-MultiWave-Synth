@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // DSP core (reference implementation).
 // The same algorithm is ported 1:1 to C++ in vst/src/dsp.h.
@@ -436,6 +436,21 @@ function WSCoreFactory(SPEC) {
     this.ap0 = 0; this.ap1 = 0;   // SOURCE PHASE moved by LFO 2: position among the PHASE_K phase sets (0 .. PHASE_K)
   }
 
+  // ---------------------------------------------------------------- WaveChord Synth: chord names and the strum plate (both panels)
+  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  // "G#m7" for a root and a chord type; the single-note type is the note alone
+  function chordName(root, type) { return NOTE_NAMES[((root % 12) + 12) % 12] + SPEC.CHORDS[type].suffix; }
+  // The notes of the strum plate, lowest first: the chord's pitch classes over the three octaves above the C..B octave
+  // holding the root, at most 12 strings (as on the touch plate of an electronic chord harp), notes above 127 dropped.
+  function plateNotes(root, type) {
+    const win = 12 * Math.floor(root / 12) + 12, c = SPEC.CHORDS[type], pcs = [];
+    for (const iv of c.iv) { const pc = (root + iv) % 12; if (!pcs.includes(pc)) pcs.push(pc); }
+    pcs.sort((a, b) => a - b);
+    const out = [];
+    for (let o = 0; o < 3 && out.length < 12; o++) for (const pc of pcs) { const n = win + 12 * o + pc; if (n <= 127 && out.length < 12) out.push(n); }
+    return out;
+  }
+
   function Engine(sr) {
     this.p = Float64Array.from(defaults());
     this.voices = [];
@@ -453,6 +468,14 @@ function WSCoreFactory(SPEC) {
     this.disp = { gains: new Float32Array(NB), mode: 0, voices: 0, peakL: 0, peakR: 0, center: 0, width: 1, depth: 0, note: -1 };
     this.lastVoice = -1;
     this.tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
+    // WaveChord Synth: the chord layer (keyOn / keyOff, see there)
+    this.holdCnt = new Uint8Array(128);    // how many held keys and chord notes want each note sounding (reference count)
+    this.plainHeld = new Uint8Array(128);  // keys played as themselves (below the selector octave, or over the chord)
+    this.plateHeld = new Uint8Array(128);  // notes of the strum plate being touched
+    this.chordRoot = -1; this.chordN = 0; this.chordVel = 0; this.chordLastRoot = 60;
+    this.chordNote = new Int16Array(MAXV); this.chordOn = new Uint8Array(MAXV); this.strumDue = new Float64Array(MAXV);
+    this.clock = 0;   // samples rendered since the start (the strum's timing)
+    this.chordTypeChanged = false;   // a selector key set chord_type: the host reads it and tells its controller / panel
     this.setSampleRate(sr);
   }
   const E = Engine.prototype;
@@ -499,6 +522,9 @@ function WSCoreFactory(SPEC) {
     if (id === P.hold && old >= 0.5 && v < 0.5) {
       for (const vc of this.voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
     }
+    // WaveChord Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
+    // are released first (nothing generated stays behind)
+    if ((id === P.chord_mode || id === P.chord_oct) && old !== v) this.chordReset();
   };
 
   // Tables: { mode, mips, rms }. Switches with a short crossfade.
@@ -597,18 +623,124 @@ function WSCoreFactory(SPEC) {
   };
 
   E.allNotesOff = function () {
-    this.stack.length = 0; this.keys.fill(0);
+    this.stack.length = 0; this.keys.fill(0); this.chordClear();
     for (const vc of this.voices) if (vc.active) { vc.gate = false; vc.held = false; vc.amp.gate(false); vc.mod.gate(false); }
   };
 
   // MIDI CC120: silence immediately (voices and effect tails)
   E.allSoundOff = function () {
-    this.stack.length = 0; this.keys.fill(0);
+    this.stack.length = 0; this.keys.fill(0); this.chordClear();
     for (const vc of this.voices) { vc.active = false; vc.gate = false; vc.held = false; vc.amp.stage = 0; vc.amp.level = 0; vc.mod.stage = 0; vc.mod.level = 0; }
     this.dlyL.fill(0); this.dlyR.fill(0); this.lpL = 0; this.lpR = 0;
     for (const c of this.combs) { c.buf.fill(0); c.f = 0; }
     for (const a of this.aps) a.buf.fill(0);
     this.chBuf.fill(0);
+  };
+
+  // ---------------------------------------------------------------- WaveChord Synth: the chord layer
+  // Every key a player presses comes here (MIDI, the on-screen and computer keyboards); the demo sequencer plays noteOn /
+  // noteOff directly and is never affected. CHORD off: keyOn is exactly noteOn (the base synthesizer, bit for bit).
+  // CHORD on, three zones of the keyboard:
+  //   - the selector octave (KEYS OCT, 12 keys): a key sets chord_type (CHORD_KEYS) and makes no sound; the new type
+  //     applies to the next root, a chord already sounding is not changed;
+  //   - above it: a key pressed while no root is held becomes the root and the whole chord sounds (chordNotes: the type,
+  //     STACKED or FOLDED voicing, BASS, at most VOICES notes, lowest first, spread by STRUM); any other key pressed while
+  //     the root is held plays as itself with its own velocity (a melody over the chord, an extension added by hand);
+  //     releasing the root releases the chord's notes only;
+  //   - below it: keys play as themselves (a left-hand bass).
+  // The engine's notes are reference-counted (holdCnt): a note shared by the chord and a held key keeps sounding until
+  // both release it. Below this layer nothing changes: sustain pedal, portamento, voice stealing, velocity.
+  E.chordBase = function () { return 24 + 12 * Math.round(this.p[P.chord_oct]); };   // the first key of the selector octave
+  E.holdOn = function (note, vel) { this.holdCnt[note]++; this.noteOn(note, vel); };
+  E.holdOff = function (note) { if (this.holdCnt[note] > 0 && --this.holdCnt[note] === 0) this.noteOff(note); };
+  E.keyOn = function (note, vel) {
+    if (note < 0 || note > 127) return;
+    if (vel <= 0) { this.keyOff(note); return; }
+    if (this.p[P.chord_mode] < 0.5) { this.noteOn(note, vel); return; }
+    const base = this.chordBase();
+    if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
+      const t = SPEC.CHORD_KEYS[note - base];
+      if (this.p[P.chord_type] !== t) { this.p[P.chord_type] = t; this.chordTypeChanged = true; }
+      return;
+    }
+    if (note === this.chordRoot) {   // the root pressed again (a host repeating a note on): the chord notes start again
+      for (let k = 0; k < this.chordN; k++) if (this.chordOn[k]) this.noteOn(this.chordNote[k], vel);
+      return;
+    }
+    if (this.plainHeld[note]) { this.noteOn(note, vel); return; }   // a key repeated without its release: once in the count
+    if (note >= base + 12 && this.chordRoot < 0) { this.startChord(note, vel); return; }
+    this.plainHeld[note] = 1; this.holdOn(note, vel);
+  };
+  E.keyOff = function (note) {
+    if (note < 0 || note > 127) return;
+    if (this.p[P.chord_mode] < 0.5) { this.noteOff(note); return; }
+    if (note === this.chordRoot) { this.endChord(); return; }
+    if (this.plainHeld[note]) { this.plainHeld[note] = 0; this.holdOff(note); return; }
+    const base = this.chordBase();
+    if (note >= base && note < base + 12) return;
+    this.noteOff(note);   // a key held since before CHORD was switched on
+  };
+  // The chord's notes for a root, ascending, into out (length MAXV); returns their number.
+  // STACKED: root + intervals. FOLDED: the chord's pitch classes inside the C..B octave holding the root (successive chords
+  // stay in one register: C4 -> C E G, G4 -> D G B, A4 -> C E A). BASS: the root's pitch class one octave below (below the
+  // window when FOLDED). At most VOICES notes: the chord is cut from the top, the root is always kept, then the bass (never
+  // with a single voice). Notes above 127 are dropped.
+  E.chordNotes = function (root, out) {
+    const c = SPEC.CHORDS[Math.round(this.p[P.chord_type])], folded = this.p[P.chord_voicing] >= 0.5;
+    const win = 12 * Math.floor(root / 12), rootNote = folded ? win + root % 12 : root, bassNote = rootNote - 12;
+    const list = [];
+    for (const iv of c.iv) { const n = folded ? win + (root + iv) % 12 : root + iv; if (n <= 127 && !list.includes(n)) list.push(n); }
+    list.sort((a, b) => a - b);
+    const maxV = Math.max(1, Math.round(this.p[P.v_voices]));
+    const withBass = this.p[P.chord_bass] >= 0.5 && bassNote >= 0 && maxV >= 2;
+    while (list.length + (withBass ? 1 : 0) > maxV) {
+      let k = list.length - 1;
+      while (k > 0 && list[k] === rootNote) k--;
+      if (list[k] === rootNote) break;
+      list.splice(k, 1);
+    }
+    let n = 0;
+    if (withBass) out[n++] = bassNote;
+    for (const x of list) if (n < MAXV) out[n++] = x;
+    return n;
+  };
+  E.startChord = function (root, vel) {
+    const n = this.chordNotes(root, this.chordNote);
+    this.chordRoot = root; this.chordLastRoot = root; this.chordN = n; this.chordVel = vel;
+    const strum = this.p[P.chord_strum] * this.sr;   // STRUM: samples between two notes, lowest first
+    for (let k = 0; k < n; k++) { this.chordOn[k] = 0; this.strumDue[k] = this.clock + k * strum; }
+    this.strumTick();   // the first note starts now (all of them without STRUM)
+  };
+  // at every block: the chord notes whose time has come (the strum; block boundaries, identical in both engines)
+  E.strumTick = function () {
+    if (this.chordRoot < 0) return;
+    for (let k = 0; k < this.chordN; k++) if (!this.chordOn[k] && this.strumDue[k] <= this.clock) { this.chordOn[k] = 1; this.holdOn(this.chordNote[k], this.chordVel); }
+  };
+  E.endChord = function () {   // the root released: its notes (pending ones are forgotten)
+    if (this.chordRoot < 0) return;
+    for (let k = 0; k < this.chordN; k++) if (this.chordOn[k]) this.holdOff(this.chordNote[k]);
+    this.chordRoot = -1; this.chordN = 0;
+  };
+  E.chordReset = function () {   // the chord and the counted keys released (CHORD or KEYS OCT changed)
+    this.endChord();
+    for (let n = 0; n < 128; n++) {
+      if (this.plainHeld[n]) { this.plainHeld[n] = 0; this.holdOff(n); }
+      if (this.plateHeld[n]) { this.plateHeld[n] = 0; this.holdOff(n); }
+      this.holdCnt[n] = 0;
+    }
+  };
+  E.chordClear = function () {   // allNotesOff / allSoundOff: the layer forgets everything (the voices are released there)
+    this.chordRoot = -1; this.chordN = 0; this.holdCnt.fill(0); this.plainHeld.fill(0); this.plateHeld.fill(0);
+  };
+  // The strum plate: its notes play as themselves, whatever CHORD says (they come from the panel), counted like held keys
+  E.plateOn = function (note, vel) {
+    if (note < 0 || note > 127) return;
+    if (this.plateHeld[note]) { this.noteOn(note, vel); return; }
+    this.plateHeld[note] = 1; this.holdOn(note, vel);
+  };
+  E.plateOff = function (note) {
+    if (note < 0 || note > 127 || !this.plateHeld[note]) return;
+    this.plateHeld[note] = 0; this.holdOff(note);
   };
 
   E.lfoTick = function (n) {
@@ -850,6 +982,7 @@ function WSCoreFactory(SPEC) {
 
   E.block = function (outL, outR, o, n) {
     const p = this.p, L = this.bufL, R = this.bufR;
+    this.strumTick(); this.clock += n;   // WaveChord Synth: the strummed chord notes whose time has come
     L.fill(0, 0, n); R.fill(0, 0, n);
     this.lfoTick(n);
     this.lfo2Tick(n);
@@ -1005,6 +1138,7 @@ function WSCoreFactory(SPEC) {
     rng, toPlain, toNorm, format, parse, defaults,
     FILTERS, dwt, idwt, fft, sourceCycle, sparsify, patternCoeffs, buildTables, tableNeeds, morphNeeded, phaseModNeeded,
     filterGains, windowValue, staticGains, displayCycle, atomShape, Engine,
+    NOTE_NAMES, chordName, plateNotes,   // WaveChord Synth
   };
 }
 if (typeof module !== 'undefined') module.exports = WSCoreFactory;

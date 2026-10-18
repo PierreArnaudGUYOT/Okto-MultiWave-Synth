@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// test_web.js - end-to-end test of the Wavelet Synthesizer web app in headless Edge.
+// test_web.js - end-to-end test of the WaveChord Synth web app in headless Edge.
 //
 //   node tests/web/test_web.js [--url <url>] [--out <dir>] [--quick] [--headed]
 //
@@ -72,7 +72,7 @@ function writeReport(abort) {
   return n('FAIL') + (abort ? 1 : 0);
 }
 // beta 0.6: where the free VST plug-in is published (the header's DOWNLOAD VST and the welcome window's third choice)
-const VST_URL = 'https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases';
+const VST_URL = 'https://github.com/PierreArnaudGUYOT/WaveChord-Synth/releases';
 const db = (x) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf');
 const short = (arr, max = 10) => (arr.length > max ? arr.slice(0, max).join('; ') + `; ... (${arr.length} total)` : arr.join('; '));
 
@@ -394,7 +394,7 @@ async function stepLoad() {
       `label '${st0.label.trim()}'; ` + short(bad));
   }
   log(`  (info) WS_TEST.allNotesOff: ${api.allNotesOff}`);
-  for (const [w, h] of [[1124, 782], [1280, 860], [1920, 1080]]) {
+  for (const [w, h] of [[1124, 902], [1280, 860], [1920, 1080]]) {
     const { st } = await shot(`load_${w}x${h}`, w, h);
     check(st.distinctColors > 8 && st.lumaStd > 2, `page renders non-blank content at ${w}x${h}`, `${st.distinctColors} colours`);
     const ov = await ev(`({sw: document.documentElement.scrollWidth, sh: document.documentElement.scrollHeight, w: innerWidth, h: innerHeight})`);
@@ -425,7 +425,7 @@ async function stepWelcome() {
   if (!check(!!w && w.visible, 'the welcome window is shown when the page opens', JSON.stringify(w))) return;
   await shot('welcome');
   log(`  title '${w.title}'; choices: ${w.choices.map((c) => c.title).join(' | ')}`);
-  check(/OKTOWAVE/.test(w.title) && /Wavelet Synthesizer/.test(w.title), "its title is 'OKTOWAVE · Wavelet Synthesizer'", w.title);
+  check(/WAVECHORD/.test(w.title) && /Chord Synthesizer/.test(w.title), "its title is 'WAVECHORD · Wavelet Chord Synthesizer'", w.title);
   const titles = w.choices.map((c) => c.title);
   check(JSON.stringify(titles) === JSON.stringify(['Run the demo', 'Play the synth', 'Download the VST']), 'three choices: Run the demo, Play the synth, Download the VST', JSON.stringify(titles));
   const demo = w.choices[0] || {}, play = w.choices.find((c) => c.id === 'start-btn'), dl = w.choices[2] || {};
@@ -473,7 +473,7 @@ async function stepStart() {
   const idle = await waitLevel((p) => p < 0.001, 2000);
   check(idle.ok, 'silence when idle after start()', `peak ${idle.peak}`, 'WARN');
   await sleep(300);
-  for (const [w, h] of [[1124, 782], [1280, 860], [1920, 1080]]) await shot(`ui_${w}x${h}`, w, h);
+  for (const [w, h] of [[1124, 902], [1280, 860], [1920, 1080]]) await shot(`ui_${w}x${h}`, w, h);
   await B.setViewport(1280, 860);
   await sleep(300);
   await shot('ui_1280x860_ref');
@@ -618,8 +618,8 @@ async function stepPanel() {
   const t0 = Date.now();
   if (!SPEC) { rec('WARN', 'panel checks', 'tools/spec.js not available'); return; }
   const r = await deviceRect();
-  if (!r) { rec('WARN', 'device element (1100x720 aspect) found on the page', 'panel checks skipped'); return; }
-  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 720];
+  if (!r) { rec('WARN', 'device element (1100x840 aspect) found on the page', 'panel checks skipped'); return; }
+  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 840];
   const all = [];
   for (const s of SPEC.SECTIONS) for (const w of s.widgets) all.push(Object.assign({ sx: s.x + w.x, sy: s.y + w.y }, w));
   // cards and captions follow the spec (no CHORUS card, no 'SCOPE · SCALOGRAM', LFO 1 / LFO 2, the TARGET caption)
@@ -657,7 +657,7 @@ async function stepPanel() {
   const vstOnly = all.filter((w) => w.only === 'vst' && w.param).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   const shown = all.filter((w) => w.vis && w.only !== 'vst').map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   const probe = (list) => ev(`(() => { const d = document.getElementById('device').getBoundingClientRect();
-    return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / 720);
+    return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / 840);
       const k = e && e.closest('.w'); return { want: w.name, at: k ? (k.title || '').split(' — ')[0] || k.className : (e ? e.tagName : null), text: k ? k.textContent.trim() : '' }; }); })()`);
   const atVst = await probe(vstOnly), atShown = await probe(shown);
   const syncEls = await ev(`[...document.querySelectorAll('#device *')].filter((e) => /\\(sync\\)|^(Delay|LFO \\d) Sync/.test(e.title || '') || (e.children.length === 0 && /^SYNC$/.test(e.textContent.trim()))).length`);
@@ -850,7 +850,7 @@ async function stepKeyboard() {
   check(B.errors(t0).length === 0, 'Z/X octave keys raise no errors', short(B.errors(t0)));
 }
 
-// Locate the device (1100x720 layout) on the page to click spec coordinates.
+// Locate the device (1100x840 layout) on the page to click spec coordinates.
 async function deviceRect() {
   return ev(`(() => {
     let best = null;
@@ -858,7 +858,7 @@ async function deviceRect() {
       const r = el.getBoundingClientRect();
       if (r.width < 300 || r.height < 200) continue;
       const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-      const ar = r.width / r.height, err = Math.abs(ar / (1100 / 720) - 1);
+      const ar = r.width / r.height, err = Math.abs(ar / (1100 / 840) - 1);
       if (err > 0.03 || r.width * r.height < 0.3 * innerWidth * innerHeight) continue;
       // closest aspect ratio wins (an outer stage/container is usually a bit off), then the larger one
       if (!best || err < best.err - 0.002 || (Math.abs(err - best.err) <= 0.002 && r.width * r.height > best.w * best.h))
@@ -872,9 +872,9 @@ async function stepMouse() {
   await ev(NEUTRAL_EXPR());
   await sleep(300);
   const r = await deviceRect();
-  if (!r) { rec('WARN', 'device element (1100x720 aspect) found on the page', 'cannot map spec coordinates; mouse checks skipped'); return; }
+  if (!r) { rec('WARN', 'device element (1100x840 aspect) found on the page', 'cannot map spec coordinates; mouse checks skipped'); return; }
   log(`  device element <${r.tag} id='${r.id}' class='${r.cls}'> at ${r.x.toFixed(0)},${r.y.toFixed(0)} size ${r.w.toFixed(0)}x${r.h.toFixed(0)}`);
-  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 720];
+  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 840];
   const t0 = Date.now();
   await B.click(...P(488, 24));
   await sleep(300);
@@ -970,7 +970,7 @@ async function stepHashes() {
 async function main() {
   fs.mkdirSync(opt.out, { recursive: true });
   for (const f of fs.readdirSync(opt.out)) if (/\.(png|txt)$/.test(f)) fs.rmSync(path.join(opt.out, f));
-  log('test_web.js - Wavelet Synthesizer web app test (headless Edge via CDP)');
+  log('test_web.js - WaveChord Synth web app test (headless Edge via CDP)');
   log(`date   : ${new Date().toISOString()}`);
   log(`page   : ${BASE_URL}`);
   log(`browser: headless Edge${opt.fileAccess ? ' with --allow-file-access-from-files' : ' WITHOUT --allow-file-access-from-files (normal browser)'}`);
