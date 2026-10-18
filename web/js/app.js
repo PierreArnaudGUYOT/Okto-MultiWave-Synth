@@ -441,7 +441,7 @@
     const url = 'manual/manual-' + w + '.html';
     $('manual-iframe').src = url;
     $('manual-newtab').href = url;
-    $('manual-title').textContent = w === 'a' ? 'Manual A — Wavelet Subtractive engine' : 'Manual B — Wavelet Additive engine';
+    $('manual-title').textContent = w === 'a' ? 'Manual A — subtractive oscillators A1 · A2' : 'Manual B — additive oscillators B1 · B2';
     $('manual-overlay').hidden = false;
   }
   // The manual pages announce themselves (postMessage works across file:// frames),
@@ -450,7 +450,7 @@
     const w = e.data && e.data.wsManual;
     if ((w !== 'a' && w !== 'b') || $('manual-overlay').hidden) return;
     $('manual-newtab').href = 'manual/manual-' + w + '.html';
-    $('manual-title').textContent = w === 'a' ? 'Manual A — Wavelet Subtractive engine' : 'Manual B — Wavelet Additive engine';
+    $('manual-title').textContent = w === 'a' ? 'Manual A — subtractive oscillators A1 · A2' : 'Manual B — additive oscillators B1 · B2';
   });
 
   function closeManual() {

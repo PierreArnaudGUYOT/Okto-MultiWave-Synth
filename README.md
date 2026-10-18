@@ -1,217 +1,189 @@
-# Wavelet Synthesizer
+# Okto MultiWave Synth
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23431760.svg)](https://doi.org/10.5281/zenodo.23431760)
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.1**, a test version (2026-10-18), see
+[RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — version **beta 0.7** (2026-10-18), see [RELEASE_HISTORY.md](RELEASE_HISTORY.md).
-Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
+Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
+(beta 0.7) with **four oscillators instead of two engines**: two subtractive wavelet oscillators (**A1, A2**) and two
+additive wavelet oscillators (**B1, B2**). It is a polyphonic synthesizer that shapes sound with the **discrete wavelet
+transform** instead of Fourier filters: one cycle of each tone is split into 11 octave-spaced wavelet bands and resynthesised
+band by band. It comes as a **web application** and a **VST3 / VST2 instrument** for Windows x64 (Ableton Live and other
+hosts).
 
-A polyphonic synthesizer that shapes sound with the **discrete wavelet transform** instead of Fourier filters.
-It comes as a **web application** and a **VST3 / VST2 instrument for Ableton Live** (Windows x64), also as a **VST3 for
-macOS** (Apple silicon and Intel). They share
-the same engine, panel layout and 150 factory presets (beta 0.5: OktoPierre's sort of the 253 of beta 0.4): his 22 **TOP
-Sounds** first (beta 0.7: exactly his favourites, the best first), then the others sorted by category like a hardware
-synthesizer (Bass, Lead, Keys, Organ, Pad, Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc, Init, Source
-Phase); both open on "A · Warm Pad".
-Its two engines can play **alone or mixed** (the **A/B MIX** knob), and a **string-machine triple chorus** widens pads,
-strings and organs. The **WAVELET MORPH** (beta 0.3) builds the sound with a second wavelet too and moves between the two
-with a knob, the LFO or the envelope. Each category lists its presets in OktoPierre's order.
-A second LFO (**LFO 2**) moves any parameter of the scale filter or the position window. **SOURCE PHASE** (beta 0.4) moves
-engine A's source wave inside the cycle before the wavelet transform: because the transform is shift-variant, the scale
-filter then acts on other atoms and the timbre changes — something no Fourier filter can do; LFO 2 can sweep it, and the
-44 presets of the Source Phase section are built on it. In the VST plug-in, a **preset
-browser** (TOP Sounds and the sound types) sits at the right of the panel; **SAVE PRESET** adjusts a factory preset,
-**DELETE** clears out the ones you do not want, ▲ ▼ reorder the lists, a sound **dragged onto a category** moves there (or
-joins TOP Sounds), the **arrow keys** choose sounds, and a **user bank** keeps your own sounds — all in one readable text
-file, `OKTOWAVE presets.txt`, kept next to the plug-in; EXPORT / IMPORT share it.
-beta 0.6 rearranges the panel (SUB OSC beside the oscillator, LFO 1 and LFO 2 side by side, the chorus inside EFFECTS,
-one MANUAL button) and adds **tempo SYNC** to the plug-in: the delay and both LFOs can follow the DAW's tempo in note
-values (1/4, 1/8 D, 1/16 T…); the web app opens with a welcome window (run the demo, play the synth, download the VST).
-beta 0.7 gives the scope more room (SUB OSC's three knobs in a column), a taller keyboard and more space for VOICE, and a
-new demo tour that starts by explaining the idea in plain words.
-A **sub oscillator** (sine, triangle or square, one or two octaves below) adds low end and infra-bass, and a
-**polyphonic portamento** selector (Off / Poly / Legato, Poly by default) works with the GLIDE time: in Poly mode every voice
-glides from its own previous note, so chord changes glide voice by voice.
+This is a *test version*: its 200 new presets are waiting for your ears. **EVALUATE SOUNDS** plays a piece of music with
+each of them and asks for 1 to 10 stars; the ratings (and the changes you make to the sounds you like) are saved in a
+text file you can send back.
 
-**Play online:** https://pierrearnaudguyot.github.io/Free-Wavelet-Synthesizer-VST/ (Chrome or Edge; with Web MIDI,
-a hardware keyboard, sequencer or controller plays it directly, no DAW needed).
-**Download the plugin**: see the
-[Releases](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases) page of the
-[GitHub repository](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST) —
-*V0.7 (beta)*, this version, with one zip for **Windows** 64-bit (VST3 / VST2) and one for **macOS** 10.13 or later (VST3,
-one universal plug-in for Apple silicon and Intel Macs; `INSTALL-mac.txt` in the zip explains the first start). The
-earlier versions (V0.6, V0.5, V0.4, V0.3, V0.3 for Mac…) stay on the same page. The web app also works offline:
-download the repository and open `web/index.html`.
+**Play online:** https://pierrearnaudguyot.github.io/Okto-MultiWave-Synth/ (Chrome or Edge; a MIDI keyboard plays it
+directly, no DAW needed).
+**Download the plug-in:** the [Releases](https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases) page
+(a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
+The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
+(the code is portable, but no macOS build is made or tested here).
 
-**MIDI without a DAW (web app):** all inputs, notes, pitch bend, mod wheel, sustain; a channel selector in the status
-bar (all or 1–16); Program Change selects a preset; **MIDI learn**: right-click a panel control, then move a knob or
-fader on your controller (Esc cancels, Delete unlinks; links are kept in the browser).
+## What is new compared with the Wavelet Synthesizer
 
-| Engine | Idea | Manual |
-|---|---|---|
-| **A · Wavelet Subtractive** | One cycle of a classic waveform is split into 11 wavelet bands (one per octave of harmonics). A *scale filter* attenuates bands, optionally only in one part of the cycle (position window), and a sparsity control keeps only the strongest atoms. | [web/manual/manual-a.html](web/manual/manual-a.html) |
-| **B · Wavelet Additive** | The cycle is built from wavelet atoms: a pattern writes the coefficients, 11 drawbars set the band levels, and every band has its own envelope (scale envelope). | [web/manual/manual-b.html](web/manual/manual-b.html) |
+- **Four oscillators**, **A1 A2 B1 B2**, one tab each at the top of the panel. Every oscillator has its **own** tone
+  (subtractive: source wave, atom shape, wavelet, sparsity, phase; additive: atom pattern, drawbars, tilt, band envelopes),
+  **scale filter**, **position window**, **tuning** (octave, semitones, cents), **own envelope** (it multiplies the AMP
+  ENVELOPE, so one oscillator can be a short attack and another a long pad) and **pitch envelope** (a fall or rise in
+  semitones over a time: kicks, plucks, zaps). Only one oscillator's cards are shown at a time, so the panel stays as clear as
+  the original's.
+- **OSC MIX** (the card next to the scope): four level knobs, one per oscillator, replace the A/B MIX knob. A1 plays at 100 %
+  on a new patch, the others at 0. The sub oscillator is in the same card.
+- **222 presets: the 22 TOP Sounds** (OktoPierre's favourites, unchanged: they sound exactly as in beta 0.7) **and 200
+  new ones** numbered `001`–`200`, in 11 categories (Bass, Lead, Keys, Organ, Pad, Strings, Brass & Wind, Pluck, Bells &
+  Mallets, FX, Drums & Perc). Every new preset uses at least two oscillators; the letters of its name say which
+  (`A1A2`, `B1B2`, `A1B1`); an oscillator is often the attack (a click, a breath, a pluck) of another.
+- **EVALUATE SOUNDS** (header, web app and plug-in): see below.
+- **CHORD MODE** (button next to the keyboard): the panel grows and a *chord harp* card appears (twelve chord pads, the chord
+  name, KEYS OCT, STACKED / FOLDED voicing, BASS, STRUM and a strum plate): one octave of the keyboard chooses the chord type, one
+  finger plays the whole chord. With CHORD MODE off the panel is the plain synthesizer and none of it is shown.
+- **LFO 2** moves the scale filter, the position window or the source phase of **every** oscillator at once (and the
+  wavelet morph and the phase LFO act on each oscillator).
+- **Lighter on the CPU**: the review of the Wavelet Synthesizer's load (`Revue.md` of the CPU study) is applied: `exp`
+  instead of `pow(10, ·)`, a two-sine chorus, no `%` in the wavelet transform, idle instances skip their silent blocks, the
+  smoothing constants no longer depend on the host's sample rate, table builds run in a Web Worker, the plug-in's builder
+  thread and library are safer. What was left out, and why, is in [RELEASE_HISTORY.md](RELEASE_HISTORY.md).
 
-Wavelets available: Haar, Daubechies 2/4/8/20, Symlet 8, Coiflet 3.
+## EVALUATE SOUNDS
+
+Click **EVALUATE SOUNDS** in the header.
+- The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) with preset **001**, then asks for
+  **1 to 10 stars** (a click; in the web app also the keys 1–9 and 0 = 10). It goes on with the next preset; **Skip**,
+  **Previous**, **Replay** and **Stop** are always there.
+- **More than 5 stars** offers to *modify* the preset: it loads exactly as designed, you change the panel with the mouse and
+  play it on your keyboard, then **Keep initial settings** or **Record preset change**. The parameters that differ from the
+  preset are written in the file.
+- Every rating is saved at once, so you can stop and **continue where you stopped** (the file is read again at the next
+  session).
+- **Web app**: the ratings are kept in the browser meanwhile; in Edge or Chrome you choose the file at the start
+  (`okto-multiwave-ratings.txt`) and it is rewritten after every rating or change; in other browsers use **Download the
+  ratings (.txt)**.
+- **Plug-in**: the file is `Documents\Okto MultiWave Synth\okto-multiwave-ratings.txt` (the local application data folder when
+  there is no Documents folder), written after every rating or change; **Change file…** chooses another one, **Show file**
+  opens its folder, **Save now** writes it again. Both versions write the same readable text: the stars of every preset, a
+  ranking, and the recorded changes as `parameter key: value in the preset -> new value`.
 
 ## Use it
 
 ### Web app
-Open `web/index.html` in Chrome, Edge or Firefox (double-click; no server or install needed). A welcome window offers **Run the demo**, **Play the synth** (MIDI
-supported; it starts the sound, then play) or **Download the VST** (the GitHub releases page, also the header's
-DOWNLOAD VST). **MANUAL** (header) opens the manual of the engine shown.
-- Play with the mouse on the keyboard, a MIDI keyboard (Web MIDI), or the computer keyboard:
-  - digits **1 2 3 4 5 6 7 8 9 0** (or the numeric keypad) = C D E F G A B C D E (do ré mi…)
-  - letter rows = chromatic piano (A W S E D F T G Y H U J K O L P)
-  - **Z** / **X** = octave down / up
-- Presets: the **preset browser** at the right of the panel (as in the VST): TOP Sounds and the sound types, one click
-  plays a sound, the **arrow keys** too (↑ ↓ sounds, ← → categories; HIDE folds the browser away and a click on the preset
-  name brings it back). ◀ ▶ and the preset name's menu work as before. **Save preset / Export / Import** are in the status bar.
-- Works directly from the file (no web server needed).
-- **▶ DEMO** (header, web app, or *Run the demo* in the welcome window) plays Beethoven's *Appassionata* (III) from the phrase after its opening chords while touring 30 presets:
-  a new preset about every 4 s, on a change of chord, starting with "B · Clarinet": OktoPierre's choice of sounds mixed one by one
-  with his TOP Sounds (played polyphonic at their normal octave); during the first presets the window explains the idea of
-  the synth in a few plain sentences; the preset browser shows the preset being played. **▾** opens the list: J. S. Bach's *Toccata in D minor* or one of the virtuoso Beethoven piano works
-  (*Appassionata* III, *Moonlight* III, *Rage over a Lost Penny*, Symphony No. 5 I (piano), *Pathétique* I, *The Tempest* I, Sonata Op. 111 I) —
-  or **Load a MIDI file…** of your own. The demo animates the important parameters and a small window explains in English
-  which parameter is changing. Stop it with ■ STOP or Esc; your sound is restored afterwards.
-  (Copyrighted songs are not bundled; load your own files for those.)
+Open `web/index.html` in Chrome, Edge or Firefox (double-click; no server or install needed). A welcome window offers **Run
+the demo**, **Play the synth** or **Download the VST**. **MANUAL** (header) opens the manual of the oscillator shown.
+- Play with the mouse on the keyboard, a MIDI keyboard (Web MIDI), or the computer keyboard: digits **1 2 3 4 5 6 7 8 9 0** =
+  C D E F G A B C D E; the letter rows A W S E D F T G Y H U J K O L P = a chromatic piano; **Z** / **X** = octave down / up.
+- **MIDI**: notes, pitch bend, mod wheel, sustain; Program Change selects a preset; **MIDI learn** by a right-click on a control.
+- Presets: the **preset browser** at the right of the panel (TOP Sounds and the categories, ↑ ↓ ← → keys), ◀ ▶ and the
+  preset name's menu. **Save preset / Export / Import** are in the status bar.
+- **▶ DEMO** plays Beethoven's *Appassionata* (III) while touring 29 presets (the TOP Sounds mixed with new ones that show
+  the oscillators at work); **▾** opens other pieces or *Load a MIDI file…*.
 
-### VST3 / VST2 in Ableton Live
-1. Build the plugin (see below), or use an existing `build\WaveletSynthesizer.vst3` folder.
-2. Copy the **whole** `WaveletSynthesizer.vst3` folder into **either**
-   - your VST3 folder `C:\Program Files\Common Files\VST3` (`vst\install.bat` does this and asks for administrator rights), **or**
-   - your VST2 plug-in folder (the one set as *VST2 Plug-in Custom Folder* in Live; no administrator rights needed).
-3. In Live: *Preferences → Plug-ins* → enable **Use VST3 Plug-in System Folders** (VST3) or
-   **Use VST2 Plug-in Custom Folder** (VST2) → **Rescan**.
-4. Drag *Plug-ins → Wavelet Synthesizer* onto a MIDI track.
+### VST3 / VST2 in Ableton Live (Windows)
+1. Build the plugin (see below), or take the zip of the Releases page.
+2. Copy the **whole** `OktoMultiWaveSynth.vst3` folder into **either** your VST3 folder `C:\Program Files\Common Files\VST3`
+   (`vst\install.bat` does this and asks for administrator rights) **or** your VST2 plug-in folder (no administrator rights).
+3. In Live: *Preferences → Plug-ins* → enable **Use VST3 Plug-in System Folders** (or **Use VST2 Plug-in Custom Folder**) →
+   **Rescan**. Drag *Plug-ins → Okto MultiWave Synth* onto a MIDI track.
 
-The plugin is a single self-contained DLL. It depends only on Windows system libraries, so nothing else
-needs to be installed. The same DLL is both a VST3 plug-in (`Contents\x86_64-win\WaveletSynthesizer.vst3`) and a VST2
-plug-in (the copy `WaveletSynthesizer.dll` next to it, found by hosts that scan a VST2 folder). The VST2 entry point
-(`vst/src/vst2.cpp`) hosts the same processor, controller and editor in-process; its declarations are written from
-the public VST 2.4 binary layout (Steinberg no longer licenses the VST2 SDK). The **MANUAL** button opens
-the manual of the engine shown, bundled inside the `.vst3` folder.
-**Tempo SYNC** (beta 0.6, plug-in only): the SYNC buttons of the delay, LFO 1 and LFO 2 make TIME / RATE a note value
-of the host's tempo (delay 1/32 … 1/1, up to 4 s; LFOs 4/1 … 1/32; T = triplet, D = dotted; 120 BPM when the host
-gives no tempo).
-Pitch bend, the mod wheel (vibrato) and the sustain pedal are supported. All parameters can be automated.
+The plugin is a single self-contained DLL that only needs Windows system libraries: a VST3 plug-in
+(`Contents\x86_64-win\OktoMultiWaveSynth.vst3`) and, as a copy next to it, a VST2 plug-in (`OktoMultiWaveSynth.dll`).
+Pitch bend, mod wheel, sustain pedal and **tempo SYNC** (delay and LFOs in note values of the host's tempo) are supported,
+and every sound parameter can be automated. The chord harp's six settings are plug-in parameters too (saved with the Live Set,
+never in a preset). In the plug-in, **SAVE PRESET**, **DELETE**, ▲ ▼ and a **user bank** keep your adjustments in one
+readable text file, `OKTOMULTIWAVE presets.txt`, next to the plug-in folder.
 
-### VST3 on a Mac
-1. Copy `WaveletSynthesizer.vst3` into your own plug-in folder `~/Library/Audio/Plug-Ins/VST3` (Finder: *Go → Go to
-   Folder…*): the presets file `OKTOWAVE presets.txt` is written next to the plug-in.
-2. First start: the plug-in is free and not signed with a paid Apple developer certificate, so macOS blocks it once.
-   In Terminal: `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/WaveletSynthesizer.vst3`
-   (or *System Settings → Privacy & Security → Open Anyway*).
-3. In Live: *Settings → Plug-ins* → **Use VST3 Plug-in System Folders** → **Rescan**. Other VST3 hosts (Cubase, Bitwig,
-   Reaper, Studio One…) work too; Logic Pro and GarageBand only load Audio Units.
-
-Same panel, sound and presets as on Windows (one universal binary for Apple silicon and Intel). On a Mac, Cmd-click resets
-a knob and Control-click on the preset name opens the preset menu.
+It installs next to the Wavelet Synthesizer: its own name, class IDs and VST2 ID, its own presets file.
 
 ## Build the VST3
 
 Requirements: the portable [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) toolchain
-(`llvm-mingw-<date>-ucrt-x86_64.zip`, extract it anywhere; no admin rights, no Visual Studio, no CMake).
-Node.js is optional: if present, the build regenerates the C++ parameter table from `tools/spec.js`.
+(`llvm-mingw-<date>-ucrt-x86_64.zip`, extract it anywhere; no admin rights, no Visual Studio, no CMake). Node.js is optional:
+if present, the build regenerates the C++ parameter table and the listening passage from `tools/spec.js`.
 
 ```bat
 set LLVM_MINGW=C:\Users\<you>\tools\llvm-mingw   (default: %USERPROFILE%\tools\llvm-mingw)
 vst\build.bat
 ```
-Output: `build\WaveletSynthesizer.vst3\Contents\x86_64-win\WaveletSynthesizer.vst3` + `Contents\Resources\manual\`.
-
-**macOS**: with the Xcode command line tools (`xcode-select --install`), run `vst/build_mac.sh`: one universal VST3 bundle
-in `build/mac/WaveletSynthesizer.vst3` (signed ad hoc). GitHub's Macs build and test it on every push
-(`.github/workflows/mac.yml`: the sound against the web engine on both architectures, then `tests/machost`, a small
-macOS host that plays notes and drives the editor); the release zip is one of the workflow's artifacts.
+Output: `build\OktoMultiWaveSynth.vst3\Contents\x86_64-win\OktoMultiWaveSynth.vst3` + `Contents\Resources\manual\`. The build
+uses `-ffp-contract=off`, so that the C++ and JavaScript engines do the same floating-point operations.
 
 ## Project layout
 
 ```
-tools/spec.js          single source of truth: parameters, panel layout, factory presets
-tools/gen_spec.js      generates web/js/spec.js and vst/src/generated/spec.h from it
-tools/wavelets.json    wavelet filter coefficients
-tools/dsp_selftest.js  engine self-test (perfect reconstruction, band-limiting, presets, aliasing)
-tools/dsp_compare.js   checks that the C++ engine matches the JavaScript reference sample by sample
-tools/make_demo.js     demo converter (tools/demo/*.mid -> web/js/demo_data.js); MIDI reader in web/js/midi.js
-tools/manual/          generator of the two user manuals (node tools/manual/build.js a b)
+tools/spec.js          single source of truth: parameters, the four oscillators, panel layout, presets
+tools/gen_spec.js      generates web/js/spec.js, vst/src/generated/spec.h and vote_data.h (the listening passage)
+tools/presets_top.js   the 22 TOP Sounds;  tools/presets_new.js  the 200 new presets (generated)
+tools/make_presets.js  builds the new presets from tools/recipes_*.js (tools/preset_dsl.js, preset_lab.js: loudness
+                       matching, distinctness check, contact sheets)
+tools/dsp_selftest.js  engine self-test;  tools/dsp_compare.js  C++ engine against the JavaScript reference
+tools/manual/          generator of the user manuals
 web/                   web application (vanilla JS, Web Audio AudioWorklet, no libraries)
-  js/core.js           DSP reference implementation (also runs inside the AudioWorklet)
-  js/ui.js, js/app.js  panel UI, presets, MIDI, computer keyboard
-  js/demo.js           demo player: songs, scene templates, the demo window, user MIDI files
-  manual/              user manuals A and B (also bundled into the VST)
-vst/                   VST3 plugin (C++17)
-  src/dsp.h            C++ port of core.js
-  src/plugin.cpp       processor, controller, factory (written directly on the VST3 interfaces)
-  src/editor.cpp       plugin window: the panel, the same on every system (draws through src/editor_platform.h)
-  src/editor_win.cpp   its Windows side (Win32 + GDI+, both part of Windows)
-  src/editor_mac.mm    its macOS side (Cocoa, Core Graphics, Core Text)
-  src/platform.h       files, folders and text conversion on Windows and macOS
-  external/pluginterfaces  Steinberg VST3 interface headers 3.8.1 (MIT licence)
-tests/                 independent test tools (VST3 test hosts for Windows and macOS, browser test driver)
+  js/core.js           DSP reference implementation (also runs inside the AudioWorklet and the table-building Worker)
+  js/ui.js, app.js     panel UI, presets, MIDI, computer keyboard;  js/evaluate.js  the rating session
+  js/demo.js           demo player (a tour of the presets)
+vst/                   VST3 / VST2 plugin (C++17)
+  src/dsp.h            C++ port of core.js;  src/plugin.cpp  processor, controller, factory
+  src/editor.cpp       the panel window (draws through editor_platform.h; editor_win.cpp is its Windows side)
+  src/bank.h, platform.h   the presets file and the operating-system calls
+tests/                 test tools (VST3 host, browser driver, regression against beta 0.7, idle-skip rule)
 ```
 
 ## How the engine works (short)
 
-- Each note plays one **cycle of 2048 samples**, analysed with a periodic orthogonal DWT into **11 bands**.
-  Band 1 is a single atom that spans the whole cycle (≈ the fundamental); band *b* has 2^(b−1) atoms and covers
-  roughly harmonics 2^(b−2)…2^(b−1) (band 11 = harmonics 513–1024), so 1 band ≈ 1 octave of harmonics.
-  Only the bands below the audio limit are played: at C4 that is bands 1–7, at C2 bands 1–9.
-  Because the analysis is pitch-synchronous, the bands follow the note.
-- Every band is resynthesised into its own layer and stored as **band-limited mip tables** (11 octave levels),
-  so the oscillator stays alias-free. Voices mix the layers with per-band gains at audio rate, so filter sweeps and envelopes are smooth.
-- Structural changes (wavelet, source, sparsity, pattern, seed) rebuild the tables on a background thread
-  (the main thread in the web app) and crossfade over about 10 ms.
+- Each note plays one **cycle of 2048 samples** per oscillator, analysed with a periodic orthogonal DWT into **11 bands**.
+  Band *b* has 2^(b−1) atoms and covers roughly harmonics 2^(b−2)…2^(b−1): one band ≈ one octave of harmonics. Because the
+  analysis is pitch-synchronous, the bands follow the note.
+- Every band is resynthesised into its own layer and stored as **band-limited mip tables**, so the oscillator stays
+  alias-free. A voice mixes the layers of each oscillator with per-band gains at audio rate, then the oscillators with their
+  levels (smoothed over 20 ms); filter sweeps and envelopes are smooth. An oscillator whose level is 0 costs nothing.
+- Structural changes (wavelet, source, sparsity, pattern, seed, an oscillator switched on or off) rebuild the tables on a
+  background thread (a Worker in the web app) and crossfade over about 10 ms.
 
 ## Development checks
 
 ```bash
-node tools/gen_spec.js           # after editing tools/spec.js
-node tools/dsp_selftest.js --wav # engine self-test; --wav writes build/test-audio/*.wav
+node tools/gen_spec.js            # after editing tools/spec.js or the presets
+node tests/quick.js               # 20 s: syntax, engine, VST3 host sections, web smoke test
+node tests/regress_v07.js         # the 22 TOP Sounds against the published beta 0.7 engine (within 1.5e-7)
+node tests/idle_skip.js           # the idle rule does not cut a delay echo or a reverb tail
+node tests/web/smoke.js           # the four oscillator views and CHORD MODE in headless Edge
 ```
-To cross-check the C++ port, compile `vst/devtest/dsp_render.cpp` and run `node tools/dsp_compare.js <dir>`.
-To check the VST2 entry point like a VST2 host, compile and run `vst/devtest/vst2_smoke.cpp` (build line at its top).
-The difference between the two engines is below 3.4e-7 for all 150 presets.
-
-## How to cite
-
-Guyot, P. A. (2026). *Wavelet Synthesizer* [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23431760
-(Zenodo record: https://zenodo.org/records/23431760; all versions: https://doi.org/10.5281/zenodo.23431759).
-GitHub shows the same reference under **Cite this repository** (`CITATION.cff`).
+To cross-check the C++ engine, compile `vst/devtest/dsp_render.cpp` (with `-ffp-contract=off`) and run
+`node tools/dsp_compare.js <dir>`: all cases agree within 2e-6 of full scale (worst: 1.8e-7). `vst/devtest/vote_session.cpp`
+drives the plug-in's EVALUATE SOUNDS window like a player (and CHORD MODE) in an off-screen window.
 
 ## Licence
 
 Copyright (C) 2026 Pierre Arnaud GUYOT ("OktoPierre").
 
-Wavelet Synthesizer (web app, VST3 plugin, tools and tests) is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3
-of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU General Public License in the file `LICENSE` for more details.
+Okto MultiWave Synth (web app, VST3 plugin, tools and tests) is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+Public License in the file `LICENSE` for more details.
 
-If you share the compiled plugin (`WaveletSynthesizer.vst3`) or the web app, share the source code with it as well
-(for example a link to the project's repository), as the GPL requires.
+If you share the compiled plugin (`OktoMultiWaveSynth.vst3`) or the web app, share the source code with it as well (for
+example a link to the project's repository), as the GPL requires.
 
 Parts that keep their own licence:
-- `vst/external/pluginterfaces/`: Steinberg VST3 interface headers, MIT licence (compatible with the GPL; its
-  licence text is kept in the folder and copied into the plugin bundle).
-- `tools/demo/*.mid` and `web/js/demo_data.js`: demo music from the Mutopia Project, public domain except the
-  *Moonlight* Sonata III (CC BY-SA 2.5, Stewart Holmes). This music data is not covered by the GPL
-  (see `tools/demo/SOURCE.md`).
+- `vst/external/pluginterfaces/`: Steinberg VST3 interface headers, MIT licence (compatible with the GPL; its licence text is
+  kept in the folder and copied into the plugin bundle).
+- `tools/demo/*.mid` and `web/js/demo_data.js`: demo music from the Mutopia Project, public domain except the *Moonlight*
+  Sonata III (CC BY-SA 2.5, Stewart Holmes). This music data is not covered by the GPL (see `tools/demo/SOURCE.md`).
 
 ## Credits
 
-Created by Pierre Arnaud GUYOT ("OktoPierre").
+Created by Pierre Arnaud GUYOT ("OktoPierre"), on the basis of his
+[Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
+(DOI [10.5281/zenodo.23431760](https://doi.org/10.5281/zenodo.23431760)). The chord keyboard comes from his WaveChord work.
 
-- Demo music: MIDI from the [Mutopia Project](https://www.mutopiaproject.org) (details in `tools/demo/SOURCE.md`): J. S. Bach *Toccata in D minor*
-  BWV 565 and Beethoven's Op. 57 III, Op. 129, Op. 67 I (piano), Op. 13 I, Op. 31/2 I, Op. 111 I — **public domain**;
-  Beethoven *Moonlight* Sonata Op. 27/2 III typeset by Stewart Holmes — **CC BY-SA 2.5**.
-- VST3 interface headers: Steinberg Media Technologies, MIT licence (`vst/external/pluginterfaces/LICENSE.txt`).
+- Demo music: MIDI from the [Mutopia Project](https://www.mutopiaproject.org): J. S. Bach *Toccata in D minor* BWV 565 and
+  Beethoven's Op. 57 III, Op. 129, Op. 67 I (piano), Op. 13 I, Op. 31/2 I, Op. 111 I — public domain; Beethoven *Moonlight*
+  Sonata Op. 27/2 III typeset by Stewart Holmes — CC BY-SA 2.5. The listening passage of EVALUATE SOUNDS is a part of Op. 57 III.
+- VST3 interface headers: Steinberg Media Technologies, MIT licence.
 - Wavelet filter coefficients were generated with PyWavelets (MIT licence) and are stored in `tools/wavelets.json`.
 
 ## Acknowledgments
 
-Thanks to Jeremi Palmigani (aka Saoul Machine) and Flo (aka Go Tiger) for testing the synth and providing valuable
-feedback and improvement suggestions.
-
-Thanks to Arnaud Grignard for the technical review of the concept.
+Thanks to Jeremi Palmigani (aka Saoul Machine) and Flo (aka Go Tiger) for testing the Wavelet Synthesizer and providing
+valuable feedback and improvement suggestions, and to Arnaud Grignard for the technical review of the concept.

@@ -165,11 +165,8 @@ function toneAmp(x, sr, f) {
 const bandMax = (x, sr, f0, f1) => { let m = 0; for (let f = f0; f <= f1; f++) m = Math.max(m, toneAmp(x, sr, f)); return m; };
 const dB = (a) => 20 * Math.log10(Math.max(a, 1e-12));
 
-// Neutral patch: 'A · Init' by name if it exists, otherwise every spec default (never a preset index).
-const NEUTRAL_EXPR = () => {
-  const i = SPEC ? SPEC.PRESETS.findIndex((p) => p.name === 'A · Init') : -1;
-  return i >= 0 ? `WS_TEST.loadPreset(${i})` : 'true';
-};
+// Neutral patch: every spec default (A1 alone at 100 %; there is no Init preset in Okto MultiWave Synth).
+const NEUTRAL_EXPR = () => `${SPEC_DEFAULTS_EXPR()} true`;
 const SPEC_DEFAULTS_EXPR = () => (SPEC ? SPEC.PARAMS.filter((p) => !p.hidden).map((p) => `WS_TEST.setParam('${p.key}', ${p.def});`).join(' ') : '');
 
 async function stepPortamento() {
@@ -425,7 +422,7 @@ async function stepWelcome() {
   if (!check(!!w && w.visible, 'the welcome window is shown when the page opens', JSON.stringify(w))) return;
   await shot('welcome');
   log(`  title '${w.title}'; choices: ${w.choices.map((c) => c.title).join(' | ')}`);
-  check(/OKTOMULTIWAVE/.test(w.title) && /Chord Synthesizer/.test(w.title), "its title is 'OKTOMULTIWAVE · Wavelet Chord Synthesizer'", w.title);
+  check(/OKTOMULTIWAVE/.test(w.title) && /Wavelet Synthesizer/.test(w.title), "its title is 'OKTOMULTIWAVE · Wavelet Synthesizer'", w.title);
   const titles = w.choices.map((c) => c.title);
   check(JSON.stringify(titles) === JSON.stringify(['Run the demo', 'Play the synth', 'Download the VST']), 'three choices: Run the demo, Play the synth, Download the VST', JSON.stringify(titles));
   const demo = w.choices[0] || {}, play = w.choices.find((c) => c.id === 'start-btn'), dl = w.choices[2] || {};
@@ -595,19 +592,25 @@ async function stepPresets() {
 }
 
 async function stepEngines() {
-  begin('Engine A / B');
+  begin('Oscillators A1 A2 B1 B2');
   await ev(NEUTRAL_EXPR());
-  for (const e of [0, 1]) {
-    await ev(`WS_TEST.setParam('engine', ${e})`);
+  const OSC = ['A1', 'A2', 'B1', 'B2'];
+  for (let e = 0; e < 4; e++) {
+    await ev(`WS_TEST.setParam('osc_view', ${e})`);
     await sleep(300);
     const r = await playNote(57, 0.8, 400);
-    log(`  engine ${e ? 'B' : 'A'}: peak ${db(r.peak)} dBFS, released ${r.released}`);
-    check(r.sounded && r.released, `engine ${e ? 'B' : 'A'} plays and releases`, `sounded ${r.sounded}, residual ${r.residual}`);
-    await shot(`engine_${e ? 'B' : 'A'}`);
+    log(`  oscillator ${OSC[e]} shown: peak ${db(r.peak)} dBFS, released ${r.released}`);
+    check(r.sounded && r.released, `with the ${OSC[e]} panel shown the synth plays and releases`, `sounded ${r.sounded}, residual ${r.residual}`);
+    await shot(`osc_${OSC[e]}`);
   }
-  const d = imageDiff(shots.engine_A, shots.engine_B);
-  check(d && d.changedFraction > 0.01, 'UI switches between engine A and B panels', d ? `${(d.changedFraction * 100).toFixed(2)} % pixels changed` : 'size mismatch', 'WARN');
-  await ev(`WS_TEST.setParam('engine', 0)`);
+  const d = imageDiff(shots.osc_A1, shots.osc_B1);
+  check(d && d.changedFraction > 0.01, 'UI switches between the A1 and B1 panels', d ? `${(d.changedFraction * 100).toFixed(2)} % pixels changed` : 'size mismatch', 'WARN');
+  // the tabs only choose the panel shown: the sound is that of the oscillator levels (OSC MIX)
+  for (const [k, v] of [['a1_lvl', 0], ['b1_lvl', 1]]) await ev(`WS_TEST.setParam('${k}', ${v}); true`);
+  const rb = await playNote(57, 0.8, 400);
+  check(rb.sounded && rb.released, 'B1 alone (OSC MIX: A1 0, B1 1) plays and releases', `peak ${db(rb.peak)} dBFS`);
+  await ev(`WS_TEST.setParam('osc_view', 0); true`);
+  await ev(NEUTRAL_EXPR());
 }
 
 // The panel against the spec layout (beta 0.6): cards, captions, the header's DOWNLOAD VST and single MANUAL button, no
@@ -618,8 +621,8 @@ async function stepPanel() {
   const t0 = Date.now();
   if (!SPEC) { rec('WARN', 'panel checks', 'tools/spec.js not available'); return; }
   const r = await deviceRect();
-  if (!r) { rec('WARN', 'device element (1100x840 aspect) found on the page', 'panel checks skipped'); return; }
-  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 840];
+  if (!r) { rec('WARN', 'device element (1100x860 aspect) found on the page', 'panel checks skipped'); return; }
+  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 860];
   const all = [];
   for (const s of SPEC.SECTIONS) for (const w of s.widgets) all.push(Object.assign({ sx: s.x + w.x, sy: s.y + w.y }, w));
   // cards and captions follow the spec (no CHORUS card, no 'SCOPE · SCALOGRAM', LFO 1 / LFO 2, the TARGET caption)
@@ -640,24 +643,24 @@ async function stepPanel() {
     Math.abs(dl.x - dx) < 2 && Math.abs(dl.y - dy) < 2, `header 'DOWNLOAD VST' opens ${VST_URL} in a new tab, at its spec place`, JSON.stringify({ dl, spec: [dx, dy] }));
   const mb = await ev(`[...document.querySelectorAll('#device button, #device a')].filter((b) => /MANUAL/.test(b.textContent)).map((b) => b.textContent)`);
   check(mb.length === 1 && mb[0] === 'USERMANUAL', "one 'USER MANUAL' button (no MANUAL A / MANUAL B)", JSON.stringify(mb));
-  const eng0 = await ev(`WS_TEST.getParam('engine')`);
-  for (const [e, file] of [[0, 'manual-a.html'], [1, 'manual-b.html']]) {
-    await ev(`WS_TEST.setParam('engine', ${e}); true`);
+  const eng0 = await ev(`WS_TEST.getParam('osc_view')`);
+  for (const [e, file] of [[0, 'manual-a.html'], [2, 'manual-b.html']]) {
+    await ev(`WS_TEST.setParam('osc_view', ${e}); true`);
     await sleep(200);
     const c = await centreOf('#device .hbtn.manual');
     if (c) await B.click(c.x, c.y);
     await sleep(500);
     const m = await ev(`({ open: !document.getElementById('manual-overlay').hidden, src: document.getElementById('manual-iframe').getAttribute('src') || '' })`);
-    check(!!c && m.open && m.src.endsWith(file), `MANUAL opens the manual of the engine shown (engine ${e ? 'B' : 'A'}: ${file})`, JSON.stringify(m));
+    check(!!c && m.open && m.src.endsWith(file), `MANUAL opens the manual of the oscillator shown (${['A1', 'A2', 'B1', 'B2'][e]}: ${file})`, JSON.stringify(m));
     await ev('WS_TEST.closeManual(); true');
     await sleep(200);
   }
-  await ev(`WS_TEST.setParam('engine', ${eng0}); true`);
+  await ev(`WS_TEST.setParam('osc_view', ${eng0}); true`);
   // tempo SYNC is the plug-in's: neither its buttons nor its note-value knobs here; the hertz / seconds knobs at their place
   const vstOnly = all.filter((w) => w.only === 'vst' && w.param).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   const shown = all.filter((w) => w.vis && w.only !== 'vst').map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   const probe = (list) => ev(`(() => { const d = document.getElementById('device').getBoundingClientRect();
-    return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / 840);
+    return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / 860);
       const k = e && e.closest('.w'); return { want: w.name, at: k ? (k.title || '').split(' — ')[0] || k.className : (e ? e.tagName : null), text: k ? k.textContent.trim() : '' }; }); })()`);
   const atVst = await probe(vstOnly), atShown = await probe(shown);
   const syncEls = await ev(`[...document.querySelectorAll('#device *')].filter((e) => /\\(sync\\)|^(Delay|LFO \\d) Sync/.test(e.title || '') || (e.children.length === 0 && /^SYNC$/.test(e.textContent.trim()))).length`);
@@ -681,12 +684,12 @@ async function stepPanel() {
       voice: v && { l: dx(v.left), r: dx(v.right), b: dy(v.bottom) } }; })()`;
   const crw = all.find((w) => w.type === 'credit'), wheels = all.find((w) => w.type === 'wheels');
   const crs = [];
-  for (const e of [0, 1]) {
-    await ev(`WS_TEST.setParam('engine', ${e}); true`);
+  for (const e of [0, 2]) {
+    await ev(`WS_TEST.setParam('osc_view', ${e}); true`);
     await sleep(200);
     crs.push(await ev(CREDIT_EXPR));
   }
-  await ev(`WS_TEST.setParam('engine', ${eng0}); true`);
+  await ev(`WS_TEST.setParam('osc_view', ${eng0}); true`);
   const cr = crs[0], crText = `${SPEC.APP.panelCredit} · ${SPEC.APP.version} · ${SPEC.APP.license}`;
   log(`  credit '${cr && cr.text}': text at x ${cr && cr.text_l.toFixed(1)}–${cr && cr.text_r.toFixed(1)}, y ${cr && cr.text_t.toFixed(1)}–${cr && cr.text_b.toFixed(1)} (VOICE card ${JSON.stringify(cr && cr.voice)}); ${cr && cr.size} px, weight ${cr && cr.weight}, colour A ${cr && cr.color}, B ${crs[1] && crs[1].color}, faint ${cr && cr.faint}`);
   check(!!cr && SPEC.APP.panelCredit === 'By OktoPierre' && cr.text === crText && cr.children === 0 && !!crs[1] && crs[1].text === crText && !cr.clipped && cr.inside,
@@ -694,9 +697,10 @@ async function stepPanel() {
   const discreet = (c) => !!c && c.size <= 10 && c.weight < 600 && c.color === c.faint;
   check(discreet(crs[0]) && discreet(crs[1]), 'credit: discreet on both engine tabs (<= 10 px, not bold, the faint text colour)',
     JSON.stringify(crs.map((c) => c && { size: c.size, weight: c.weight, color: c.color, faint: c.faint })));
-  check(!!cr && !!crw && cr.align === 'left' && Math.abs(cr.text_l - crw.sx) < 2 && !!cr.voice && cr.text_l >= cr.voice.l - 1 &&
-    cr.text_t >= cr.voice.b - 1 && cr.text_r < cr.voice.r && (!wheels || cr.text_r < wheels.sx) && cr.text_b <= 720 + 0.5,
-    `credit: left-aligned at the bottom left (text from x ${crw ? crw.sx : '?'}), under the VOICE card, left of the wheels`, JSON.stringify(cr));
+  // left-aligned at the bottom left, inside the panel, below the VOICE card and clear of the wheels (the keyboard section)
+  const clearOfWheels = !wheels || !(cr.text_l < wheels.sx + wheels.w && cr.text_r > wheels.sx && cr.text_t < wheels.sy + wheels.h - 4 && cr.text_b > wheels.sy);
+  check(!!cr && !!crw && cr.align === 'left' && Math.abs(cr.text_l - crw.sx) < 2 && !!cr.voice && cr.text_t >= cr.voice.b - 1 && clearOfWheels && cr.text_b <= 860 + 0.5,
+    `credit: left-aligned at the bottom left (text from x ${crw ? crw.sx : '?'}), below the VOICE card, clear of the wheels`, JSON.stringify(cr));
   // controls greyed out when they do nothing (still driven by the parameters)
   const greyed = (key) => ev(`(() => { const e = [...document.querySelectorAll('#device .knob')].find((k) => (k.title || '').split(' — ')[0] === ${JSON.stringify(SPEC_BY_KEY[key].name)});
     return e ? e.classList.contains('disabled') : null; })()`);
@@ -722,14 +726,13 @@ async function stepPanel() {
   const unlinked = await ev('WS_TEST.midiMap()');
   check(/MIDI learn/.test(learnTxt) && /Delay Time/.test(learnTxt) && map[21] === 'fx_dtime' && !Object.values(unlinked).includes('fx_dtime'),
     'right-click on the delay TIME knob starts MIDI learn; a CC links it; Backspace unlinks it', `status '${learnTxt}', map ${JSON.stringify(map)}, after ${JSON.stringify(unlinked)}`);
-  // beta 0.7: TOP Sounds = exactly OktoPierre's 22 sounds (no Source Phase sound among them), the categories in the spec order
-  // with Source Phase LAST: in the preset browser (its sound types and their numbers) and in the preset menu (its groups)
+  // TOP Sounds = exactly OktoPierre's 22 sounds, the categories in the spec order (Bass ... Drums & Perc): in the preset browser
+  // (its sound types and their numbers) and in the preset menu (its groups)
   const TOP_N = 22;
   const topNames = SPEC.PRESETS.slice(0, SPEC.TOP).map((p) => p.name);
-  const topCats = SPEC.PRESETS.slice(0, SPEC.TOP).filter((p) => p.cat === 'Source Phase').map((p) => p.name);
   const lastCat = SPEC.CATEGORIES[SPEC.CATEGORIES.length - 1];
-  check(SPEC.TOP === TOP_N && topCats.length === 0 && lastCat === 'Source Phase', `spec: TOP Sounds = ${TOP_N} sounds, none of Source Phase; Source Phase is the last category`,
-    `TOP ${SPEC.TOP}, Source Phase among them: ${JSON.stringify(topCats)}, last category '${lastCat}'`);
+  check(SPEC.TOP === TOP_N && SPEC.PRESETS.length === TOP_N + SPEC.NEW_COUNT && lastCat === 'Drums & Perc', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets; ${lastCat} is the last category`,
+    `TOP ${SPEC.TOP}, presets ${SPEC.PRESETS.length}, last category '${lastCat}'`);
   const bInfo = await ev(`(() => { const b = document.getElementById('browser'); if (!b) return null;
     const tab = b.querySelector('.btabs button'); if (tab) tab.click();   // FACTORY
     const first = b.querySelector('.bcats .bcat'); if (first) first.click();   // TOP Sounds
@@ -738,8 +741,8 @@ async function stepPanel() {
   const catWant = ['TOP Sounds', ...SPEC.CATEGORIES];
   log(`  browser: ${bInfo ? bInfo.cats.map((c) => `${c.label} ${c.n}`).join(' | ') : 'none'}`);
   check(!!bInfo && JSON.stringify(bInfo.cats.map((c) => c.label)) === JSON.stringify(catWant) && bInfo.cats[0].n === TOP_N &&
-    bInfo.cats[bInfo.cats.length - 1].label === 'Source Phase' && bInfo.cats[bInfo.cats.length - 1].n === SPEC.PRESETS.filter((p) => p.cat === 'Source Phase').length,
-    `preset browser: TOP Sounds (${TOP_N}) first, then the categories in the spec order, Source Phase last`, JSON.stringify(bInfo && bInfo.cats));
+    bInfo.cats[bInfo.cats.length - 1].label === lastCat && bInfo.cats[bInfo.cats.length - 1].n === SPEC.PRESETS.filter((p) => p.cat === lastCat).length,
+    `preset browser: TOP Sounds (${TOP_N}) first, then the categories in the spec order, ${lastCat} last`, JSON.stringify(bInfo && bInfo.cats));
   check(!!bInfo && JSON.stringify(bInfo.rows) === JSON.stringify(topNames), `preset browser: TOP Sounds lists OktoPierre's ${TOP_N} sounds in the spec order (${topNames[0]} … ${topNames[topNames.length - 1]})`,
     JSON.stringify(bInfo && bInfo.rows.slice(0, 4)) + ` … (${bInfo ? bInfo.rows.length : 0} rows)`);
   // the classic menu (the preset name opens it while the browser is shown; a second click closes it)
@@ -751,8 +754,8 @@ async function stepPanel() {
   const grpWant = ['★ TOP SOUNDS', ...SPEC.CATEGORIES.map((c) => c.toUpperCase())];
   log(`  preset menu groups: ${(groups || []).map((g) => `${g.name} ${g.n}`).join(' | ')}`);
   check(!!groups && JSON.stringify(factoryGroups.map((g) => g.name)) === JSON.stringify(grpWant) && factoryGroups[0].n === TOP_N &&
-    factoryGroups[factoryGroups.length - 1].name === 'SOURCE PHASE' && !(await ev(`!!document.querySelector('.pmenu:not(.demo-menu)')`)),
-    `preset menu: ★ TOP SOUNDS (${TOP_N}) first, then one group per category in the spec order, SOURCE PHASE last`, JSON.stringify(groups));
+    factoryGroups[factoryGroups.length - 1].name === lastCat.toUpperCase() && !(await ev(`!!document.querySelector('.pmenu:not(.demo-menu)')`)),
+    `preset menu: ★ TOP SOUNDS (${TOP_N}) first, then one group per category in the spec order, ${lastCat.toUpperCase()} last`, JSON.stringify(groups));
   // the preset browser selects presets (a click on a row, then the arrow key)
   const rows = await ev(`[...document.querySelectorAll('#browser .blist .bsnd')].map((e) => e.title)`);
   if (rows.length >= 3) {
@@ -850,7 +853,7 @@ async function stepKeyboard() {
   check(B.errors(t0).length === 0, 'Z/X octave keys raise no errors', short(B.errors(t0)));
 }
 
-// Locate the device (1100x840 layout) on the page to click spec coordinates.
+// Locate the device (1100x860 layout) on the page to click spec coordinates.
 async function deviceRect() {
   return ev(`(() => {
     let best = null;
@@ -858,7 +861,7 @@ async function deviceRect() {
       const r = el.getBoundingClientRect();
       if (r.width < 300 || r.height < 200) continue;
       const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-      const ar = r.width / r.height, err = Math.abs(ar / (1100 / 840) - 1);
+      const ar = r.width / r.height, err = Math.abs(ar / (1100 / 860) - 1);
       if (err > 0.03 || r.width * r.height < 0.3 * innerWidth * innerHeight) continue;
       // closest aspect ratio wins (an outer stage/container is usually a bit off), then the larger one
       if (!best || err < best.err - 0.002 || (Math.abs(err - best.err) <= 0.002 && r.width * r.height > best.w * best.h))
@@ -872,17 +875,18 @@ async function stepMouse() {
   await ev(NEUTRAL_EXPR());
   await sleep(300);
   const r = await deviceRect();
-  if (!r) { rec('WARN', 'device element (1100x840 aspect) found on the page', 'cannot map spec coordinates; mouse checks skipped'); return; }
+  if (!r) { rec('WARN', 'device element (1100x860 aspect) found on the page', 'cannot map spec coordinates; mouse checks skipped'); return; }
   log(`  device element <${r.tag} id='${r.id}' class='${r.cls}'> at ${r.x.toFixed(0)},${r.y.toFixed(0)} size ${r.w.toFixed(0)}x${r.h.toFixed(0)}`);
-  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 840];
+  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 860];
   const t0 = Date.now();
-  await B.click(...P(488, 24));
+  // the four tabs A1 A2 B1 B2 (x 296, 224 wide): B1 is the third, A1 the first
+  await B.click(...P(296 + 224 * 5 / 8, 24));
   await sleep(300);
-  const eB = await ev(`WS_TEST.getParam('engine')`);
-  await B.click(...P(356, 24));
+  const eB = await ev(`WS_TEST.getParam('osc_view')`);
+  await B.click(...P(296 + 224 / 8, 24));
   await sleep(300);
-  const eA = await ev(`WS_TEST.getParam('engine')`);
-  check(eB === 1 && eA === 0, 'clicking the engine selector switches engine B then A', `after B click: ${eB}, after A click: ${eA}`, 'WARN');
+  const eA = await ev(`WS_TEST.getParam('osc_view')`);
+  check(eB === 2 && eA === 0, 'clicking the oscillator tabs shows B1 then A1', `after B1 click: ${eB}, after A1 click: ${eA}`, 'WARN');
   const c0 = await ev(`WS_TEST.getParam('f_cutoff')`);
   const [kx, ky] = P(50, 418);
   await B.drag(kx, ky, kx, ky + 60, 12);

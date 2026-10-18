@@ -1,35 +1,79 @@
 # Okto MultiWave Synth — Release history
 
-Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer; the history of the
-synthesizer follows its own first release below.
+Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
+the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
-## Okto MultiWave Synth beta 0.1 — 2026-10-18 (the chord keyboard)
+## Okto MultiWave Synth beta 0.1 — 2026-10-18 (four oscillators, 200 new presets, EVALUATE SOUNDS)
+
+A **test version**: the sound engine, the panel and the presets are new, and the 200 new presets still have to be heard.
 
 **In short**
-- **CHORD KEYBOARD** (bottom card of the panel, plug-in and web app): one octave of the keyboard (KEYS OCT, C3–B3 by
-  default, tinted purple) chooses the chord type and makes no sound; every key above it plays the whole chord with one
-  finger; keys pressed while the root is held play as themselves, keys below the selector octave play a bass line.
-- **Twelve chord pads** in the layout of the selector octave: Maj, Min, 7, m7, Maj7, Sus2, Sus4, Dim, Aug, 5, Add9 and
-  Note (the root alone); the white keys carry the major and bright chords, the black keys the minor, altered or bare ones.
-  22 chord types in all (6, m6, m7b5, dim7, 9, m9, maj9, 7sus4, mMaj7, 6/9 through the Chord Type parameter).
-- **Chord display** (name and notes), **STACKED / FOLDED** voicing (folded = in the octave of the root, as on an
-  electronic chord harp), **BASS** (the root one octave down), **STRUM** (0–100 ms between the notes) and a **strum plate** to strum
-  the chord with the mouse.
-- The chord's notes are ordinary notes: sustain, portamento, voice allocation and every sound parameter work as usual; a
-  chord never uses more voices than VOICES. Reference-counted notes: a note shared by the chord and a held key keeps
-  sounding until both release it.
-- The six chord settings are automatable plug-in parameters, saved with the Live Set and never in a preset; a selector key
-  updates the Chord Type parameter (its automation lane follows what you play).
-- Its own plug-in identity (name, class IDs, VST2 ID, presets file `OKTOMULTIWAVE presets.txt`, macOS bundle id): it installs
-  next to the Wavelet Synthesizer.
+- **Four oscillators instead of two engines**: A1 A2 (subtractive wavelet) and B1 B2 (additive wavelet). Each has its own tone,
+  scale filter, position window, tuning (octave, semitones, cents), **own envelope** (it multiplies the AMP ENVELOPE) and
+  **pitch envelope** (a fall or rise in semitones over a time); one tab per oscillator at the top of the panel shows its cards
+  (the panel is as clear as before: the other three oscillators' cards are not shown).
+- **OSC MIX** (four level knobs) replaces the A/B MIX knob. A new patch plays A1 at 100 %, the others at 0. A level is smoothed
+  over 20 ms; an oscillator at 0 costs nothing, and the wave tables of an oscillator are built only while its level is above 0.
+- **LFO 2** moves its target in every oscillator at once; WAVELET MORPH and the SOURCE PHASE LFO act on each oscillator.
+- **222 presets**: the **22 TOP Sounds** (unchanged: they match the Wavelet Synthesizer beta 0.7 within 1.5e-7 of the peak)
+  and **200 new presets** `001`–`200` — Bass 18, Lead 22, Keys 22, Organ 12, Pad 30, Strings 18, Brass & Wind 14, Pluck 20,
+  Bells & Mallets 18, FX 14, Drums & Perc 12 — made with the oscillator pairs A1A2 (73), B1B2 (67) and A1B1 (60). Every one uses
+  at least two oscillators; one oscillator is often the attack (a click of noise, a pluck, a breath). Their loudness is matched
+  to the TOP Sounds, and none is a near copy of another (checked by their spectra and envelopes).
+- **EVALUATE SOUNDS** (web app and plug-in): plays 5 s of Beethoven's *Appassionata* (III) with each new preset, asks 1–10
+  stars, offers to modify what you rated above 5 (the changes are recorded as the parameters that differ from the preset) and
+  saves a `.txt` after every answer; it continues where it stopped.
+- **CHORD MODE** button next to the keyboard: it grows the panel by 120 px and shows the chord-harp card; off, the panel is
+  the plain synthesizer (the chord settings stay plug-in parameters, saved with the project, never in a preset).
+- Demo: a tour of 29 presets on *Appassionata* (the TOP Sounds mixed with new presets that show the oscillators at work), the
+  other pieces play the same tour.
+- New identity next to the Wavelet Synthesizer and WaveChord: name, class IDs, VST2 ID `OkMW`, presets file
+  `OKTOMULTIWAVE presets.txt`, web storage keys. Windows and web only: no macOS build was made.
 
-**Your sounds**: the 150 presets are those of the Wavelet Synthesizer beta 0.6, and with the chord keyboard off every
-note sounds exactly as there (the chord layer only routes notes; the sound engine is unchanged).
+**CPU remarks of the load study applied** (`Revue.md`, `CPU Load test`; the C++ and JavaScript engines still agree: 251 cases
+within 1.8e-7, the limit of the cross-check is now 2e-6):
+- *P1, P7*: the terms that do not depend on the voice (oscillator levels, unison, the additive bands' bars, decays and tilt,
+  LFO 2) are computed once per block; an oscillator at level 0, or a morph or phase share at 0, is not rendered.
+- *P2*: `exp` instead of `pow(10, ·)` in the filter gains, the drive and the master level (differences of the last bit).
+- *E1*: the chorus' two LFOs are rotating vectors (two sines and two cosines per block instead of six sines per sample).
+- *R1*: the wavelet transform wraps with a mask instead of `%` (bit-identical).
+- *P10*: an instance with no voice, no table fade and a silent output (under −180 dBFS for longer than the delay's echo plus
+  4096 samples) does not compute its blocks; checked against the full computation on dry, delay, reverb and chorus sounds.
+- *E3*: the delay, its filter, the master smoothing and the reverb damping have the same time constants at 44.1, 48 and 96 kHz
+  (48 kHz is unchanged to the bit).
+- *T3*: the web app builds the wave tables in a Worker (with a sequence number, so a late result never replaces a newer one);
+  it falls back to the main thread without Worker.
+- Robustness: a NaN or huge velocity and a NaN parameter are harmless; the builder thread and the first activation catch an
+  out-of-memory error; a table set built for an older state cannot replace the one built at activation; the build uses
+  `-ffp-contract=off`; the presets file is never written over when it was read cut (16 MB), it is flushed to the disk before it
+  replaces the old one, and the library asks the system for its folder once and looks at the file at most every 500 ms; the
+  preset browser is drawn only when its part of the window is; the web app says so when the audio processor fails
+  (`onprocessorerror`), draws its animated displays when their data changed (and twice a second at rest), and creates no
+  buffer views per audio quantum.
+- *Not done* (they change the sound or need a listening validation, and the TOP Sounds must stay as they were): P3 `CTRL = 64`
+  (the gains would follow more slowly), P4 table of the filter gains and P5 `float` voice loop (1e-4 and 1e-7 away from the
+  reference), T1 real inverse FFT, T2, T4, T5 shared tables between instances, T6, E2 reverb layout in C++, the `fmax` limit
+  at high sample rates, and the Revue's remarks on CI, accessibility and import limits.
 
-**Checked**: the C++ plug-in matches the JavaScript reference on the 150 presets and on three chord scenarios (folded with
-bass, stacked with strum and 4 voices, mono with strum, the strum plate included); the chord layer's own tests (18
-cases); the VST2 entry point with MIDI (a selector key is silent and changes Chord Type, a root plays the chord, its release
-ends it); the VST3 test host; the web app.
+**Checked**: the 22 TOP Sounds against the published beta 0.7 engine; the C++ engine against the JavaScript reference on 251
+cases (all 222 presets and variants of every feature, chord scenarios included); the idle rule; the VST3 test host (98 checks of
+its quick sections); the plug-in's EVALUATE SOUNDS window and CHORD MODE driven by `vst/devtest/vote_session.cpp` in an
+off-screen window (audio, parameters sent to the host, ratings file, screenshots); the web app in headless Edge (the four
+oscillator views, CHORD MODE, the demo, every preset plays and releases).
+
+---
+
+# The chord keyboard (WaveChord Synth beta 0.1 — 2026-10-18), now part of Okto MultiWave Synth
+
+- A chord keyboard in the style of electronic chord harps: one octave of the keyboard (KEYS OCT, C3–B3 by default, tinted
+  purple) chooses the chord type and makes no sound; every key above it plays the whole chord with one finger; keys pressed
+  while the root is held play as themselves, keys below the selector octave play a bass line.
+- Twelve chord pads in the layout of the selector octave (Maj, Min, 7, m7, Maj7, Sus2, Sus4, Dim, Aug, 5, Add9, Note) and 22
+  chord types in all; a chord display, STACKED / FOLDED voicing, BASS, STRUM (0–100 ms between the notes) and a strum plate.
+- The chord's notes are ordinary notes: sustain, portamento, voice allocation and every sound parameter work as usual; a chord
+  never uses more voices than VOICES. Reference-counted notes: a note shared by the chord and a held key keeps sounding until
+  both release it. The six chord settings are automatable plug-in parameters, never in a preset; a selector key updates the
+  Chord Type parameter.
 
 ---
 

@@ -292,7 +292,8 @@ section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'zoom', x: 222, y: 14, w: 50, h: 20 },
   { type: 'seg', param: 'osc_view', style: 'engine', x: 296, y: 9, w: 224, h: 30 },   // the four oscillators: A1 A2 | B1 B2
   { type: 'presets', x: 526, y: 9, w: 220, h: 30 },
-  { type: 'evaluate', x: 752, y: 9, w: 104, h: 30 },   // (the plug-in's SAVE PRESET is at 862)
+  { type: 'evaluate', x: 752, y: 9, w: 104, h: 30 },
+  { type: 'download', only: 'web', x: 862, y: 9, w: 68, h: 30 },   // the plug-in has SAVE PRESET there
   { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
   { type: 'knobS', param: 'master', x: 1028, y: 6, w: 36, h: 36 },
   { type: 'meter', x: 1072, y: 9, w: 14, h: 30 },

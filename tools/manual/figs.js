@@ -181,7 +181,7 @@ for (const E of ['a', 'b']) {
   {
     const cuts = [1.5, 2.5, 3.5, 4.5, 12], pw = 160, ph = 92, gap = 12, Wd = cuts.length * pw + (cuts.length - 1) * gap, Hd = ph + 46;
     let b = '';
-    const p = params({ engine: 0, a_wave: 0, wavelet: 0 }), tb = C.buildTables(p, false);
+    const p = params({ osc_view: 0, a_wave: 0, wavelet: 0 }), tb = C.buildTables(p, false);
     cuts.forEach((c, i) => {
       const g = C.filterGains(0, c, 96, 0, new Float64Array(11));
       const y = C.displayCycle(tb, g, 0, 1, 0, new Float64Array(N));
@@ -198,7 +198,7 @@ for (const E of ['a', 'b']) {
     const ss = [0, 0.3, 0.5, 0.7, 0.9], pw = 160, ph = 92, gap = 12, Wd = ss.length * pw + (ss.length - 1) * gap, Hd = ph + 46;
     let b = '';
     ss.forEach((s, i) => {
-      const p = params({ engine: 0, a_wave: 0, wavelet: 3, a_sparsity: s }), tb = C.buildTables(p, false);
+      const p = params({ osc_view: 0, a_wave: 0, wavelet: 3, a_sparsity: s }), tb = C.buildTables(p, false);
       const raw = C.sourceCycle(0, 0.5), x0 = i * (pw + gap), sc = 0.92 / Math.max(1, peak(tb.layers[C.DRY]));
       b += panelFrame(x0, 0, pw, ph);
       b += poly(cyclePts(raw, x0 + 6, 6, pw - 12, ph - 12, sc), GREY, 1.2);
@@ -210,7 +210,7 @@ for (const E of ['a', 'b']) {
   }
   {
     const Wd = 860, Hd = 214, L = 20, R = Wd - 20, Tp = 14, B = 172;
-    const p = params({ engine: 0, a_wave: 1, wavelet: 4 }), tb = C.buildTables(p, false), g = C.filterGains(0, 2.5, 24, 0, new Float64Array(11));
+    const p = params({ osc_view: 0, a_wave: 1, wavelet: 4 }), tb = C.buildTables(p, false), g = C.filterGains(0, 2.5, 24, 0, new Float64Array(11));
     const filt = C.displayCycle(tb, g, 0, 1, 0, new Float64Array(N));
     const win = C.displayCycle(tb, g, 0.5, 0.4, 1, new Float64Array(N));
     let b = rect(L + 0.3 * (R - L), Tp, 0.4 * (R - L), B - Tp, T.tint, { op: 0.8 });
@@ -233,7 +233,7 @@ for (const E of ['a', 'b']) {
     let b = '';
     const saw = C.sourceCycle(0, 0.5);
     ns.forEach((n, i) => {
-      const o = { engine: 1, wavelet: 0, b_pattern: 0, b_tilt: -6 }; for (let k = 1; k <= 11; k++) o['b_bar' + k] = k <= n ? 1 : 0;
+      const o = { osc_view: 2, b1_wavelet: 0, b_pattern: 0, b_tilt: -6 }; for (let k = 1; k <= 11; k++) o['b_bar' + k] = k <= n ? 1 : 0;
       const { y } = cycleFor(o);
       const x0 = i * (pw + gap), sc = 0.92 / peak(y);
       b += panelFrame(x0, 0, pw, ph);
@@ -267,8 +267,8 @@ for (const E of ['a', 'b']) {
       b += text(mx, ly + 1, 'bands 1–6', { size: 10.5, fill: GREY }) + rect(mx + 58, ly - 7, 8, 8, T.acc) + text(mx + 69, ly + 1, '+', { size: 11, fill: GREY }) + rect(mx + 82, ly - 7, 8, 8, SLATE) + text(mx + 93, ly + 1, '−', { size: 11, fill: GREY });
       const wx = ox + 172, ww = cw - 184, wy = oy + 10, wh = chh - 20;
       b += panelFrame(wx, wy, ww, wh);
-      const yh = cycleFor({ engine: 1, wavelet: 0, b_pattern: pi, b_tilt: -6 }).y;
-      const yd = cycleFor({ engine: 1, wavelet: 3, b_pattern: pi, b_tilt: -6 }).y;
+      const yh = cycleFor({ osc_view: 2, b1_wavelet: 0, b_pattern: pi, b_tilt: -6 }).y;
+      const yd = cycleFor({ osc_view: 2, b1_wavelet: 3, b_pattern: pi, b_tilt: -6 }).y;
       b += poly(cyclePts(yd, wx + 5, wy + 4, ww - 10, wh - 8, 0.9 / peak(yd)), SLATE, 1.3, { op: 0.7 });
       b += poly(cyclePts(yh, wx + 5, wy + 4, ww - 10, wh - 8, 0.9 / peak(yh)), T.ink, 2);
     });

@@ -1,12 +1,10 @@
 # Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The macOS plug-in (Mac port of beta 0.3): built and tested on GitHub's Apple-silicon Macs, for Apple silicon and Intel.
+# The macOS plug-in (Mac port of the Wavelet Synthesizer beta 0.3; not part of Okto MultiWave Synth beta 0.1, run by hand): built and tested on GitHub's Apple-silicon Macs, for Apple silicon and Intel.
 # Results (Actions tab, "Artifacts"): the release zip and the test output (logs, editor screenshots).
 name: macOS plug-in
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:   # no macOS build is made for beta 0.1 (Windows and web only): run it by hand to try the port
 permissions:
   contents: read
 jobs:

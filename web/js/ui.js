@@ -629,7 +629,7 @@ class SynthUI {
     this.dev.classList.toggle('mode-a', m === 0);
     this.dev.classList.toggle('mode-b', m === 1);
     if (this.browser) this.browser.classList.toggle('mode-b', m === 1);
-    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'Engine B user manual — wavelet additive (an additive oscillator is shown)' : 'Engine A user manual — wavelet subtractive (a subtractive oscillator is shown)';
+    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'User manual B — the additive oscillators B1 · B2 (an additive oscillator is shown)' : 'User manual A — the subtractive oscillators A1 · A2 (a subtractive oscillator is shown)';
     for (const s of this.sections) s.el.classList.toggle('hidden', this.secHidden(s.spec));
   }
   secHidden(spec) {

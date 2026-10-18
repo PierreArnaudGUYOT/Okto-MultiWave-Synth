@@ -1,6 +1,6 @@
 # Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 # SPDX-License-Identifier: GPL-3.0-or-later
-# How to cite Okto MultiWave Synth (GitHub shows it as "Cite this repository"). It is built on the Wavelet Synthesizer (DOI below).
+# How to cite Okto MultiWave Synth (GitHub shows it as "Cite this repository"). It is built on the Wavelet Synthesizer (its DOI is in references).
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "Okto MultiWave Synth"
@@ -24,14 +24,15 @@ references:
     doi: 10.5281/zenodo.23431760
     repository-code: "https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST"
 abstract: >-
-  Okto MultiWave Synth adds a chord keyboard in the style of electronic chord harps (one octave chooses the chord type, one finger plays the whole chord,
-  with voicing, bass, strum and a strum plate) to the Wavelet Synthesizer: a polyphonic synthesizer that shapes sound with the discrete wavelet transform instead of Fourier filters: one cycle
-  of each tone is decomposed into 11 octave-spaced wavelet bands and resynthesised band by band. Engine A (wavelet
-  subtractive) filters and thins out the atoms of a source wave; engine B (wavelet additive) writes the atoms directly.
+  Okto MultiWave Synth is a polyphonic synthesizer with four wavelet oscillators (two subtractive, two additive) that shapes
+  sound with the discrete wavelet transform instead of Fourier filters: one cycle of each tone is decomposed into 11
+  octave-spaced wavelet bands and resynthesised band by band. Every oscillator has its own scale filter, position window,
+  tuning, envelope and pitch envelope; a chord keyboard in the style of electronic chord harps plays whole chords with one finger.
+  It is built on the Wavelet Synthesizer and ships 222 presets and a listening test (EVALUATE SOUNDS) to rate the new ones.
   Web application and VST3 / VST2 instrument for Windows x64.
 keywords:
+  - multi-oscillator synthesis
   - chord keyboard
-  - strum plate
   - sound synthesis
   - discrete wavelet transform
   - synthesizer

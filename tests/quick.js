@@ -105,7 +105,7 @@ function vst3() {
 }
 
 // ---------------------------------------------------------------- 4. web app smoke test (muted headless Edge)
-const DEMO_FIRST = 'B · Clarinet';   // the agreed opening sound of the default demo (tests/web/test_demo.js has the whole sequence)
+const DEMO_FIRST = 'A · Noise Wash Pad';   // the agreed opening sound of the default demo (tests/web/test_demo.js has the whole sequence)
 async function web() {
   const t = Date.now(), bad = [];
   const { Browser, sleep } = require(R('tests', 'web', 'cdp.js'));

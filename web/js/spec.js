@@ -3371,6 +3371,14 @@ var WS_SPEC = {
      "h": 30
     },
     {
+     "type": "download",
+     "only": "web",
+     "x": 862,
+     "y": 9,
+     "w": 68,
+     "h": 30
+    },
+    {
      "type": "manual",
      "x": 936,
      "y": 9,
