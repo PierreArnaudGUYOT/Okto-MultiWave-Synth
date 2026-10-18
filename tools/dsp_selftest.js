@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Developer self-test of the reference DSP core (web/js/core.js).
+// Developer self-test of the reference DSP core (web/js/core.js). Okto MultiWave Synth beta 0.1: the oscillator A1 / the tables of slot 0
+// stand for the earlier engine A; the four-oscillator behaviour is checked by tests/regress_v07.js, tests/idle_skip.js and the cross-check.
 // Usage: node tools/dsp_selftest.js [--wav]   (WAV files go to build/test-audio/)
 'use strict';
 const fs = require('fs');
@@ -41,7 +42,7 @@ console.log('2. Haar: one cycle of a square wave is a single atom');
 
 console.log('3. engine A layers sum back to the source');
 {
-  const p = C.defaults(); p[C.P.engine] = 0; p[C.P.a_wave] = 0; p[C.P.wavelet] = 3;
+  const p = C.defaults(); p[C.P.osc_view] = 0; p[C.P.a_wave] = 0; p[C.P.wavelet] = 3;
   const tb = C.buildTables(p, false), src = C.sourceCycle(0, 0.5);
   let err = 0; for (let i = 0; i < C.N; i++) err = Math.max(err, Math.abs(tb.layers[C.DRY][i] - src[i]));
   check(err < 1e-7, `dry layer vs source (coefficients below 1e-9 of max are zeroed) max err ${err.toExponential(2)}`);
@@ -49,12 +50,12 @@ console.log('3. engine A layers sum back to the source');
 
 console.log('4. band-limited mips contain no harmonics above their limit');
 {
-  const p = C.defaults(); p[C.P.engine] = 0; p[C.P.a_wave] = 0; p[C.P.wavelet] = 0;
+  const p = C.defaults(); p[C.P.osc_view] = 0; p[C.P.a_wave] = 0; p[C.P.wavelet] = 0;
   const t0 = Date.now(); const tb = C.buildTables(p, true); const ms = Date.now() - t0;
   let worst = 0;
   for (let m = 0; m < C.NMIP; m++) {
     const H = 1024 >> m, re = new Float64Array(C.N), im = new Float64Array(C.N);
-    for (let i = 0; i < C.N; i++) re[i] = tb.mips[m * C.TW + i * C.NL + C.DRY];
+    for (let i = 0; i < C.N; i++) re[i] = tb.slots[0].mips[m * C.TW + i * C.NL + C.DRY];
     C.fft(re, im, false);
     let inB = 0, outB = 0;
     for (let h = 1; h < C.N / 2; h++) { const e = re[h] * re[h] + im[h] * im[h]; if (h <= H) inB += e; else outB += e; }
@@ -107,7 +108,7 @@ console.log(`  average real-time load ${(totalMs / totalSec / 10).toFixed(1)}% o
 
 console.log('7. aliasing: saw at C7 (2093 Hz), engine A, filter open');
 {
-  const p = C.defaults(); p[C.P.engine] = 0; p[C.P.a_wave] = 0; p[C.P.wavelet] = 0; p[C.P.f_cutoff] = 11; p[C.P.amp_s] = 1;
+  const p = C.defaults(); p[C.P.osc_view] = 0; p[C.P.a_wave] = 0; p[C.P.wavelet] = 0; p[C.P.f_cutoff] = 11; p[C.P.amp_s] = 1;
   const eng = new C.Engine(sr); p.forEach((v, i) => eng.setParam(i, v)); eng.setTables(C.buildTables(p, true));
   eng.noteOn(96, 1);
   const n = 8192, L = new Float32Array(n * 2), R = new Float32Array(n * 2);
@@ -176,12 +177,13 @@ console.log('8. SOURCE PHASE (beta 0.4)');
   const s1 = C.sourceCycle(2, 0.3, 1), s0 = C.sourceCycle(2, 0.3, 0);
   check(s1.every((v, i) => v === s0[i]), 'phase 1 (a whole turn) is phase 0');
   // LFO 2 -> SOURCE PHASE: the engine-A tables at the other PHASE_K - 1 positions, only when needed
-  const p = C.defaults(); p[C.P.engine] = 0; p[C.P.ab_mix] = 0; p[C.P.wavelet] = 0; p[C.P.f_cutoff] = 5;
+  const p = C.defaults(); p[C.P.osc_view] = 0; p[C.P.wavelet] = 0; p[C.P.f_cutoff] = 5;
   p[C.P.lfo2_target] = SPEC.LFO2_TARGETS.indexOf(C.P.a_phase);
   const off = C.buildTables(p, true);
   p[C.P.lfo2_amt] = 0.5;
   const t0 = Date.now(), on = C.buildTables(p, true), ms = Date.now() - t0;
-  check(!off.ph && on.ph && on.ph.length === C.PHASE_K - 1, `LFO 2 -> PHASE builds ${on.ph ? on.ph.length : 0} more table sets (amount 0: none) in ${ms} ms`);
+  const onPh = on.slots[0].ph;   // Okto MultiWave Synth: the phase sets are built per oscillator
+  check(!off.slots[0].ph && onPh && onPh.length === C.PHASE_K - 1, `LFO 2 -> PHASE builds ${onPh ? onPh.length : 0} more table sets (amount 0: none) in ${ms} ms`);
 }
 
 console.log('9. no stuck note when a preset changes VOICES while a key is held (beta 0.4 fix)');
@@ -190,7 +192,7 @@ console.log('9. no stuck note when a preset changes VOICES while a key is held (
   const load = (eng, vals) => { vals.forEach((v, i) => eng.setParam(i, v)); eng.setTables(C.buildTables(Float64Array.from(vals), true)); };
   const run = (eng, secs) => { const n = 128, L = new Float32Array(n), R = new Float32Array(n); let pk = 0;
     for (let b = 0; b < secs * sr / n; b++) { eng.process(L, R, n); for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i])); } return pk; };
-  const poly = byName('A · Warm Pad'), mono = byName('A · Acid Sub');   // VOICES 8 / VOICES 1 (beta 0.5)
+  const poly = byName('A · Warm Pad'), mono = byName('001 A1A2 · Deep Saw Bass');   // VOICES 8 / VOICES 1
   check(poly[C.P.v_voices] > 1 && mono[C.P.v_voices] === 1, 'test presets: one polyphonic, one mono');
   // poly -> mono between note on and note off: before the fix the second voice was never released
   let eng = new C.Engine(sr); load(eng, poly);
@@ -295,6 +297,67 @@ console.log('11. Okto MultiWave Synth: the chord layer (keyOn / keyOff over the 
     'chord names (G#m7, C) and the strum plate of G major: three octaves of G B D above the root octave');
   check(S.CHORD_KEYS.length === 12 && new Set(S.CHORD_KEYS).size === 12 && S.CHORDS.length === 22 && S.PARAMS[P.chord_mode].def === 0 &&
     S.PARAMS.filter(p => p.perf).length === 6, 'spec: 12 selector keys each with its own type, 22 chord types, CHORD off by default, 6 perf parameters');
+}
+
+console.log('12. Okto MultiWave Synth: the four oscillators');
+{
+  const P = C.P, K = C.K;
+  const make = (set) => {
+    const p = C.defaults(); for (const k in set) p[P[k]] = set[k];
+    const eng = new C.Engine(sr); p.forEach((v, i) => eng.setParam(i, v)); eng.setTables(C.buildTables(p, true));
+    return { p, eng };
+  };
+  const play = (eng, secs, note = 60) => {
+    const n = Math.round(secs * sr / 128) * 128, L = new Float32Array(n), R = new Float32Array(n);
+    eng.noteOn(note, 0.9);
+    for (let o = 0; o < n; o += 128) eng.process(L.subarray(o, o + 128), R.subarray(o, o + 128), 128);
+    return L;
+  };
+  const peakOf = (x, a, b) => { let m = 0; for (let i = Math.round(a * sr); i < Math.round(b * sr) && i < x.length; i++) m = Math.max(m, Math.abs(x[i])); return m; };
+  const f0 = 440 * Math.pow(2, (60 - 69) / 12);
+  const freqAt = (x, t0, dur) => {   // rising zero crossings per second in [t0, t0 + dur)
+    let c = 0; for (let i = Math.round(t0 * sr) + 1; i < Math.round((t0 + dur) * sr); i++) if (x[i - 1] < 0 && x[i] >= 0) c++;
+    return c / dur;
+  };
+  // every oscillator alone sounds; the tables of the others are not built
+  const names = ['A1', 'A2', 'B1', 'B2'];
+  for (let o = 0; o < 4; o++) {
+    const set = { a1_lvl: 0 }; set[SPEC.PARAMS[K[o].lvl].key] = 1;
+    const { p, eng } = make(set);
+    const tb = C.buildTables(p, true), built = tb.slots.map(t => !!t).join();
+    const L = play(eng, 0.5);
+    check(peakOf(L, 0.1, 0.5) > 0.02 && L.every(isFinite) && tb.slots.every((t, i) => !!t === (i === o)), `${names[o]} alone sounds (peak ${peakOf(L, 0.1, 0.5).toFixed(3)}), only its tables are built (${built})`);
+  }
+  // a short own envelope makes an oscillator a one-shot attack
+  {
+    const { eng } = make({ a1_lvl: 0, a2_lvl: 1, a2_eon: 1, a2_ed: 0.03, a2_es: 0, amp_s: 1 });
+    const L = play(eng, 1.2);
+    const early = peakOf(L, 0.0, 0.15), late = peakOf(L, 0.6, 1.2);
+    check(early > 0.02 && late < 0.01 * early, `A2 with a 30 ms own envelope: ${early.toFixed(3)} at the start, ${late.toExponential(1)} after 0.6 s`);
+    const same = make({ a1_lvl: 0, a2_lvl: 1, amp_s: 1 }); const L2 = play(same.eng, 1.2);
+    check(peakOf(L2, 0.6, 1.2) > 0.1, `without it the same oscillator sustains (${peakOf(L2, 0.6, 1.2).toFixed(3)})`);
+  }
+  // a pitch envelope: a sine starts an octave up and falls to the note
+  {
+    const { eng } = make({ a_wave: 4, f_cutoff: 12, a1_pamt: 12, a1_ptime: 0.2, amp_s: 1, amp_a: 0.001 });
+    const L = play(eng, 1.5);
+    // the offset falls exponentially (60 dB in PITCH ENV TIME): about 6 semitones are left after 20 ms
+    const f1 = freqAt(L, 0.005, 0.03), f2 = freqAt(L, 1.2, 0.2);
+    check(f1 > 1.3 * f0 && Math.abs(f2 / f0 - 1) < 0.03, `pitch envelope +12 st: ${f1.toFixed(0)} Hz over the first 35 ms, ${f2.toFixed(0)} Hz later (the note is ${f0.toFixed(0)} Hz)`);
+  }
+  // tuning: an octave up and a fifth up
+  {
+    const a = make({ a_wave: 4, f_cutoff: 12, a1_oct: 1, amp_s: 1 }), b = make({ a_wave: 4, f_cutoff: 12, a1_semi: 7, amp_s: 1 });
+    const fa = freqAt(play(a.eng, 0.6), 0.2, 0.3), fb = freqAt(play(b.eng, 0.6), 0.2, 0.3);
+    check(Math.abs(fa / f0 - 2) < 0.03 && Math.abs(fb / f0 - Math.pow(2, 7 / 12)) < 0.03, `OCTAVE +1 gives ${fa.toFixed(0)} Hz, SEMI +7 gives ${fb.toFixed(0)} Hz (note ${f0.toFixed(0)} Hz)`);
+  }
+  // the oscillator tab (osc_view) is only a panel choice: the sound does not change
+  {
+    const a = make({ osc_view: 0, a1_lvl: 0.7, a2_lvl: 0.5 }), b = make({ osc_view: 3, a1_lvl: 0.7, a2_lvl: 0.5 });
+    const La = play(a.eng, 0.4), Lb = play(b.eng, 0.4);
+    let d = 0; for (let i = 0; i < La.length; i++) d = Math.max(d, Math.abs(La[i] - Lb[i]));
+    check(d === 0, `osc_view (the tab shown) does not change the sound (max difference ${d})`);
+  }
 }
 
 console.log(fails ? `\n${fails} FAILURE(S)` : '\nALL PASS');

@@ -445,10 +445,12 @@ checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (fou
 `tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp` (251 cases), `vst/devtest/vote_session.cpp` (the plug-in's EVALUATE SOUNDS
 window and CHORD MODE in an off-screen window: the host-side parameters, the audio, the ratings file, screenshots; build line at its
 top; it needs `MW_VOTES_DIR`, which it sets itself, so it never touches the player's file), `tests/web/test_web.js` (adapted: the
-oscillator tabs, 860 px panel, no Source Phase; the full run plays all 222 presets and takes about 10 minutes). **Not updated for
-this version** (they describe the Wavelet Synthesizer's presets, panel or demo scenes): `tests/web/test_demo.js` (the scene
-sections), `vst/devtest/bank_session.cpp`, the editor sections of `tests/vst3host` (screenshots, reload), `tests/machost`,
-`tools/dsp_selftest.js`. Run them only after porting them. The old descriptions follow.
+oscillator tabs, 860 px panel, no Source Phase, a neutral patch made of the spec defaults — there is no Init preset; the full run plays all
+222 presets and takes about 10 minutes), `tests/web/test_demo.js` (every song is a preset tour: the plan against the spec's `TOUR`, the
+welcome sentences, the forced playing rules, stop paths, MIDI files; `--smoke` about 2 minutes), `tools/dsp_selftest.js` (12 sections; 12 =
+the four oscillators), `vst/devtest/library_test.cpp` (the presets file, no window), `vst/devtest/vst2_smoke.cpp`. **Not ported** (they drive
+the Wavelet Synthesizer's presets, panel or screenshots, or the macOS build): `vst/devtest/bank_session.cpp`, the editor and reload sections
+of `tests/vst3host`, `tests/machost`. Run them only after porting them. The old descriptions follow.
 - `tests/vst3host/vst3host.exe <bundle> <outdir> [--quick] [--only a,b]`: DAW-like VST3 host (parameters, audio,
   state, controller state, offline, presets, sub, portamento, high notes, attribute list, editor screenshots, reload).
 - `tests/web/test_web.js`, `tests/web/test_demo.js [--smoke]`: browser suites through `tests/web/cdp.js`.

@@ -162,7 +162,7 @@ ${controls([
     [SLK[0].es, 'Sustain level.', '0 % makes a one-shot attack that dies by itself.'],
     [SLK[0].er, 'Release after the key is released.', ''],
     [SLK[0].pamt, `The <b>pitch envelope</b>: the oscillator starts this many semitones away from the note and glides to it (negative = it starts below).`, '+12 … +30 with a short TIME is a kick or a zap; a small value is a "blip" on every note.'],
-    [SLK[0].ptime, 'How long the glide takes to come back to the note (exponential).', ''],
+    [SLK[0].ptime, 'How long the glide takes to come back to the note: exponential, the time to fall by 60 dB (half of the distance is covered in about a tenth of it).', ''],
   ])}
 <p class="small muted">The table shows the ranges and defaults of A1's controls; A2, B1 and B2 have the same ones. The own envelope has no effect while its switch is off.</p>
 <h3 id="ideas">Ideas, and presets to study</h3>

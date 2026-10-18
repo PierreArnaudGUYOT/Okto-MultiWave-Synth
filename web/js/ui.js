@@ -153,7 +153,7 @@ class SynthUI {
         const a = el('a', 'hbtn dl', box, { width: '100%', height: '100%' });
         a.href = VST_RELEASES; a.target = '_blank'; a.rel = 'noopener';
         a.innerHTML = 'DOWNLOAD<b>VST</b>';
-        a.title = 'Download the free VST plug-in (Windows VST3 / VST2, macOS VST3) from GitHub';
+        a.title = 'Download the free VST plug-in (Windows VST3 / VST2) from GitHub';
         return;
       }
       case 'label': box.classList.add('wlabel'); box.textContent = w.text; return;

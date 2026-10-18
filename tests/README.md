@@ -6,13 +6,24 @@ VST3 `pluginterfaces` headers only, and the web driver talks to Edge directly ov
 
 ```
 tests/
+  quick.js       the 20-second check to run after every change (syntax, generated files, engine, VST3 host sections, web app)
+  regress_v07.js the 22 TOP Sounds against the published Wavelet Synthesizer beta 0.7 engine (tests/ref/v07/), within 1.5e-7
+  idle_skip.js   the engine's idle rule, the smoothing at other sample rates, hostile velocities
   vst3host/      VST3 test host (C++, llvm-mingw, static exe)
     host.cpp, host_util.h, host_objects.h, build.bat
     check_params.js          params.csv  <->  tools/spec.js
     selftest/                reference plug-in used only to validate the host
   web/           headless-Edge tests for the web app
-    cdp.js, png.js, test_web.js, selftest_cdp.js, dummy/index.html
+    cdp.js, png.js, smoke.js, test_web.js, test_demo.js, selftest_cdp.js, dummy/index.html
 ```
+
+**Status for Okto MultiWave Synth beta 0.1.** Maintained and passing: `quick.js`, `regress_v07.js`, `idle_skip.js`, `web/smoke.js`
+(the four oscillator views and CHORD MODE), `web/test_web.js` (about 10 minutes: it plays all 222 presets) and `web/test_demo.js`,
+`tools/dsp_selftest.js` (12 sections), the C++ cross-check (`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp`, 251 cases) and the
+developer checks `vst/devtest/vote_session.cpp` (EVALUATE SOUNDS and CHORD MODE in the plug-in's window), `library_test.cpp` (the
+presets file) and `vst2_smoke.cpp`. The VST3 host below is the Wavelet Synthesizer's: its sections that do not look at the editor
+apply unchanged. **Not ported** (they drive the Wavelet Synthesizer's browser, screenshots and presets, or the macOS build, which
+this version does not make): `vst/devtest/bank_session.cpp`, `tests/machost`, the editor and reload sections of the VST3 host.
 
 Requirements: Windows x64, `%USERPROFILE%\tools\llvm-mingw` (or set `CXX`), Node.js >= 22 (it has a
 global `WebSocket`), and Microsoft Edge (or set `EDGE_PATH`). No npm packages and no admin rights are needed.

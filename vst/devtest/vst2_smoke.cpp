@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Developer check of the VST2 entry point: loads build\OktoMultiWaveSynth.vst3\Contents\x86_64-win\OktoMultiWaveSynth.dll
 // like a VST2 host does (LoadLibrary + VSTPluginMain) and exercises audio, MIDI, parameters, programs, chunks and the editor.
-//   x86_64-w64-mingw32-clang++ -std=c++17 -O2 -static -I vst/external -I vst/src vst/devtest/vst2_smoke.cpp -o vst2_smoke.exe -luser32
+//   x86_64-w64-mingw32-clang++ -std=c++17 -O2 -static -I vst/external -I vst/src vst/devtest/vst2_smoke.cpp -o vst2_smoke.exe -luser32 -lgdi32
 //   vst2_smoke.exe [path\to\OktoMultiWaveSynth.dll]
 #include <windows.h>
 #include <cmath>

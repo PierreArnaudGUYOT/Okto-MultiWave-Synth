@@ -1,26 +1,21 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// test_demo.js - tests the web app's DEMO split button in headless Edge.
+// test_demo.js - tests the web app's DEMO split button in headless Edge (Okto MultiWave Synth: every song is a preset tour).
 //
 //   node tests/web/test_demo.js [--url URL] [--out DIR] [--file-access] [--smoke]
 //
 // UI: `.demo-btn` ("▶ DEMO") plays the DEFAULT demo (song 0) and shows "■ STOP" while running;
 // `.demo-arrow` ("▾") opens `.demo-menu` (songs + "Load a MIDI file…", the default song tagged DEFAULT).
 // By default Edge runs WITHOUT --allow-file-access-from-files (like a normal browser opening file://).
-// Data-driven: songs come from WS_TEST.demoSongs() and are looked up by title; presets by name.
-// - Default demo = PRESET TOUR (demoState().preset defined): the agreed sequence EXPECTED_TOUR (OktoPierre's
-//   favourites first), a change every ~4 s on a chord (WS_TEST.demoTour gives the times), with Voices 16, Octave 0,
-//   Glide 0 and Amp Attack capped at 0.08 s forced; all other values must equal the spec preset. Played from a cold
-//   start via `.demo-btn`, to the end (full mode). beta 0.7: during the first presets the demo window shows the agreed
-//   welcome sentences (TOUR_INTRO, one per preset), then the summary of each preset.
-// - Toccata (looked up by title): the agreed scene schedule (SCHED) over the first 30 s.
-// - Every other song: starts, sounds, monotonic scenes, the varied parameter moves, stop restores exactly.
-// - Stop paths (header STOP, window STOP, Esc), user MIDI files, non-MIDI error, Ctrl+click reset.
-// - Welcome window (beta 0.6): 'Run the demo' from a cold start plays the default demo; when another tab takes the audio,
-//   the window comes back with the reason, and its 'Play the synth' / 'Run the demo' take the audio back (lifecycle).
-// --smoke: welcome 'Run the demo', menu via the arrow, default tour from a cold start up to its 7th preset (the welcome
-//          sentences, then a preset summary), header STOP
-//          restore, another song from the arrow menu + Esc restore, hostile MIDI files, lifecycle (about 2 min).
+// - Every song plays the PRESET TOUR of tools/spec.js (TOUR: the TOP Sounds mixed with new presets; the first two are not heard on the
+//   default song, which starts at 7.8 s): a change every ~4 s on a chord (WS_TEST.demoTour gives the times), with Voices 16, Octave 0,
+//   Glide 0 and Amp Attack capped at 0.08 s forced; all other values must equal the spec preset. During the first presets the demo
+//   window shows the welcome sentences (TOUR_INTRO), then the summary of each preset.
+// - Stop paths (header STOP, window STOP, Esc), user MIDI files, hostile files, non-MIDI error, Ctrl+click reset.
+// - Welcome window: 'Run the demo' from a cold start plays the default demo; when another tab takes the audio, the window comes
+//   back with the reason, and its 'Play the synth' / 'Run the demo' take the audio back (lifecycle).
+// --smoke: welcome 'Run the demo', menu via the arrow, default tour from a cold start up to its 7th preset, header STOP restore,
+//          another song from the arrow menu + Esc restore, hostile MIDI files, lifecycle (about 2 min).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -46,43 +41,22 @@ const presetValues = (name) => {
   return pr ? Object.assign({}, ...SPEC.PARAMS.map((p) => ({ [p.key]: p.def })), pr.v) : null;
 };
 
-// Agreed scene schedule of the Bach Toccata
-const SCHED = [
-  { t: 0, param: 'wavelet', steps: [[0, 6], [2, 4], [4, 0]] },
-  { t: 6, param: 'b_tilt', ramp: [6, 9.4, -12, 1] },
-  { t: 11.5, param: 'f_cutoff', ramp: [11.75, 17.5, 1.5, 10] },
-  { t: 19.5, param: 'f_res', ramp: [19.75, 25.5, 0, 18] },
-  { t: 27.5, param: 'f_slope', ramp: [27.75, 38, 6, 72] },
-  { t: 38.6, param: 'a_wave', steps: [[38.6, 1], [41.1, 2], [43.6, 3]] },
-  { t: 45.5, param: 'p_depth', ramp: [45.75, 51, 0, 1] },
-  { t: 59.8, param: 'a_sparsity', ramp: [60, 68, 0, 0.92] },
-  { t: 68.8, param: 'b_pattern', steps: [[68.8, 0], [73.3, 1], [76.9, 3], [80.6, 5]] },
-  { t: 85.5, param: 'drawbars', wave: [86, 105.5] },
-  { t: 105.6, param: 'fx_rmix', ramp: [106, 117.5, 0.25, 0.6] },
-];
 const TOL_T = 0.3; // s: scene clock vs. parameter update (rAF) tolerance
 const TOUR_STEP = 4; // s per preset in the tour (TOL_T = 0.3 s leaves a 3.4 s checked window per preset)
-const TOUR_START = 'B · Clarinet'; // first preset of the tour (the opening chords of the piece are cut)
-// the agreed preset sequence of the default demo (beta 0.7): OktoPierre's 16 sounds mixed one by one with his TOP Sounds
-const EXPECTED_TOUR = ['B · Clarinet', 'A · Noise Wash Pad', 'B · Mirror Sub Bass', 'A · Siren Sweep', 'B · Theatre Organ',
-  'B · Space Choir', 'A · Wave Riser Shift', 'A · Wavelet Lead', 'A · Wave Atom Choir Shift', 'B · Focus Sweep',
-  'A · String Machine', 'B · Flute Lead', 'AB · Analog Strings', 'B · Choir Pad', 'AB · Dream Pad', 'A · Wave Brass',
-  'B · Ensemble Organ', 'A · Wave Riser', 'A · Solina Cellos', 'A · Warm Pad', 'AB · Wavelet Choir',
-  'A · Wave Attack Lead', 'A · Poly Chorus Pad', 'A · Dub Echo Lead', 'AB · Organ Lead', 'A · Wave Pulse Lead',
-  'B · Glass Ensemble', 'AB · Glass Choir', 'AB · Silk Strings', 'A · Chorus Square Lead'];
-// beta 0.7: the agreed sentences the demo window shows during the first presets of the tour (one each, web/js/demo.js
-// TOUR_INTRO), before the usual summary of each preset
+// the preset sequence of the default demo: tools/spec.js TOUR from its third entry (the opening chords of the piece are cut), wrapping round
+const TOUR = SPEC.TOUR;
+const tourFrom = (first, n) => Array.from({ length: n }, (_, i) => TOUR[(first + i) % TOUR.length]);
+const TOUR_START = TOUR[2];   // first preset heard on the default song
+// the sentences the demo window shows during the first presets of the tour (one each, web/js/demo.js TOUR_INTRO), before the summary
 const TOUR_INTRO = [
-  'Welcome to OKTOWAVE. Every sound you hear is built from wavelets: tiny waves, like bricks of sound.',
-  'The synth splits each note into eleven layers, from the deep body of the sound up to its brightest shimmer.',
-  'Engine A takes a classic waveform and shapes these layers: a filter that works with wavelets instead of frequencies.',
-  'Engine B builds the sound brick by brick: its drawbars mix the layers, like an organ made of wavelets.',
-  'Wavelets also know where things happen inside the wave, so the sound can be reshaped in ways a classic filter cannot.',
-  'Glassy pads, hollow organs, deep basses: each one is a preset you can play. Enjoy the tour!',
+  'Welcome to OKTOMULTIWAVE. Every sound you hear is built from wavelets: tiny waves, like bricks of sound.',
+  'This synth has four oscillators: two that shape a classic waveform (A1, A2) and two that build the sound brick by brick (B1, B2).',
+  'Most presets use two of them: a body that sings, and a second oscillator that adds a colour, a shimmer or the attack.',
+  'An oscillator can live for a few milliseconds only: a click, a pluck, a breath. It gives the sound its attack.',
+  'CHORD MODE turns the keyboard into a chord harp: one key plays a whole chord. Try it under the keyboard.',
+  'Pads, plucks, organs, basses: each one is a preset you can play. Enjoy the tour!',
 ];
 const SUMMARY_END = 'Played polyphonic at its normal octave, with short echoes.';   // the end of every preset summary (demo.js presetSummary)
-// base preset of the Toccata scenes (label shows it with the modified dot)
-const TOC_PRESETS = [[0, 'B · Octave Organ'], [11.5, 'A · Init'], [68.8, 'B · Init'], [105.6, 'B · Octave Organ']];
 const FORCED = { v_voices: 16, v_oct: 0, v_glide: 0 }; // + caps: amp_a <= 0.08, fx_dmix <= 0.1, fx_dfb <= 0.3
 const CAPS = { amp_a: 0.08, fx_dmix: 0.1, fx_dfb: 0.3 };
 
@@ -111,7 +85,7 @@ function diffVals(a, b) {
 async function deviceRect() {
   return ev(`(() => { const d = document.getElementById('device'); if (!d) return null; const r = d.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })()`);
 }
-const P = (x, y) => [DEV.x + (x * DEV.w) / 1100, DEV.y + (y * DEV.h) / 840];
+const P = (x, y) => [DEV.x + (x * DEV.w) / 1100, DEV.y + (y * DEV.h) / 860];
 async function rectOf(sel, index = 0) {
   return ev(`(() => { const e = document.querySelectorAll(${JSON.stringify(sel)})[${index}]; if (!e) return null; const r = e.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, text: e.textContent.trim(),
@@ -119,14 +93,10 @@ async function rectOf(sel, index = 0) {
 }
 
 const SNAP_EXPR = `(() => { const s = WS_TEST.demoState(); const l = WS_TEST.getLevel();
-  const keys = ['wavelet','b_tilt','f_cutoff','f_res','f_slope','a_wave','p_depth','a_sparsity','b_pattern','fx_rmix'];
-  for (let b = 1; b <= 11; b++) keys.push('b_bar' + b);
-  const v = {}; for (const k of keys) v[k] = WS_TEST.getParam(k);
-  let pv = null; if (s.running && s.param && !s.preset) { const k = s.param === 'drawbars' ? 'b_bar1' : s.param; if (WS_TEST.paramKeys().includes(k)) pv = WS_TEST.getParam(k); }
   const all = s.running && s.preset ? Object.fromEntries(WS_TEST.paramKeys().map(k => [k, WS_TEST.getParam(k)])) : null;
   const q = (c) => { const e = document.querySelector(c); return e ? e.textContent.trim() : null; };
   const w = document.querySelector('.demo-win');
-  return { s, v, pv, all, lv: Math.max(l.peakL, l.peakR), hot: document.querySelectorAll('.hot').length,
+  return { s, all, lv: Math.max(l.peakL, l.peakR), hot: document.querySelectorAll('.hot').length,
     sec: q('.dw-sec'), param: q('.dw-param'), val: q('.dw-val'), text: q('.dw-text'), btn: q('.demo-btn'), win: !!w && getComputedStyle(w).display !== 'none',
     lbl: (() => { const n = document.querySelector('.presets .pname'); if (!n) return null; const sp = n.querySelector('span');
       return { name: (sp ? sp.textContent : n.textContent).trim(), dirty: !!n.querySelector('.dirty') }; })() }; })()`;
@@ -183,48 +153,18 @@ async function chooseFromMenu(title, songs) {
 }
 
 // ------------------------------------------------------------------ checks
-function songChecks(name, song, samples, full) {
-  const run = samples.filter((x) => x.s.running);
-  const titles = [...new Set(run.map((x) => x.s.song))];
-  check(titles.length === 1 && titles[0] === song.title, `${name}: demoState().song is the song title`, JSON.stringify(titles));
-  const nsc = [...new Set(run.map((x) => x.s.scenes))];
-  let mono = true, prev = -1, prevT = -1e9;
-  const sceneVals = {};
-  for (const x of run) {
-    if (x.s.scene < prev || x.s.time < prevT - 0.2) mono = false;
-    prev = Math.max(prev, x.s.scene);
-    prevT = Math.max(prevT, x.s.time);
-    if (x.s.time > 0 && x.pv !== null) (sceneVals[x.s.scene] = sceneVals[x.s.scene] || new Set()).add(Math.round(x.pv * 1e6));
-  }
-  log(`  ${name}: ${nsc.join('/')} scenes; scene time reached ${run.length ? run[run.length - 1].s.time.toFixed(1) : '-'} s`);
-  check(mono, `${name}: scene index and scene time never go backwards`);
-  const still = Object.entries(sceneVals).filter(([, s]) => s.size < 2).map(([k]) => `scene ${Number(k) + 1} (${run.find((x) => x.s.scene === Number(k)).s.param})`);
-  check(still.length === 0 || (!full && still.length === 1 && Object.keys(sceneVals).length <= 2), `${name}: the varied parameter moves in every observed scene`, `no movement in ${still.join(', ')}`);
-  check(run.filter((x) => x.s.time > 0.3).every((x) => x.hot >= 1 && (x.param || '').startsWith('Now varying')), `${name}: window shows 'Now varying: …' and a control is marked 'hot'`);
-  const badLbl = run.filter((x) => x.s.time > 0.3 && !(x.lbl && x.lbl.dirty && SPEC.PRESETS.some((p) => p.name === x.lbl.name))).map((x) => `t=${x.s.time.toFixed(1)} ${JSON.stringify(x.lbl)}`);
-  check(badLbl.length === 0, `${name}: preset label shows the scene's base preset with the modified dot`, short(badLbl));
-  const maxLv = Math.max(0, ...run.map((x) => x.lv));
-  const lv = run.filter((x) => x.s.time > 1).map((x) => x.lv);
-  check(maxLv <= 1.0, `${name}: no output level above 1.0`, `max ${maxLv}`);
-  check(lv.filter((v) => v > 0.001).length / Math.max(1, lv.length) > 0.8, `${name}: sounds while playing`, `${lv.filter((v) => v > 0.001).length}/${lv.length} samples above -60 dBFS`, 'WARN');
-  if (full) {
-    const maxScene = Math.max(...run.map((x) => x.s.scene));
-    check(maxScene === nsc[0] - 1, `${name}: progresses through all scenes to the last one`, `reached scene ${maxScene + 1} of ${nsc[0]}`);
-  }
-}
-
 // The tour plan itself (independent of the player): the agreed sequence, a change about every TOUR_STEP s.
-function planChecks(plan, song) {
-  const seq = plan.map((p) => p.preset), gaps = plan.slice(1).map((p, i) => p.t - plan[i].t);
-  check(JSON.stringify(seq) === JSON.stringify(EXPECTED_TOUR), `tour plan: the agreed sequence of ${EXPECTED_TOUR.length} presets, from '${TOUR_START}'`,
-    seq.map((n, i) => (n === EXPECTED_TOUR[i] ? null : `#${i + 1} '${n}' expected '${EXPECTED_TOUR[i]}'`)).filter(Boolean).slice(0, 3).join('; ') || `${seq.length} presets`);
+function planChecks(plan, song, first) {
+  const seq = plan.map((p) => p.preset), gaps = plan.slice(1).map((p, i) => p.t - plan[i].t), want = tourFrom(first, plan.length);
+  check(JSON.stringify(seq) === JSON.stringify(want), `tour plan: the spec's TOUR from entry ${first + 1} on (${plan.length} presets, from '${want[0]}')`,
+    seq.map((n, i) => (n === want[i] ? null : `#${i + 1} '${n}' expected '${want[i]}'`)).filter(Boolean).slice(0, 3).join('; ') || `${seq.length} presets`);
   check(plan.length > 0 && plan[0].t === 0 && gaps.every((g) => g > TOUR_STEP - 1.5 && g < TOUR_STEP + 1.5) && plan[plan.length - 1].t < song.duration,
     `tour plan: starts at 0 s, then a change every ${TOUR_STEP} ± 1.5 s (on a chord) until the end`,
     `gaps ${Math.min(...gaps).toFixed(2)}–${Math.max(...gaps).toFixed(2)} s, last change ${plan[plan.length - 1].t.toFixed(1)} s of ${song.duration} s`);
 }
 
 // Preset tour: at time t the preset of the last plan entry with plan[k].t <= t; all values = spec preset except the forced ones
-function tourChecks(name, song, samples, plan, full, intro = true) {
+function tourChecks(name, song, samples, plan, full, intro = true, start = plan[0].preset) {
   const run = samples.filter((x) => x.s.running && x.s.time >= 0);
   const N = plan.length;
   const seen = [], badOrder = [], badVals = [], badText = [], badLbl = [], badIntro = [], introSeen = new Set();
@@ -256,7 +196,7 @@ function tourChecks(name, song, samples, plan, full, intro = true) {
     else summarySeen++;
   }
   log(`  ${name}: presets in order of appearance (${seen.length}): ${seen.join(' | ')}`);
-  check(seen[0] === TOUR_START, `${name}: the tour starts at '${TOUR_START}'`, `first preset '${seen[0]}'`);
+  check(seen[0] === start, `${name}: the tour starts at '${start}'`, `first preset '${seen[0]}'`);
   check(badOrder.length === 0, `${name}: at every moment the preset of the tour plan`, short(badOrder));
   check(badLbl.length === 0, `${name}: preset label shows exactly the tour preset (no modified dot)`, short(badLbl));
   check(badVals.length === 0, `${name}: each preset's spec values with Voices 16, Octave 0, Glide 0 forced and Amp Attack <= 0.08 s, Delay Mix <= 0.1, Delay Feedback <= 0.3`, short(badVals));
@@ -279,37 +219,6 @@ function tourChecks(name, song, samples, plan, full, intro = true) {
   check(maxLv <= 1.0, `${name}: no output level above 1.0`, `max ${maxLv}`);
   check(lv.filter((v) => v > 0.001).length / Math.max(1, lv.length) > 0.8, `${name}: sounds while playing`, `${lv.filter((v) => v > 0.001).length}/${lv.length} samples above -60 dBFS`, 'WARN');
   return seen.length;
-}
-
-function toccataChecks(samples) {
-  const expected = (t) => { let k = 0; for (let i = 0; i < SCHED.length; i++) if (t >= SCHED[i].t) k = i; return k; };
-  const sceneBad = [], valBad = [];
-  for (const x of samples.filter((y) => y.s.running)) {
-    const t = x.s.time;
-    if (t < 0 || SCHED.some((s) => Math.abs(t - s.t) < TOL_T)) continue;
-    const k = expected(t), sc = SCHED[k];
-    if (x.s.scene !== k || x.s.param !== sc.param) sceneBad.push(`t=${t.toFixed(2)} ${x.s.scene}/${x.s.param} vs ${k}/${sc.param}`);
-    if (sc.ramp) {
-      const [t0, t1, a, b] = sc.ramp;
-      const e = a + (b - a) * Math.min(1, Math.max(0, (t - t0) / (t1 - t0)));
-      if (!(Math.abs(x.v[sc.param] - e) <= (Math.abs(b - a) / (t1 - t0)) * TOL_T + Math.abs(b - a) * 0.01 + 1e-6)) valBad.push(`t=${t.toFixed(2)} ${sc.param}=${x.v[sc.param].toFixed(3)} vs ${e.toFixed(3)}`);
-    } else if (sc.steps) {
-      if (sc.steps.some((st) => Math.abs(t - st[0]) < TOL_T)) continue;
-      let e = sc.steps[0][1]; for (const st of sc.steps) if (t >= st[0]) e = st[1];
-      if (x.v[sc.param] !== e) valBad.push(`t=${t.toFixed(2)} ${sc.param}=${x.v[sc.param]} vs ${e}`);
-    }
-  }
-  const lblBad = [];
-  for (const x of samples.filter((y) => y.s.running && y.s.time > 0.3)) {
-    const t = x.s.time;
-    if (TOC_PRESETS.some((p) => Math.abs(t - p[0]) < TOL_T)) continue;
-    let want = TOC_PRESETS[0][1];
-    for (const p of TOC_PRESETS) if (t >= p[0]) want = p[1];
-    if (!(x.lbl && x.lbl.name === want && x.lbl.dirty)) lblBad.push(`t=${t.toFixed(1)} ${JSON.stringify(x.lbl)} expected '${want}•'`);
-  }
-  check(lblBad.length === 0, "Toccata: preset label shows the scene's base preset with the modified dot ('B · Octave Organ•', then 'A · Init•')", short(lblBad));
-  check(sceneBad.length === 0, 'Toccata: scenes follow the agreed schedule', short(sceneBad));
-  check(valBad.length === 0, 'Toccata: parameter ramps/steps follow the schedule', short(valBad));
 }
 
 // ------------------------------------------------------------------ MIDI helpers
@@ -556,7 +465,7 @@ async function main() {
     const menuItems = await ev(`(() => { const n = document.querySelector('.presets .pname'); if (!n) return null; n.click();
       const it = [...document.querySelectorAll('.pmenu:not(.demo-menu) .it')].map((e) => e.textContent.replace(/✕$/, ''));
       n.click(); return it; })()`);
-    const menuWant = specNames.map((s) => s.replace(' · ', ''));
+    const menuWant = specNames;   // the menu shows each name whole (the letters before it are coloured)
     check(Array.isArray(menuItems) && menuWant.every((s, i) => menuItems[i] === s), `preset menu lists the ${specNames.length} factory presets in spec order`,
       JSON.stringify((menuItems || []).slice(0, 6)) + ' …');
     check(JSON.stringify(names.slice(0, specNames.length)) === JSON.stringify(specNames), 'WS_TEST.presets() follows the spec order', JSON.stringify(names.slice(0, 4)));
@@ -596,6 +505,7 @@ async function main() {
     check(/STOP/.test(st0.btn) && st0.win && !(await ev(`!!document.querySelector('.demo-menu')`)), "while running: '■ STOP', demo window visible, no menu",
       JSON.stringify({ btn: st0.btn, win: st0.win }));
     const isTour = typeof st0.s.preset === 'string';
+    check(isTour, 'the default demo is a preset tour (demoState().preset)', JSON.stringify(st0.s.preset));
     log(`  preset tour: ${isTour ? 'yes' : 'no'} (demoState().preset = ${JSON.stringify(st0.s.preset)})`);
     let shot = false;
     // smoke: up to the first preset after the welcome sentences (beta 0.7), so that the switch to the preset summary is seen
@@ -606,10 +516,10 @@ async function main() {
     });
     if (isTour) {
       const plan = plan0;
-      planChecks(plan, songs[0]);
-      const n = tourChecks('tour', songs[0], [st0, ...tourSamples], plan, !opt.smoke);
+      planChecks(plan, songs[0], 2);
+      const n = tourChecks('tour', songs[0], [st0, ...tourSamples], plan, !opt.smoke, true, TOUR_START);
       check(n >= (opt.smoke ? 5 : plan.length), `tour: at least ${opt.smoke ? 5 : plan.length} presets observed`, `${n}`);
-    } else songChecks('default demo', songs[0], [st0, ...tourSamples], !opt.smoke);
+    }
     if (opt.smoke) {
       const hb = await rectOf('.demo-btn');
       await B.click(hb.x, hb.y);
@@ -624,21 +534,21 @@ async function main() {
     check(B.errors().length === 0, 'no console errors during the default demo', short(B.errors()));
 
     // ---- a modified preset as baseline from here on
-    const iSparse = names.indexOf('A · Clean Keys');   // beta 0.5 (A · Sparse Keys was left out)
-    if (iSparse >= 0) await ev(`WS_TEST.loadPreset(${iSparse})`);
+    await ev(`WS_TEST.loadPreset(${SPEC.TOP + 40})`);   // a new preset as the baseline
     await ev(`WS_TEST.setParam('f_cutoff', 5.5); WS_TEST.setParam('fx_rmix', 0.33); true`);
     await sleep(200);
     const base = await snapshotAll();
     log(`  baseline from here: '${base.label.replace(/<[^>]+>/g, ' ').trim()}' (modified)`);
 
-    // ---- Toccata from the arrow menu
+    // ---- a song from the arrow menu: its own tour, from the first entry of the spec's TOUR
     if (iToccata >= 0) {
       begin(`Toccata from the arrow menu: ${songs[iToccata].title}`);
       check(await chooseFromMenu(songs[iToccata].title, songs), 'the Toccata can be chosen from the arrow menu');
       check(!!(await waitDemoTime(0, 8000)), 'it starts');
       const sm = await follow(opt.smoke ? 10 : 30);
-      songChecks('Toccata', songs[iToccata], sm, false);
-      toccataChecks(sm);
+      const planT = await ev(`WS_TEST.demoTour(${iToccata})`);
+      planChecks(planT, songs[iToccata], 0);
+      tourChecks('Toccata', songs[iToccata], sm, planT, false, false, TOUR[0]);
       const hb = await rectOf('.demo-btn');
       check(/STOP/.test(hb.text), "'■ STOP' shown while a menu song plays", hb.text);
       if (opt.smoke) { await B.key('Escape', { code: 'Escape' }); check(await waitStopped(2000), 'Esc stops the demo'); }
@@ -648,15 +558,15 @@ async function main() {
     if (opt.smoke) { check(B.errors().length === 0, 'no console errors', short(B.errors())); await hostileMidiTests(base, dialogs); await lifecycleTests(); throw SMOKE_DONE; }
 
     // ---- every other song
-    begin('Other songs: start / scenes / stop');
+    begin('Other songs: start / tour / stop');
     for (let i = 1; i < songs.length; i++) {
       if (i === iToccata) continue;
       await ev(`WS_TEST.demoStart(${i})`);
       await waitDemoTime(0, 8000);
       const sm = await follow(14);
       const st = sm[sm.length - 1].s;
-      if (typeof st.preset === 'string') tourChecks(`song ${i}`, songs[i], sm, await ev(`WS_TEST.demoTour(${i})`), false, false);
-      else songChecks(`song ${i} '${songs[i].short || songs[i].title}' (14 s)`, songs[i], sm, false);
+      const planI = await ev(`WS_TEST.demoTour(${i})`);
+      tourChecks(`song ${i}`, songs[i], sm, planI, false, false, TOUR[0]);
       await ev('WS_TEST.demoStop()');
       check(await waitStopped(2000), `song ${i}: demoStop() stops it`);
       await checkRestored(base, `song ${i} stop`);
@@ -735,7 +645,8 @@ async function main() {
 
     // ---- Ctrl+click
     begin('Ctrl+click on a knob resets it to the default');
-    for (const [key, x, y] of [['f_cutoff', 50, 418], ['amp_a', 582, 418]]) {
+    const centre = (key) => { for (const sec of SPEC.SECTIONS) if (sec.view === undefined || sec.view <= 0) for (const w of sec.widgets) if (w.param === key) return [sec.x + w.x + w.w / 2, sec.y + w.y + w.h / 2]; return null; };
+    for (const [key, x, y] of [['f_cutoff', ...centre('f_cutoff')], ['amp_a', ...centre('amp_a')]]) {
       const p = SPEC_BY_KEY[key];
       const other = p.min + (p.max - p.min) * 0.3;
       await ev(`WS_TEST.setParam('${key}', ${other})`);
