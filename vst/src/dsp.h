@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // DSP core (C++ port of web/js/core.js, same algorithm 1:1).
 #pragma once
@@ -24,10 +24,13 @@ constexpr int NMIP = 11;          // mip m keeps harmonics 1..(1024 >> m)
 constexpr int TW = (N + 1) * NL;  // floats per mip table
 constexpr int CTRL = 32;          // control-rate block
 constexpr int MAXV = 16;
+constexpr int NS = 4;             // oscillators: A1 A2 B1 B2 (kSlots)
 // SOURCE PHASE moved by LFO 2 (beta 0.4): the engine-A tables are also built at PHASE_K positions round the cycle
 // (phase + k / PHASE_K); 12 is not a power of two, so neighbouring positions differ in every band (core.js PHASE_K)
 constexpr int PHASE_K = 12;
 constexpr double LN1000 = 6.907755278982137;
+constexpr double LN10 = 2.302585092994046;   // Math.LN10
+constexpr double LVL_EPS = 1e-5;   // an oscillator whose smoothed level is below this is not rendered
 constexpr double VOICE_GAIN = 0.4;   // about -8 dB per voice: headroom for chords
 constexpr double LIMIT_T = 0.7;      // output soft limiter: transparent below -3 dBFS, never above 0 dBFS
 constexpr double PI = 3.14159265358979323846;
@@ -82,10 +85,7 @@ inline std::string formatValue(const ParamDef& p, double v) {
     case FMT_DEG: return fmtNum("%.0f", jsRound(v * 360)) + "\xC2\xB0";
     case FMT_CYC: return "\xC2\xB1" + fmtNum("%.0f", jsRound(v * 360)) + "\xC2\xB0";
     case FMT_BANDAMT: return "\xC2\xB1" + fmtNum("%.1f", v) + " bands";
-    case FMT_ABMIX:
-      if (v <= 0) return "A";
-      if (v >= 1) return "B";
-      return "A " + fmtNum("%.0f", jsRound((1 - v) * 100)) + " \xC2\xB7 B " + fmtNum("%.0f", jsRound(v * 100));
+    case FMT_SEMI: { double r = jsRound(v); return sgn(r, fmtNum("%.0f", std::fabs(r)) + " st"); }
     default: return fmtNum("%.2f", v);
   }
 }
@@ -95,18 +95,6 @@ inline bool parseValue(const ParamDef& p, std::string s, double& out) {
   if (p.fmt == FMT_CHOICE) {
     std::string t = s; while (!t.empty() && t.back() == ' ') t.pop_back(); while (!t.empty() && t[0] == ' ') t.erase(0, 1);
     for (int i = 0; i < p.numChoices; i++) if (lower(p.choices[i]) == lower(t)) { out = i; return true; }
-  }
-  if (p.fmt == FMT_ABMIX) {   // "A", "B", or the B share in percent ("A 70 · B 30" or "30")
-    std::string t = lower(s); while (!t.empty() && t.back() == ' ') t.pop_back(); while (!t.empty() && t[0] == ' ') t.erase(0, 1);
-    if (t == "a") { out = 0; return true; }
-    if (t == "b") { out = 1; return true; }
-    size_t k = t.find('b');
-    const char* c = t.c_str() + (k == std::string::npos ? 0 : k + 1);
-    while (*c == ' ') c++;
-    char* end = nullptr; double v = std::strtod(c, &end);
-    if (end == c) return false;
-    out = std::min(1.0, std::max(0.0, v / 100));
-    return true;
   }
   size_t m = s.find("\xE2\x88\x92"); if (m != std::string::npos) s.replace(m, 3, "-");
   if (p.fmt == FMT_SEC && lower(s).find("off") != std::string::npos) { out = p.min; return true; }
@@ -257,108 +245,69 @@ inline void patternCoeffs(int pattern, int seed, double* c) {
 }
 
 // Everything that depends only on the structural parameters.
+// Okto MultiWave Synth: four oscillators A1 A2 B1 B2 (kSlots). The tables of one oscillator that plays (Tables::slot): its mip
+// tables, with WAVELET MORPH the same oscillator built with WAVELET 2, and with SOURCE PHASE moved by LFO 2 the other
+// PHASE_K - 1 phases of the set (and of the WAVELET 2 set): phase + k / PHASE_K, k = 1 .. PHASE_K - 1 (empty: none).
+struct SlotTables {
+  bool on = false; int mode = 0;
+  std::vector<float> mips, rms;                      // NMIP * TW, NMIP * NL
+  bool hasW2 = false; std::vector<float> w2Mips, w2Rms;
+  std::vector<std::vector<float>> phMips, phRms, w2PhMips, w2PhRms;
+};
 struct Tables {
+  // displays (buildTables without mips): the raw layers of the oscillator shown on the panel; also where buildSet works
   int mode = 0, kept = 0, nonzero = 0;
   std::vector<double> layers;   // NL * N (raw, for displays)
   std::vector<double> coeffs;   // N
   double bandScale[NB];
   std::vector<float> mips;      // NMIP * TW (empty when built without mips)
   std::vector<float> rms;       // NMIP * NL
-  // engines A and B mixed: the other engine's mip tables (mode altMode)
-  bool hasAlt = false; int altMode = 0;
-  std::vector<float> altMips, altRms;
-  // WAVELET MORPH (beta 0.3): the same sound built with WAVELET 2 (and its alt set when engines A and B are mixed)
-  bool hasW2 = false; int w2Mode = 0; std::vector<float> w2Mips, w2Rms;
-  bool w2HasAlt = false; int w2AltMode = 0; std::vector<float> w2AltMips, w2AltRms;
-  // SOURCE PHASE moved by LFO 2 (beta 0.4): each engine-A set (0 main, 1 alt, 2 WAVELET 2, 3 WAVELET 2 alt) also at the
-  // phases a_phase + k / PHASE_K, k = 1 .. PHASE_K - 1 (empty: none)
-  std::vector<std::vector<float>> phMips[4], phRms[4];
+  // the sound (buildTables with mips): the oscillators that play
+  int needs = 0;
+  SlotTables slot[NS];
   Tables() : layers((size_t)NL * N), coeffs(N) {}
   const double* layer(int l) const { return layers.data() + (size_t)l * N; }
 };
 
-// Which table sets the sound needs: bit 0 = engine A (A/B MIX below B), bit 1 = engine B (MIX above A).
+// Which oscillators the sound needs: bit s = oscillator s has a level above 0.
 inline int tableNeeds(const double* params) {
-  const double m = params[P_AB_MIX];
-  return (m < 1 ? 1 : 0) | (m > 0 ? 2 : 0);
+  int m = 0;
+  for (int s = 0; s < NS; s++) if (params[kSlots[s].lvl] > 0) m |= 1 << s;
+  return m;
 }
-
-inline void buildSet(const double* params, int mode, bool withMips, Tables& t);
-
-// withMips=false: the engine shown on the panel (displays). withMips=true: what the sound needs, engine A or B
-// alone, or both when mixed (the engine shown on the panel is the main set, the other one the alt set).
-// WAVELET MORPH: the morph needs the WAVELET 2 tables when it can move away from WAVELET and WAVELET 2 is another wavelet.
+// WAVELET MORPH (beta 0.3): the amounts that can move the sound away from WAVELET; an oscillator whose wavelet is WAVELET 2 has
+// nothing to morph to
+inline bool morphOn(const double* params) { return params[P_WMORPH] > 0 || params[P_LFO_WAV] > 0 || params[P_ENV_WAV] != 0; }
+inline bool slotMorph(const double* params, int s) { return morphOn(params) && (int)jsRound(params[P_WAV2]) != (int)jsRound(params[kSlots[s].wavelet]); }
 inline bool morphNeeded(const double* params) {
-  return (params[P_WMORPH] > 0 || params[P_LFO_WAV] > 0 || params[P_ENV_WAV] != 0) &&
-         (int)jsRound(params[P_WAV2]) != (int)jsRound(params[P_WAVELET]);
+  for (int s = 0; s < NS; s++) if (params[kSlots[s].lvl] > 0 && slotMorph(params, s)) return true;
+  return false;
 }
-
-inline void buildSound(const double* params, int view, Tables& t) {
-  const int need = tableNeeds(params);
-  if (need != 3) { buildSet(params, need == 1 ? 0 : 1, true, t); return; }
-  buildSet(params, view, true, t);
-  Tables a;
-  buildSet(params, 1 - view, true, a);
-  t.hasAlt = true; t.altMode = a.mode; t.altMips.swap(a.mips); t.altRms.swap(a.rms);
-}
-
-// LFO 2 moves the source phase when it targets it with an amount, and engine A plays
+// SOURCE PHASE (beta 0.4) moved by LFO 2: it targets the phase with an amount; the subtractive oscillators that play get the sets
+constexpr int ROLE_PCEN = 6, ROLE_PHASE = 9;   // the roles of kSlotRole / kLfo2Role (spec.js ROLES)
+inline bool phaseModOn(const double* params) { return kLfo2Role[(int)jsRound(params[P_LFO2_TARGET])] == ROLE_PHASE && params[P_LFO2_AMT] != 0; }
+inline bool slotPhaseMod(const double* params, int s) { return phaseModOn(params) && kSlots[s].mode == 0 && params[kSlots[s].lvl] > 0; }
 inline bool phaseModNeeded(const double* params) {
-  return kLfo2Targets[(int)jsRound(params[P_LFO2_TARGET])] == P_A_PHASE && params[P_LFO2_AMT] != 0 && (tableNeeds(params) & 1) != 0;
-}
-// the engine-A tables at phases a_phase + k / PHASE_K (k = 1 .. PHASE_K - 1), wavelet wav
-inline void phaseSets(const double* params, double wav, std::vector<std::vector<float>>& mips, std::vector<std::vector<float>>& rms) {
-  double pk[kNumParams];
-  std::memcpy(pk, params, sizeof pk);
-  pk[P_WAVELET] = wav;
-  mips.resize(PHASE_K - 1); rms.resize(PHASE_K - 1);
-  Tables s;
-  for (int k = 1; k < PHASE_K; k++) {
-    double v = params[P_A_PHASE] + (double)k / PHASE_K; v -= std::floor(v);
-    pk[P_A_PHASE] = v;
-    buildSet(pk, 0, true, s);
-    mips[k - 1].swap(s.mips); rms[k - 1].swap(s.rms);
-  }
+  for (int s = 0; s < NS; s++) if (slotPhaseMod(params, s)) return true;
+  return false;
 }
 
-inline void buildTables(const double* params, bool withMips, Tables& t) {
-  const int view = (int)jsRound(params[P_ENGINE]);
-  t.hasAlt = false; t.altMips.clear(); t.altRms.clear();
-  t.hasW2 = false; t.w2HasAlt = false; t.w2Mips.clear(); t.w2Rms.clear(); t.w2AltMips.clear(); t.w2AltRms.clear();
-  for (int s = 0; s < 4; s++) { t.phMips[s].clear(); t.phRms[s].clear(); }
-  if (!withMips) { buildSet(params, view, false, t); return; }
-  buildSound(params, view, t);
-  if (morphNeeded(params)) {   // WAVELET MORPH
-    double p2[kNumParams];
-    std::memcpy(p2, params, sizeof p2);
-    p2[P_WAVELET] = params[P_WAV2];
-    Tables w;
-    buildSound(p2, view, w);
-    t.hasW2 = true; t.w2Mode = w.mode; t.w2Mips.swap(w.mips); t.w2Rms.swap(w.rms);
-    if (w.hasAlt) { t.w2HasAlt = true; t.w2AltMode = w.altMode; t.w2AltMips.swap(w.altMips); t.w2AltRms.swap(w.altRms); }
-  }
-  // SOURCE PHASE moved by LFO 2 (beta 0.4): every engine-A set also at the other PHASE_K - 1 positions
-  if (phaseModNeeded(params)) {
-    if (t.mode == 0) phaseSets(params, params[P_WAVELET], t.phMips[0], t.phRms[0]);
-    if (t.hasAlt && t.altMode == 0) phaseSets(params, params[P_WAVELET], t.phMips[1], t.phRms[1]);
-    if (t.hasW2 && t.w2Mode == 0) phaseSets(params, params[P_WAV2], t.phMips[2], t.phRms[2]);
-    if (t.hasW2 && t.w2HasAlt && t.w2AltMode == 0) phaseSets(params, params[P_WAV2], t.phMips[3], t.phRms[3]);
-  }
-}
-
-inline void buildSet(const double* params, int mode, bool withMips, Tables& t) {
-  t.mode = mode;
-  const Filter& f = filter((int)jsRound(params[P_WAVELET]));
+// Builds the tables of oscillator s into t (raw layers, coefficients, and with mips the mip tables). ovWavelet / ovPhase (>= 0)
+// replace the oscillator's own wavelet / source phase (the WAVELET MORPH set, the phase sets).
+inline void buildSet(const double* params, int s, bool withMips, Tables& t, double ovWavelet = -1, double ovPhase = -1) {
+  const SlotDef& k = kSlots[s];
+  t.mode = k.mode;
+  const Filter& f = filter((int)jsRound(ovWavelet >= 0 ? ovWavelet : params[k.wavelet]));
   double* c = t.coeffs.data();
   std::vector<double> band(N), l(N);
   std::fill(t.layers.begin(), t.layers.end(), 0.0);
   for (int b = 0; b < NB; b++) t.bandScale[b] = 1;
   if (t.mode == 0) {
     std::vector<double> src(N);
-    sourceCycle((int)jsRound(params[P_A_WAVE]), params[P_A_WIDTH], src.data(), params[P_A_PHASE]);
+    sourceCycle((int)jsRound(params[k.wave]), params[k.width], src.data(), ovPhase >= 0 ? ovPhase : params[k.phase]);
     dwt(src.data(), f, c);
     c[0] = 0;
-    t.kept = sparsify(c, params[P_A_SPARSITY], t.nonzero);
+    t.kept = sparsify(c, params[k.sparsity], t.nonzero);
     double* dry = t.layers.data() + (size_t)DRY * N;
     for (int b = 1; b <= NB; b++) {
       std::fill(band.begin(), band.end(), 0.0);
@@ -368,7 +317,7 @@ inline void buildSet(const double* params, int mode, bool withMips, Tables& t) {
       for (int i = 0; i < N; i++) dry[i] += dst[i];
     }
   } else {
-    patternCoeffs((int)jsRound(params[P_B_PATTERN]), (int)jsRound(params[P_B_SEED]), c);
+    patternCoeffs((int)jsRound(params[k.pattern]), (int)jsRound(params[k.seed]), c);
     for (int b = 1; b <= NB; b++) {
       std::fill(band.begin(), band.end(), 0.0);
       for (int i = 1 << (b - 1); i < (1 << b); i++) band[i] = c[i];
@@ -402,6 +351,42 @@ inline void buildSet(const double* params, int mode, bool withMips, Tables& t) {
       for (int i = 0; i < N; i++) { double v = yr[i] / N; dst[i * NL + L] = (float)v; e += v * v; }
       dst[N * NL + L] = dst[L];
       t.rms[m * NL + L] = (float)std::sqrt(e / N);
+    }
+  }
+}
+
+// the tables of subtractive oscillator s at phases a_phase + k / PHASE_K (k = 1 .. PHASE_K - 1), wavelet wav
+inline void phaseSets(const double* params, int s, double wav, std::vector<std::vector<float>>& mips, std::vector<std::vector<float>>& rms) {
+  mips.resize(PHASE_K - 1); rms.resize(PHASE_K - 1);
+  Tables sc;
+  for (int k = 1; k < PHASE_K; k++) {
+    double v = params[kSlots[s].phase] + (double)k / PHASE_K; v -= std::floor(v);
+    buildSet(params, s, true, sc, wav, v);
+    mips[k - 1].swap(sc.mips); rms[k - 1].swap(sc.rms);
+  }
+}
+
+// withMips=false: the oscillator shown on the panel (displays). withMips=true: the oscillators the sound needs.
+inline void buildTables(const double* params, bool withMips, Tables& t) {
+  t.needs = 0;
+  for (int s = 0; s < NS; s++) t.slot[s] = SlotTables();
+  if (!withMips) { buildSet(params, (int)jsRound(params[P_OSC_VIEW]), false, t); return; }
+  const int need = tableNeeds(params);
+  t.needs = need;
+  Tables sc;
+  for (int s = 0; s < NS; s++) {
+    if (!(need & (1 << s))) continue;
+    SlotTables& st = t.slot[s];
+    st.on = true;
+    buildSet(params, s, true, sc);
+    st.mode = sc.mode; st.mips.swap(sc.mips); st.rms.swap(sc.rms);
+    if (slotMorph(params, s)) {   // WAVELET MORPH
+      buildSet(params, s, true, sc, params[P_WAV2]);
+      st.hasW2 = true; st.w2Mips.swap(sc.mips); st.w2Rms.swap(sc.rms);
+    }
+    if (slotPhaseMod(params, s)) {   // SOURCE PHASE moved by LFO 2: every set also at the other PHASE_K - 1 positions
+      phaseSets(params, s, params[kSlots[s].wavelet], st.phMips, st.phRms);
+      if (st.hasW2) phaseSets(params, s, params[P_WAV2], st.w2PhMips, st.w2PhRms);
     }
   }
 }
@@ -452,12 +437,13 @@ inline double windowValue(double ph, double pc, double w, double D) {
   return (1 - D) + D * bump;
 }
 
-inline void staticGains(const double* params, double* out) {
+inline void staticGains(const double* params, double* out) {   // the oscillator shown on the panel
+  const int view = (int)jsRound(params[P_OSC_VIEW]); const SlotDef& k = kSlots[view];
   double fg[NB];
-  filterGains((int)jsRound(params[P_F_TYPE]), params[P_F_CUTOFF], params[P_F_SLOPE], params[P_F_RES], fg);
-  if ((int)jsRound(params[P_ENGINE]) == 0) { for (int b = 0; b < NB; b++) out[b] = fg[b]; return; }
+  filterGains((int)jsRound(params[k.ftype]), params[k.fcut], params[k.fslope], params[k.fres], fg);
+  if (k.mode == 0) { for (int b = 0; b < NB; b++) out[b] = fg[b]; return; }
   double norm = 0;
-  for (int b = 0; b < NB; b++) { double bar = params[P_B_BAR1 + b] * std::pow(10.0, params[P_B_TILT] * b / 20); norm += bar; out[b] = bar * fg[b]; }
+  for (int b = 0; b < NB; b++) { double bar = params[k.bar1 + b] * std::exp(params[k.tilt] * b * (LN10 / 20)); norm += bar; out[b] = bar * fg[b]; }
   norm = std::max(1.0, norm);
   for (int b = 0; b < NB; b++) out[b] /= norm;
 }
@@ -498,47 +484,58 @@ struct Env {
   }
 };
 
+// The state of one oscillator of one voice.
+struct Slot {
+  double phase[4] = {0, 0, 0, 0};                        // the unison copies' phases
+  double g[NB] = {}, dg[NB] = {}, tg[NB] = {};           // band gains: now, step, target
+  double scale[NB] = {}; bool scaleAtk[NB] = {};         // additive oscillators: the band envelopes
+  double f0 = 261.63; int mip = 0; double pc = 0, pw = 1, pd = 0;   // its pitch, mip level and position window
+  Env own; double pe = 1;                                // its own envelope; its pitch envelope (1 -> 0)
+  bool live = false;                                     // rendered in the last block
+};
 struct Voice {
   bool active = false, gate = false, held = false, fresh = true;
   int note = 60; double vel = 1; uint64_t age = 0;
   double pitch = 60, target = 60, f0 = 261.63;
   bool glide = false;
-  int U = 1, mip = 0;
-  double phase[4] = {0, 0, 0, 0};
   double subPhase = 0;
   Env amp, mod;
-  double scale[NB] = {}; bool scaleAtk[NB] = {};
-  double gA[NB] = {}, dA[NB] = {}, gB[NB] = {}, dB[NB] = {}, tA[NB] = {}, tB[NB] = {};
-  double pc = 0, pw = 1, pd = 0;
+  Slot sl[NS];
   double wm0 = 0, wm1 = 0;   // WAVELET MORPH position at the start / end of the block
   double ap0 = 0, ap1 = 0;   // SOURCE PHASE moved by LFO 2: position among the PHASE_K phase sets (0 .. PHASE_K)
 };
+// releases the voice's own envelopes (with the AMP and MOD envelopes)
+inline void relOwn(Voice& v) { for (int s = 0; s < NS; s++) v.sl[s].own.gate(false); }
 
+// What the audio thread plays: per oscillator its tables (see SlotTables); the pointers stay valid while `owner` lives.
+struct SetRef { int mode = 0; const float* mips = nullptr; const float* rms = nullptr; };
+struct SlotRef {
+  bool on = false;
+  SetRef main;
+  bool hasW2 = false; SetRef w2;                       // WAVELET MORPH: the tables of WAVELET 2
+  bool hasPh = false; SetRef ph[PHASE_K];              // SOURCE PHASE moved by LFO 2: the PHASE_K phase sets (index 0 = main)
+  bool hasW2Ph = false; SetRef w2ph[PHASE_K];          // ... and those of WAVELET 2 (index 0 = w2)
+};
 struct TableRef {
-  int mode = 0; const float* mips = nullptr; const float* rms = nullptr; const void* owner = nullptr;
-  int altMode = 0; const float* altMips = nullptr; const float* altRms = nullptr;   // engines A and B mixed
-  // WAVELET MORPH, the tables of WAVELET 2 (w2Mips == nullptr: no morph)
-  int w2Mode = 0; const float* w2Mips = nullptr; const float* w2Rms = nullptr;
-  int w2AltMode = 0; const float* w2AltMips = nullptr; const float* w2AltRms = nullptr;
-  // SOURCE PHASE moved by LFO 2 (beta 0.4): the PHASE_K phase sets of the sets 0 main, 1 alt, 2 WAVELET 2, 3 WAVELET 2 alt
-  // (index 0 = the set itself); hasPh[s] false: none
-  bool hasPh[4] = {}; const float* phM[4][PHASE_K] = {}; const float* phR[4][PHASE_K] = {};
+  SlotRef slot[NS];
+  const void* owner = nullptr;
 };
 inline TableRef tableRef(const Tables& t) {
-  TableRef r;
-  r.mode = t.mode; r.mips = t.mips.data(); r.rms = t.rms.data(); r.owner = &t;
-  if (t.hasAlt) { r.altMode = t.altMode; r.altMips = t.altMips.data(); r.altRms = t.altRms.data(); }
-  if (t.hasW2) {
-    r.w2Mode = t.w2Mode; r.w2Mips = t.w2Mips.data(); r.w2Rms = t.w2Rms.data();
-    if (t.w2HasAlt) { r.w2AltMode = t.w2AltMode; r.w2AltMips = t.w2AltMips.data(); r.w2AltRms = t.w2AltRms.data(); }
-  }
-  const float* baseM[4] = {r.mips, r.altMips, r.w2Mips, r.w2AltMips};
-  const float* baseR[4] = {r.rms, r.altRms, r.w2Rms, r.w2AltRms};
-  for (int s = 0; s < 4; s++) {
-    if ((int)t.phMips[s].size() != PHASE_K - 1) continue;
-    r.hasPh[s] = true;
-    r.phM[s][0] = baseM[s]; r.phR[s][0] = baseR[s];
-    for (int k = 1; k < PHASE_K; k++) { r.phM[s][k] = t.phMips[s][k - 1].data(); r.phR[s][k] = t.phRms[s][k - 1].data(); }
+  TableRef r; r.owner = &t;
+  for (int s = 0; s < NS; s++) {
+    const SlotTables& st = t.slot[s]; SlotRef& o = r.slot[s];
+    if (!st.on) continue;
+    o.on = true;
+    o.main.mode = st.mode; o.main.mips = st.mips.data(); o.main.rms = st.rms.data();
+    if (st.hasW2) { o.hasW2 = true; o.w2.mode = st.mode; o.w2.mips = st.w2Mips.data(); o.w2.rms = st.w2Rms.data(); }
+    if ((int)st.phMips.size() == PHASE_K - 1) {
+      o.hasPh = true; o.ph[0] = o.main;
+      for (int k = 1; k < PHASE_K; k++) { o.ph[k].mode = st.mode; o.ph[k].mips = st.phMips[k - 1].data(); o.ph[k].rms = st.phRms[k - 1].data(); }
+    }
+    if (st.hasW2 && (int)st.w2PhMips.size() == PHASE_K - 1) {
+      o.hasW2Ph = true; o.w2ph[0] = o.w2;
+      for (int k = 1; k < PHASE_K; k++) { o.w2ph[k].mode = st.mode; o.w2ph[k].mips = st.w2PhMips[k - 1].data(); o.w2ph[k].rms = st.w2PhRms[k - 1].data(); }
+    }
   }
   return r;
 }
@@ -560,8 +557,8 @@ inline int plateNotes(int root, int type, int* out) {
 }
 
 struct Display {
-  float gains[NB] = {}; int mode = 0; uint32_t voices = 0; float peakL = 0, peakR = 0;
-  float center = 0, width = 1, depth = 0; int note = -1;
+  float gains[NB] = {}; int mode = 0, view = 0; uint32_t voices = 0; float peakL = 0, peakR = 0;
+  float center = 0, width = 1, depth = 0; int note = -1; bool slotLive = false;
 };
 
 class Engine {
@@ -578,6 +575,7 @@ class Engine {
   Display disp; int lastVoice = -1;
   double sr = 48000, fmax = 29000;
   double tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
+  bool started = false;   // the first block has been rendered
   // Okto MultiWave Synth: the chord layer (keyOn / keyOff, see there)
   uint8_t holdCnt[128] = {};    // how many held keys and chord notes want each note sounding (reference count)
   uint8_t plainHeld[128] = {};  // keys played as themselves (below the selector octave, or over the chord)
@@ -622,13 +620,16 @@ class Engine {
     dcR = 1 - 2 * PI * 10 / sr; dcxL = dcyL = dcxR = dcyR = 0;
     chLen = (int)std::ceil(sr * 0.03) + 4;
     chBuf.assign(chLen, 0.0f); chW = 0; chPh = 0; chPh2 = 0;
-    mixSm = p[P_AB_MIX];
+    for (int s2 = 0; s2 < NS; s2++) lvlSm[s2] = p[kSlots[s2].lvl];
   }
 
   // Called on deactivation: also forgets the voices' pitch memory so that a render (export, freeze)
   // never glides in from notes played before it.
   void reset() {
-    for (auto& v : voices) { v.active = false; v.gate = false; v.held = false; v.amp = Env(); v.mod = Env(); v.age = 0; v.pitch = v.target = 60; }
+    for (auto& v : voices) {
+      v.active = false; v.gate = false; v.held = false; v.amp = Env(); v.mod = Env(); v.age = 0; v.pitch = v.target = 60;
+      for (auto& sl : v.sl) { sl.own = Env(); sl.pe = 1; sl.live = false; }
+    }
     counter = 0; lastPitch = 60;
     stackN = 0; std::memset(keys, 0, sizeof keys); chordClear();
     std::fill(dlyL.begin(), dlyL.end(), 0.0f); std::fill(dlyR.begin(), dlyR.end(), 0.0f);
@@ -636,6 +637,8 @@ class Engine {
     for (auto& a : aps) std::fill(a.buf.begin(), a.buf.end(), 0.0f);
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
     dcxL = dcyL = dcxR = dcyR = 0;
+    started = false;
+    for (int s = 0; s < NS; s++) lvlSm[s] = p[kSlots[s].lvl];
   }
 
   void setParam(int id, double v) {
@@ -643,10 +646,12 @@ class Engine {
     double old = p[id];
     p[id] = v;
     if (id == P_HOLD && old >= 0.5 && v < 0.5)
-      for (auto& vc : voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
+      for (auto& vc : voices) if (vc.active && vc.held) { vc.held = false; vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); relOwn(vc); }
     // Okto MultiWave Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
     // are released first (nothing generated stays behind)
     if ((id == P_CHORD_MODE || id == P_CHORD_OCT) && old != v) chordReset();
+    // before the first block an oscillator's level (smoothed over 20 ms while the audio runs) simply takes its value
+    if (!started) for (int s = 0; s < NS; s++) if (id == kSlots[s].lvl) lvlSm[s] = v;
   }
 
   // Switch tables with a short crossfade. A table that is dropped is reported in released[].
@@ -669,7 +674,7 @@ class Engine {
       Voice& vc = voices[0];
       bool legato = vc.active && stackN > 0;   // another key is still held down
       if (stackN < 128) stack[stackN++] = note;
-      for (int k = 1; k < MAXV; k++) if (voices[k].active) { voices[k].gate = false; voices[k].amp.gate(false); voices[k].mod.gate(false); }
+      for (int k = 1; k < MAXV; k++) if (voices[k].active) { voices[k].gate = false; voices[k].amp.gate(false); voices[k].mod.gate(false), relOwn(voices[k]); }
       trigger(vc, note, vel, legato, porta == 1 || (porta == 2 && legato));
       lastVoice = 0;
       return;
@@ -724,13 +729,13 @@ class Engine {
       }
     }
     for (auto& vc : voices) if (vc.active && vc.gate && vc.note == note) {
-      if (hold) vc.held = true; else { vc.gate = false; vc.amp.gate(false); vc.mod.gate(false); }
+      if (hold) vc.held = true; else { vc.gate = false; vc.amp.gate(false); vc.mod.gate(false), relOwn(vc); }
     }
   }
 
   void allNotesOff() {
     stackN = 0; std::memset(keys, 0, sizeof keys); chordClear();
-    for (auto& vc : voices) if (vc.active) { vc.gate = false; vc.held = false; vc.amp.gate(false); vc.mod.gate(false); }
+    for (auto& vc : voices) if (vc.active) { vc.gate = false; vc.held = false; vc.amp.gate(false); vc.mod.gate(false), relOwn(vc); }
   }
 
   // MIDI CC120: silence immediately (voices and effect tails)
@@ -856,10 +861,19 @@ class Engine {
   Comb combs[16]; AP aps[8];
   double vol = 0.5, dcR = 0.999, dcxL = 0, dcyL = 0, dcxR = 0, dcyR = 0;
   std::vector<float> chBuf; int chLen = 0, chW = 0; double chPh = 0, chPh2 = 0;   // triple chorus
-  double mixSm = 0;                                                               // smoothed A/B MIX
   float bufL[CTRL], bufR[CTRL];
-  double fg[NB], tmpB[NB], lg[NB], panL[4], panR[4], inc[4], endPhase[4];
+  double fg[NB], tmpB[NB], lg[NB], panL[4], panR[4], inc[4], detMul[4];
   int act[NL];
+  // per block, computed once for all voices (prepBlock): the oscillators' levels (smoothed over 20 ms) and settings
+  struct Prep {
+    double tune = 0; int ftype = 0; double fcut = 0, fslope = 0, fres = 0, fkey = 0, fenv = 0, fvel = 0, pcen = 0, pwid = 0, pdep = 0;
+    double bar[NB] = {}, atkRate[NB] = {}, decay[NB] = {}; double norm = 1, sus = 1;
+  } pr[NS];
+  double lvlSm[NS] = {}, m0[NS] = {}, m1[NS] = {}; bool live[NS] = {};
+  int U = 1; double topMul = 1; int role2 = -1; double d2 = 0;
+  // per voice and block: the amp envelope (with the velocity gain) per sample, each oscillator's own envelope, end states
+  double envA[CTRL], ownBuf[NS][CTRL], endPh[NS][4];
+  bool ownOn[NS] = {}; double ownLevel[NS] = {}; int ownStage[NS] = {};
   double endLevel = 0, endSubPhase = 0; int endStage = 0;
 
   void removeFromStack(int note) {
@@ -872,17 +886,24 @@ class Engine {
     double glide = glideOn ? p[P_V_GLIDE] : 0;
     if (!vc.active) {
       vc.fresh = true;
-      for (int u = 0; u < 4; u++) vc.phase[u] = std::fmod(u * 0.618034, 1.0);
+      for (int s = 0; s < NS; s++) {
+        Slot& sl = vc.sl[s];
+        for (int u = 0; u < 4; u++) sl.phase[u] = std::fmod(u * 0.618034, 1.0);
+        for (int b = 0; b < NB; b++) sl.scale[b] = 0;
+        sl.live = false; sl.own.level = 0; sl.own.stage = 0; sl.pe = 1;
+      }
       vc.subPhase = 0;
       vc.amp.level = 0; vc.mod.level = 0;
-      for (int b = 0; b < NB; b++) vc.scale[b] = 0;
       // polyphonic portamento: an idle voice glides from its own last pitch (a never-used voice from the last note)
       vc.pitch = glide > 0 ? (vc.age ? vc.pitch : lastPitch) : note;
     } else if (glide <= 0) vc.pitch = note;
     vc.active = true; vc.gate = true; vc.held = false;
     vc.note = note; vc.target = note; vc.vel = vel;
     vc.age = ++counter;
-    if (!legato) { vc.amp.gate(true); vc.mod.gate(true); for (int b = 0; b < NB; b++) vc.scaleAtk[b] = true; }
+    if (!legato) {
+      vc.amp.gate(true); vc.mod.gate(true);
+      for (int s = 0; s < NS; s++) { Slot& sl = vc.sl[s]; for (int b = 0; b < NB; b++) sl.scaleAtk[b] = true; sl.own.gate(true); sl.pe = 1; }
+    }
     lastPitch = note;
   }
 
@@ -913,122 +934,193 @@ class Engine {
     lfo2Phase += lfoHz(P_LFO2_SYNC, P_LFO2_DIV, P_LFO2_RATE) * n / sr;
     if (lfo2Phase >= 1) { lfo2Phase -= std::floor(lfo2Phase); sh2 = lfo2Rng.next() * 2 - 1; }
   }
-  // parameter i as LFO 2 moves it (its target t2, by d2 in plain units), else exactly as set
-  static double lfo2Value(const double* p, int i, int t2, double d2) {
-    if (i != t2) return p[i];
-    const double v = p[i] + d2;
-    return i == P_P_CENTER ? v : std::min(kParams[i].max, std::max(kParams[i].min, v));   // POSITION wraps later
+  // LFO 2 (beta 0.3) moves the parameter of a role (cutoff, slope ... position width) by d2 in plain units: the value of that
+  // field of oscillator s as LFO 2 moves it (kept in range, POSITION wraps later)
+  static double roleVal(const double* p, int s, int role, int role2, double d2) {
+    const int i = kSlotRole[s][role]; const double v = p[i];
+    if (role2 != role) return v;
+    const double w = v + d2;
+    return role == ROLE_PCEN ? w : std::min(kParams[i].max, std::max(kParams[i].min, w));
   }
 
+  // Everything the voices share in a block of n samples, computed once: LFO 2, the unison copies, the oscillators' levels
+  // (smoothed over 20 ms) and settings, the additive oscillators' band terms. live[s]: oscillator s is rendered.
+  void prepBlock(int n, bool fading) {
+    const int t2 = (int)jsRound(p[P_LFO2_TARGET]);
+    const ParamDef& tp = kParams[kLfo2Targets[t2]];
+    role2 = kLfo2Role[t2]; d2 = p[P_LFO2_AMT] * lfo2 * 0.5 * (tp.max - tp.min);
+    // unison copies (detune and pan are the same for every oscillator)
+    const int Un = (int)jsRound(p[P_V_UNISON]); const double det = p[P_V_DETUNE], width = p[P_V_WIDTH];
+    U = std::max(1, std::min(4, Un));
+    const double uGain = 1 / std::sqrt((double)U);
+    topMul = std::pow(2.0, (U > 1 ? det : 0) / 1200);
+    for (int u = 0; u < U; u++) {
+      const double pos = U > 1 ? 2.0 * u / (U - 1) - 1 : 0;
+      detMul[u] = std::pow(2.0, det * pos / 1200);
+      const double th = (pos * width + 1) * PI / 4;
+      panL[u] = std::sqrt(2.0) * std::cos(th) * uGain; panR[u] = std::sqrt(2.0) * std::sin(th) * uGain;
+    }
+    const double a = 1 - std::exp(-n / (0.02 * sr));
+    for (int s = 0; s < NS; s++) {
+      const SlotDef& k = kSlots[s]; Prep& q = pr[s];
+      m0[s] = lvlSm[s];
+      lvlSm[s] += (p[k.lvl] - lvlSm[s]) * a;
+      m1[s] = lvlSm[s];
+      const bool has = (hasCur && cur.slot[s].on) || (fading && hasPrev && prev.slot[s].on);
+      live[s] = has && (m0[s] > LVL_EPS || m1[s] > LVL_EPS);
+      if (!live[s]) continue;
+      q.tune = 12 * p[k.oct] + p[k.fine] / 100 + p[k.semi];
+      q.ftype = (int)jsRound(p[k.ftype]);
+      q.fcut = roleVal(p, s, 0, role2, d2); q.fslope = roleVal(p, s, 1, role2, d2); q.fres = roleVal(p, s, 2, role2, d2);
+      q.fkey = roleVal(p, s, 3, role2, d2); q.fenv = roleVal(p, s, 4, role2, d2); q.fvel = roleVal(p, s, 5, role2, d2);
+      q.pcen = roleVal(p, s, 6, role2, d2); q.pwid = roleVal(p, s, 7, role2, d2); q.pdep = roleVal(p, s, 8, role2, d2);
+      if (k.mode == 1) {   // additive: drawbars x tilt, their sum, the band envelopes' steps (the same for every voice)
+        const double atk = p[k.atk], spread = p[k.spread], body = p[k.body], bright = p[k.bright];
+        double norm = 0;
+        for (int b = 0; b < NB; b++) {
+          const double bar = p[k.bar1 + b] * std::exp(p[k.tilt] * b * (LN10 / 20));
+          q.bar[b] = bar; norm += bar;
+          const double t = b / 10.0;
+          q.atkRate[b] = n / (atk * std::pow(16.0, spread * (t - 0.5)) * sr);
+          const double dt = body * std::pow(bright / body, t);
+          q.decay[b] = std::exp(-n * LN1000 / (dt * sr));
+        }
+        q.norm = std::max(1.0, norm); q.sus = p[k.sus];
+      }
+    }
+  }
+
+  // Per-voice control update for a block of n samples.
   void control(Voice& vc, int n) {
     double glide = vc.glide ? p[P_V_GLIDE] : 0;
     if (glide > 0 && vc.pitch != vc.target) {
       vc.pitch += (vc.target - vc.pitch) * (1 - std::exp(-n * 4.6 / (glide * sr)));
       if (std::fabs(vc.target - vc.pitch) < 1e-3) vc.pitch = vc.target;
     } else vc.pitch = vc.target;
-    double semis = vc.pitch + 12 * p[P_V_OCT] + p[P_V_FINE] / 100 + 2 * p[P_BEND] + lfo * (p[P_LFO_PITCH] + 50 * p[P_MODWHEEL]) / 100;
-    double f0 = 440 * std::pow(2.0, (semis - 69) / 12);
-    vc.f0 = f0;
-    int U = (int)jsRound(p[P_V_UNISON]); double det = p[P_V_DETUNE];
-    vc.U = std::max(1, std::min(4, U));
-    double fTop = f0 * std::pow(2.0, (vc.U > 1 ? det : 0) / 1200);
-    double maxH = std::floor(fmax / fTop);
-    vc.mip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : std::min(NMIP - 1, (int)std::ceil(std::log2(1024 / maxH) - 1e-9));
-
-    double mod = vc.mod.step(n, sr, p[P_MOD_A], p[P_MOD_D], p[P_MOD_S], p[P_MOD_R]);
-    // LFO 2 moves its target by up to ± AMOUNT × half the target's range
-    const int t2 = kLfo2Targets[(int)jsRound(p[P_LFO2_TARGET])];
-    const double d2 = p[P_LFO2_AMT] * lfo2 * 0.5 * (kParams[t2].max - kParams[t2].min);
-    double cut = lfo2Value(p, P_F_CUTOFF, t2, d2) + (1 - lfo2Value(p, P_F_KEYTRK, t2, d2)) * std::log2(261.63 / f0) +
-                 lfo2Value(p, P_F_ENV, t2, d2) * mod + p[P_LFO_CUT] * lfo + lfo2Value(p, P_F_VEL, t2, d2) * (vc.vel - 1);
-    filterGains((int)jsRound(p[P_F_TYPE]), cut, lfo2Value(p, P_F_SLOPE, t2, d2), lfo2Value(p, P_F_RES, t2, d2), fg);
-
-    double norm = 0;
-    double atk = p[P_B_ATK], spread = p[P_B_SPREAD], body = p[P_B_BODY], bright = p[P_B_BRIGHT], sus = p[P_B_SUS];
-    for (int b = 0; b < NB; b++) {
-      double bar = p[P_B_BAR1 + b] * std::pow(10.0, p[P_B_TILT] * b / 20);
-      norm += bar;
-      double t = b / 10.0, lv = vc.scale[b];
-      if (vc.scaleAtk[b]) {
-        lv += n / (atk * std::pow(16.0, spread * (t - 0.5)) * sr);
-        if (lv >= 1) { lv = 1; vc.scaleAtk[b] = false; }
-      } else {
-        double dt = body * std::pow(bright / body, t);
-        lv = sus + (lv - sus) * std::exp(-n * LN1000 / (dt * sr));
-      }
-      vc.scale[b] = lv;
-      tmpB[b] = bar * lv * fg[b];
-    }
-    norm = std::max(1.0, norm);
-    for (int b = 0; b < NB; b++) {
-      double tA = fg[b], tB = tmpB[b] / norm;
-      if (vc.fresh) { vc.gA[b] = tA; vc.gB[b] = tB; }
-      vc.tA[b] = tA; vc.tB[b] = tB;
-      vc.dA[b] = (tA - vc.gA[b]) / n; vc.dB[b] = (tB - vc.gB[b]) / n;
-    }
+    const double semis = vc.pitch + 12 * p[P_V_OCT] + p[P_V_FINE] / 100 + 2 * p[P_BEND] + lfo * (p[P_LFO_PITCH] + 50 * p[P_MODWHEEL]) / 100;
+    vc.f0 = 440 * std::pow(2.0, (semis - 69) / 12);   // the voice's pitch (the sub oscillator follows it); each oscillator adds its tuning
+    const double mod = vc.mod.step(n, sr, p[P_MOD_A], p[P_MOD_D], p[P_MOD_S], p[P_MOD_R]);
     // WAVELET MORPH position of this voice (0 = WAVELET, 1 = WAVELET 2): MORPH + LFO + mod envelope
     const double wm = std::min(1.0, std::max(0.0, p[P_WMORPH] + p[P_LFO_WAV] * lfo + p[P_ENV_WAV] * mod));
     vc.wm0 = vc.fresh ? wm : vc.wm1; vc.wm1 = wm;
     // SOURCE PHASE moved by LFO 2 (beta 0.4): the voice's place among the PHASE_K phase sets, from ap0 to ap1 (round the cycle)
-    double ap = (t2 == P_A_PHASE ? d2 : 0) * PHASE_K; ap -= std::floor(ap / PHASE_K) * PHASE_K;
+    double ap = (role2 == ROLE_PHASE ? d2 : 0) * PHASE_K; ap -= std::floor(ap / PHASE_K) * PHASE_K;
     vc.ap0 = vc.fresh ? ap : vc.ap1; vc.ap1 = ap;
     vc.fresh = false;
-    double pc = lfo2Value(p, P_P_CENTER, t2, d2) + p[P_LFO_POS] * lfo; pc -= std::floor(pc);
-    vc.pc = pc;
-    vc.pw = std::min(1.0, std::max(lfo2Value(p, P_P_WIDTH, t2, d2), 16 * fTop / sr));
-    vc.pd = lfo2Value(p, P_P_DEPTH, t2, d2);
+
+    for (int s = 0; s < NS; s++) {
+      Slot& sl = vc.sl[s]; const SlotDef& k = kSlots[s]; const Prep& q = pr[s];
+      // the pitch envelope and the own envelope go on whether the oscillator sounds or not
+      if (p[k.pamt] != 0) sl.pe *= std::exp(-n * LN1000 / (p[k.ptime] * sr));
+      if (!live[s]) {
+        if (p[k.eon] >= 0.5) sl.own.step(n, sr, p[k.ea], p[k.ed], p[k.es], p[k.er]);
+        sl.live = false;
+        continue;
+      }
+      const double f0 = 440 * std::pow(2.0, (semis + q.tune + p[k.pamt] * sl.pe - 69) / 12);
+      sl.f0 = f0;
+      const double fTop = f0 * topMul;
+      const double maxH = std::floor(fmax / fTop);
+      sl.mip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : std::min(NMIP - 1, (int)std::ceil(std::log2(1024 / maxH) - 1e-9));
+      // scale filter
+      const double cut = q.fcut + (1 - q.fkey) * std::log2(261.63 / f0) + q.fenv * mod + p[P_LFO_CUT] * lfo + q.fvel * (vc.vel - 1);
+      filterGains(q.ftype, cut, q.fslope, q.fres, fg);
+      const bool fresh = !sl.live;   // a note's first block, or the oscillator just came in: the gains start at their target
+      if (k.mode == 1) {   // additive: the band envelopes (a returning oscillator starts them again)
+        if (fresh) for (int b = 0; b < NB; b++) { sl.scale[b] = 0; sl.scaleAtk[b] = true; }
+        for (int b = 0; b < NB; b++) {
+          double lv = sl.scale[b];
+          if (sl.scaleAtk[b]) {
+            lv += q.atkRate[b];
+            if (lv >= 1) { lv = 1; sl.scaleAtk[b] = false; }
+          } else lv = q.sus + (lv - q.sus) * q.decay[b];
+          sl.scale[b] = lv;
+          tmpB[b] = q.bar[b] * lv * fg[b];
+        }
+        for (int b = 0; b < NB; b++) {
+          const double t = tmpB[b] / q.norm;
+          if (fresh) sl.g[b] = t;
+          sl.tg[b] = t; sl.dg[b] = (t - sl.g[b]) / n;
+        }
+      } else {
+        for (int b = 0; b < NB; b++) {
+          const double t = fg[b];
+          if (fresh) sl.g[b] = t;
+          sl.tg[b] = t; sl.dg[b] = (t - sl.g[b]) / n;
+        }
+      }
+      double pc = q.pcen + p[P_LFO_POS] * lfo; pc -= std::floor(pc);
+      sl.pc = pc;
+      sl.pw = std::min(1.0, std::max(q.pwid, 16 * fTop / sr));
+      sl.pd = q.pdep;
+    }
   }
 
-  // gain0/gainInc: the A/B MIX share of this table set (1, 0 when it plays alone); withSub: adds the sub oscillator
-  // (once per voice, at full level whatever the mix).
-  void renderVoice(const Voice& vc, int n, int mode, const float* mips, const float* rms, double fade0, double fadeInc,
-                   bool invert, double gain0, double gainInc, bool withSub) {
-    const size_t off = (size_t)vc.mip * TW;
-    const double* g = mode == 0 ? vc.gA : vc.gB; const double* dg = mode == 0 ? vc.dA : vc.dB;
-    // A fundamental at or above Nyquist can only alias: the wavetable part of such a voice stays silent.
-    const bool audible = vc.f0 < 0.5 * sr;
-    int na = 0;
-    if (audible)
-      for (int b = 0; b < NB; b++)
-        if (rms[vc.mip * NL + b] > 1e-7f && (std::fabs(g[b]) > 1e-6 || std::fabs(g[b] + dg[b] * n) > 1e-6)) act[na++] = b;
-    const int U = vc.U;
-    const bool useDry = audible && mode == 0 && vc.pd > 0;
-    const double det = p[P_V_DETUNE], width = p[P_V_WIDTH], uGain = 1 / std::sqrt((double)U);
-    for (int u = 0; u < U; u++) {
-      double pos = U > 1 ? 2.0 * u / (U - 1) - 1 : 0;
-      inc[u] = vc.f0 * std::pow(2.0, det * pos / 1200) / sr;
-      double th = (pos * width + 1) * PI / 4;
-      panL[u] = std::sqrt(2.0) * std::cos(th) * uGain; panR[u] = std::sqrt(2.0) * std::sin(th) * uGain;
-      endPhase[u] = vc.phase[u];
-    }
-    for (int b = 0; b < NB; b++) lg[b] = g[b];
-    const double pc = vc.pc, pw = vc.pw, pd = vc.pd;
+  // The voice's AMP ENVELOPE for the block, per sample, with the velocity gain (envA); its end state in endLevel / endStage.
+  void ampPass(const Voice& vc, int n) {
     double lev = vc.amp.level; int st = vc.amp.stage;
     const double s = p[P_AMP_S];
     const double aInc = 1 / (p[P_AMP_A] * sr), dC = std::exp(-LN1000 / (p[P_AMP_D] * sr)), rC = std::exp(-LN1000 / (p[P_AMP_R] * sr));
     const double velGain = VOICE_GAIN * (1 - p[P_AMP_VEL] * (1 - vc.vel));
-    // sub oscillator: one per voice (not per unison voice), centred, not filtered
-    const double subLvl = p[P_SUB_LEVEL];
-    const double subInc = vc.f0 * ((int)jsRound(p[P_SUB_OCT]) == 1 ? 0.25 : 0.5) / sr;
-    const bool subOn = withSub && subLvl > 0 && subInc < 0.5;   // silent when it would alias (above Nyquist)
-    const int subShape = (int)jsRound(p[P_SUB_SHAPE]);
-    const bool unity = gain0 == 1 && gainInc == 0;
-    double sph = vc.subPhase;
-    double fade = fade0, gain = gain0;
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < na; j++) { int b = act[j]; lg[b] += dg[b]; }
       if (st == 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
       else if (st == 2) lev = s + (lev - s) * dC;
       else if (st == 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
-      double fg1 = fade >= 1 ? 1 : fade;
-      double envBase = lev * velGain * (invert ? 1 - fg1 : fg1);
-      double env = unity ? envBase : envBase * gain;
+      envA[i] = lev * velGain;
+    }
+    endLevel = lev; endStage = st;
+  }
+  // Oscillator s's OWN ENVELOPE for the block, per sample (ownBuf[s]); its end state in ownLevel[s] / ownStage[s].
+  void ownPass(const Voice& vc, int s, int n) {
+    const SlotDef& k = kSlots[s]; const Slot& sl = vc.sl[s];
+    double lev = sl.own.level; int st = sl.own.stage;
+    const double sus = p[k.es];
+    const double aInc = 1 / (p[k.ea] * sr), dC = std::exp(-LN1000 / (p[k.ed] * sr)), rC = std::exp(-LN1000 / (p[k.er] * sr));
+    for (int i = 0; i < n; i++) {
+      if (st == 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
+      else if (st == 2) { lev = sus + (lev - sus) * dC; if (std::fabs(lev - sus) < 1e-9) lev = sus; }
+      else if (st == 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
+      ownBuf[s][i] = lev;
+    }
+    ownLevel[s] = lev; ownStage[s] = st;
+  }
+
+  // Render one voice's oscillator s for n samples with table set (mode, mips, rms), accumulating into bufL/bufR.
+  // Does not modify the voice: the end phases are left in endPh[s] so that several renders of the same oscillator (table
+  // crossfade, WAVELET MORPH, phase sets) start from the same state. The output follows the amp envelope (envA), the own
+  // envelope when it is on, the crossfade (ramping from fade0 by fadeInc per sample; invert: 1 - fade) and the oscillator's
+  // level share gain0 (+ gainInc per sample).
+  void renderVoice(const Voice& vc, int n, int s, int mode, const float* mips, const float* rms, double fade0, double fadeInc,
+                   bool invert, double gain0, double gainInc) {
+    const Slot& sl = vc.sl[s];
+    const size_t off = (size_t)sl.mip * TW;
+    const double* g = sl.g; const double* dg = sl.dg;
+    // A fundamental at or above Nyquist can only alias: the wavetable part of such a voice stays silent.
+    const bool audible = sl.f0 < 0.5 * sr;
+    int na = 0;
+    if (audible)
+      for (int b = 0; b < NB; b++)
+        if (rms[sl.mip * NL + b] > 1e-7f && (std::fabs(g[b]) > 1e-6 || std::fabs(g[b] + dg[b] * n) > 1e-6)) act[na++] = b;
+    const bool useDry = audible && mode == 0 && sl.pd > 0;
+    double* ph = endPh[s];
+    for (int u = 0; u < U; u++) { inc[u] = sl.f0 * detMul[u] / sr; ph[u] = sl.phase[u]; }
+    for (int b = 0; b < NB; b++) lg[b] = g[b];
+    const double pc = sl.pc, pw = sl.pw, pd = sl.pd;
+    const double* own = ownOn[s] ? ownBuf[s] : nullptr;
+    const bool unity = gain0 == 1 && gainInc == 0;
+    double fade = fade0, gain = gain0;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < na; j++) { int b = act[j]; lg[b] += dg[b]; }
+      const double fg1 = fade >= 1 ? 1 : fade;
+      double env = envA[i] * (invert ? 1 - fg1 : fg1);
+      if (!unity) env *= gain;
+      if (own) env *= own[i];
       fade += fadeInc; gain += gainInc;
       double oL = 0, oR = 0;
       for (int u = 0; u < U; u++) {
-        double x = endPhase[u] + inc[u];
+        double x = ph[u] + inc[u];
         if (x >= 1) x -= std::floor(x);   // keeps the table row inside [0, N) even for steps longer than a cycle
-        endPhase[u] = x;
+        ph[u] = x;
         double pos = x * N; int i0 = (int)pos; double fr = pos - i0;
         const float* base = mips + off + (size_t)i0 * NL; const float* nx = base + NL;
         double y;
@@ -1049,92 +1141,95 @@ class Engine {
         }
         oL += y * panL[u]; oR += y * panR[u];
       }
-      double sv = 0;
-      if (subOn) {
-        sph += subInc; if (sph >= 1) sph -= std::floor(sph);
-        sv = subLvl * subWave(sph, subInc, subShape);
-        if (unity) { oL += sv; oR += sv; }
-      }
-      if (unity) { bufL[i] += (float)(oL * env); bufR[i] += (float)(oR * env); }
-      else { bufL[i] += (float)(oL * env + sv * envBase); bufR[i] += (float)(oR * env + sv * envBase); }
+      bufL[i] += (float)(oL * env); bufR[i] += (float)(oR * env);
     }
-    endLevel = lev; endStage = st;
-    if (withSub) endSubPhase = sph;
   }
 
-  // Renders one voice with a table set and, when engines A and B are mixed, its alt set: shares 1 - mix (A) and
-  // mix (B), moving from m0 to m1 across the block; the sub oscillator is rendered once.
-  void renderSet(const Voice& vc, int n, const TableRef& t, double fade0, double fadeInc, bool invert, double m0, double m1) {
-    const float* const* pm = t.hasPh[0] ? t.phM[0] : nullptr; const float* const* pr = t.hasPh[0] ? t.phR[0] : nullptr;
-    if (!t.altMips) { renderTable(vc, n, t.mode, t.mips, t.rms, pm, pr, fade0, fadeInc, invert, 1, 0, true); return; }
-    const double g0 = t.mode == 0 ? 1 - m0 : m0, g1 = t.mode == 0 ? 1 - m1 : m1;
-    renderTable(vc, n, t.mode, t.mips, t.rms, pm, pr, fade0, fadeInc, invert, g0, (g1 - g0) / n, true);
-    renderTable(vc, n, t.altMode, t.altMips, t.altRms, t.hasPh[1] ? t.phM[1] : nullptr, t.hasPh[1] ? t.phR[1] : nullptr,
-                fade0, fadeInc, invert, 1 - g0, (g0 - g1) / n, false);
+  // The sub oscillator: one per voice (not per unison voice), centred, not filtered, following the amp envelope.
+  void renderSub(const Voice& vc, int n) {
+    const double subLvl = p[P_SUB_LEVEL];
+    endSubPhase = vc.subPhase;
+    if (!(subLvl > 0)) return;
+    const double subInc = vc.f0 * ((int)jsRound(p[P_SUB_OCT]) == 1 ? 0.25 : 0.5) / sr;
+    const int subShape = (int)jsRound(p[P_SUB_SHAPE]);
+    if (!(subInc < 0.5)) return;   // silent when it would alias (above Nyquist)
+    double sph = vc.subPhase;
+    for (int i = 0; i < n; i++) {
+      sph += subInc; if (sph >= 1) sph -= std::floor(sph);
+      const double sv = subLvl * subWave(sph, subInc, subShape) * envA[i];
+      bufL[i] += (float)sv; bufR[i] += (float)sv;
+    }
+    endSubPhase = sph;
   }
 
-  // SOURCE PHASE moved by LFO 2 (beta 0.4): an engine-A set with its phase sets (phM / phR, index 0 = the set itself) plays
-  // the sets on each side of the voice's place q (share 1 - |q - k| round the cycle), q moving from ap0 to ap1 across the
-  // block; the shares of a block start and end each add up to 1. Without phase sets exactly renderVoice.
-  void renderTable(const Voice& vc, int n, int mode, const float* mips, const float* rms, const float* const* phM,
-                   const float* const* phR, double fade0, double fadeInc, bool invert, double gain0, double gainInc, bool withSub) {
-    if (!phM) { renderVoice(vc, n, mode, mips, rms, fade0, fadeInc, invert, gain0, gainInc, withSub); return; }
+  // SOURCE PHASE moved by LFO 2 (beta 0.4): a subtractive set with its phase sets (ph, index 0 = the set itself) plays the sets on
+  // each side of the voice's place q (share 1 - |q - k| round the cycle), q moving from ap0 to ap1 across the block; the shares
+  // of a block start and end each add up to 1. Without phase sets exactly renderVoice. A share of 0 at both ends renders nothing.
+  void renderTable(const Voice& vc, int n, int s, const SetRef& main, const SetRef* ph, double fade0, double fadeInc, bool invert,
+                   double gain0, double gainInc) {
+    if (!ph) {
+      if (gain0 == 0 && gainInc == 0) return;
+      renderVoice(vc, n, s, main.mode, main.mips, main.rms, fade0, fadeInc, invert, gain0, gainInc);
+      return;
+    }
     const double gain1 = gain0 + gainInc * n;
     const int a0 = (int)std::floor(vc.ap0) % PHASE_K, b0 = (a0 + 1) % PHASE_K;
     const int a1 = (int)std::floor(vc.ap1) % PHASE_K, b1 = (a1 + 1) % PHASE_K;
     const double f0 = vc.ap0 - std::floor(vc.ap0), f1 = vc.ap1 - std::floor(vc.ap1);
-    bool sub = withSub;
     for (int k = 0; k < PHASE_K; k++) {
       const double s0 = k == a0 ? 1 - f0 : k == b0 ? f0 : 0, s1 = k == a1 ? 1 - f1 : k == b1 ? f1 : 0;
       if (s0 == 0 && s1 == 0) continue;
       const double k0 = gain0 * s0, k1 = gain1 * s1;
-      renderVoice(vc, n, mode, phM[k], phR[k], fade0, fadeInc, invert, k0, (k1 - k0) / n, sub);
-      sub = false;
+      renderVoice(vc, n, s, ph[k].mode, ph[k].mips, ph[k].rms, fade0, fadeInc, invert, k0, (k1 - k0) / n);
     }
   }
 
-  // WAVELET MORPH. Without WAVELET 2 tables exactly renderSet (bit-identical sound when the morph is off); with them, the sound of WAVELET (share
-  // 1 - morph) and the same sound built with WAVELET 2 (share morph), the voice's morph moving from wm0 to wm1.
-  void renderMorph(const Voice& vc, int n, const TableRef& t, double fade0, double fadeInc, bool invert, double m0, double m1) {
-    if (!t.w2Mips) { renderSet(vc, n, t, fade0, fadeInc, invert, m0, m1); return; }
-    renderSetK(vc, n, t.mode, t.mips, t.rms, t.altMode, t.altMips, t.altRms, t, 0, fade0, fadeInc, invert, m0, m1, 1 - vc.wm0, 1 - vc.wm1, true);
-    renderSetK(vc, n, t.w2Mode, t.w2Mips, t.w2Rms, t.w2AltMode, t.w2AltMips, t.w2AltRms, t, 2, fade0, fadeInc, invert, m0, m1, vc.wm0, vc.wm1, false);
-  }
-  // renderSet with an extra share k (k0 -> k1 across the block) and the sub oscillator only when withSub; the phase sets
-  // of the set are t's slot ph, of its alt set slot ph + 1
-  void renderSetK(const Voice& vc, int n, int mode, const float* mips, const float* rms, int altMode, const float* altMips,
-                  const float* altRms, const TableRef& t, int ph, double fade0, double fadeInc, bool invert, double m0, double m1,
-                  double k0, double k1, bool withSub) {
-    const float* const* pm = t.hasPh[ph] ? t.phM[ph] : nullptr; const float* const* pr = t.hasPh[ph] ? t.phR[ph] : nullptr;
-    if (!altMips) { renderTable(vc, n, mode, mips, rms, pm, pr, fade0, fadeInc, invert, k0, (k1 - k0) / n, withSub); return; }
-    const double s0 = mode == 0 ? 1 - m0 : m0, s1 = mode == 0 ? 1 - m1 : m1;
-    renderTable(vc, n, mode, mips, rms, pm, pr, fade0, fadeInc, invert, s0 * k0, (s1 * k1 - s0 * k0) / n, withSub);
-    renderTable(vc, n, altMode, altMips, altRms, t.hasPh[ph + 1] ? t.phM[ph + 1] : nullptr, t.hasPh[ph + 1] ? t.phR[ph + 1] : nullptr,
-                fade0, fadeInc, invert, (1 - s0) * k0, ((1 - s1) * k1 - (1 - s0) * k0) / n, false);
+  // WAVELET MORPH: without WAVELET 2 tables exactly renderTable (bit-identical sound when the morph is off); with them, the
+  // oscillator (share 1 - morph) and the same oscillator built with WAVELET 2 (share morph), the voice's morph moving from wm0
+  // to wm1. The oscillator's level moves from m0 to m1 across the block.
+  void renderSlot(const Voice& vc, int n, int s, const SlotRef& t, double fade0, double fadeInc, bool invert, double lv0, double lv1) {
+    if (!t.hasW2) { renderTable(vc, n, s, t.main, t.hasPh ? t.ph : nullptr, fade0, fadeInc, invert, lv0, (lv1 - lv0) / n); return; }
+    const double a0 = lv0 * (1 - vc.wm0), a1 = lv1 * (1 - vc.wm1), b0 = lv0 * vc.wm0, b1 = lv1 * vc.wm1;
+    renderTable(vc, n, s, t.main, t.hasPh ? t.ph : nullptr, fade0, fadeInc, invert, a0, (a1 - a0) / n);
+    renderTable(vc, n, s, t.w2, t.hasW2Ph ? t.w2ph : nullptr, fade0, fadeInc, invert, b0, (b1 - b0) / n);
   }
 
   void block(float* outL, float* outR, int o, int n) {
     strumTick(); clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
     std::fill(bufL, bufL + n, 0.0f); std::fill(bufR, bufR + n, 0.0f);
+    started = true;
     lfoTick(n);
     lfo2Tick(n);
     uint32_t vmask = 0;
     const bool fading = hasPrev;
     const double fadeInc = fading ? 1.0 / 512 : 0, fade0 = fading ? fade : 1;
-    // A/B MIX, smoothed (20 ms) so that turning the knob does not click
-    const double m0 = mixSm;
-    mixSm += (p[P_AB_MIX] - mixSm) * (1 - std::exp(-n / (0.02 * sr)));
-    const double m1 = mixSm;
+    prepBlock(n, fading);
     for (int k = 0; k < MAXV; k++) {
       Voice& vc = voices[k];
       if (!vc.active || !hasCur) continue;
       control(vc, n);
-      if (fading) renderMorph(vc, n, prev, fade0, fadeInc, true, m0, m1);
-      renderMorph(vc, n, cur, fade0, fadeInc, false, m0, m1);
+      ampPass(vc, n);
+      for (int s = 0; s < NS; s++) {
+        if (!live[s]) continue;
+        const Slot& sl = vc.sl[s];
+        ownOn[s] = p[kSlots[s].eon] >= 0.5;
+        if (ownOn[s]) ownPass(vc, s, n);
+        for (int u = 0; u < 4; u++) endPh[s][u] = sl.phase[u];   // a render that is skipped leaves the phases as they were
+        if (fading && prev.slot[s].on) renderSlot(vc, n, s, prev.slot[s], fade0, fadeInc, true, m0[s], m1[s]);
+        if (cur.slot[s].on) renderSlot(vc, n, s, cur.slot[s], fade0, fadeInc, false, m0[s], m1[s]);
+      }
+      renderSub(vc, n);
+      // commit end-of-block state
       vc.amp.level = endLevel; vc.amp.stage = endStage;
-      for (int u = 0; u < 4; u++) vc.phase[u] = endPhase[u];
       vc.subPhase = endSubPhase;
-      std::memcpy(vc.gA, vc.tA, sizeof vc.gA); std::memcpy(vc.gB, vc.tB, sizeof vc.gB);
+      for (int s = 0; s < NS; s++) {
+        Slot& sl = vc.sl[s];
+        if (live[s]) {
+          for (int u = 0; u < 4; u++) sl.phase[u] = endPh[s][u];
+          std::memcpy(sl.g, sl.tg, sizeof sl.g); sl.live = true;
+          if (ownOn[s]) { sl.own.level = ownLevel[s]; sl.own.stage = ownStage[s]; }
+        } else sl.live = false;
+      }
       if (vc.amp.stage == 0) { vc.active = false; vc.gate = false; continue; }
       vmask |= 1u << k;
     }
@@ -1216,15 +1311,16 @@ class Engine {
       outL[o + i] = (float)l; outR[o + i] = (float)r;
       pkL = std::max(pkL, (float)std::fabs(l)); pkR = std::max(pkR, (float)std::fabs(r));
     }
+    // display state: the oscillator shown on the panel
+    const int view = (int)jsRound(p[P_OSC_VIEW]);
     disp.peakL = pkL; disp.peakR = pkR; disp.voices = vmask;
-    disp.mode = hasCur ? cur.mode : (int)jsRound(p[P_ENGINE]);
-    if (lastVoice >= 0 && voices[lastVoice].active) {
-      const Voice& lv = voices[lastVoice];
-      const double* g = disp.mode == 0 ? lv.gA : lv.gB;
-      for (int b = 0; b < NB; b++) disp.gains[b] = (float)g[b];
-      disp.center = (float)lv.pc; disp.width = (float)lv.pw; disp.depth = (float)lv.pd; disp.note = lv.note;
-    } else disp.note = -1;
+    disp.view = view; disp.mode = kSlots[view].mode;
+    if (lastVoice >= 0 && voices[lastVoice].active && voices[lastVoice].sl[view].live) {
+      const Voice& lv = voices[lastVoice]; const Slot& sl = lv.sl[view];
+      for (int b = 0; b < NB; b++) disp.gains[b] = (float)sl.g[b];
+      disp.center = (float)sl.pc; disp.width = (float)sl.pw; disp.depth = (float)sl.pd; disp.note = lv.note; disp.slotLive = true;
+    } else { disp.note = lastVoice >= 0 && voices[lastVoice].active ? voices[lastVoice].note : -1; disp.slotLive = false; }
   }
 };
 
-}  // namespace ws
+} // namespace ws

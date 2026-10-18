@@ -1,117 +1,67 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Developer cross-check: renders every factory preset with the C++ engine to raw float files
-// (same scenario as tools/dsp_compare.js) so the port can be compared with the JS reference.
-// beta 0.3: then LFO 2 on each of its targets (no factory preset uses it yet), on presets of both engines.
+// Developer cross-check: renders the cases written by `node tools/dsp_compare.js --list <dir>` (every factory preset, then
+// variants of the engine's features: tools/dsp_cases.js) with the C++ engine to raw float files <dir>/cpp_NNN.raw, so that the
+// port can be compared with the JS reference (`node tools/dsp_compare.js <dir>`).
+// Usage: dsp_render <dir>
 #include "../src/dsp.h"
 #include <chrono>
+#include <fstream>
+#include <sstream>
 using namespace ws;
-// Okto MultiWave Synth: the chord layer and the strum plate driven as a player would (keys through keyOn / keyOff, the plate's notes),
-// the same events as tools/dsp_compare.js: offset (a multiple of the 128-sample block), kind, note, velocity
+// the chord layer and the strum plate driven as a player would (keys through keyOn / keyOff, the plate's notes), the same events
+// as tools/dsp_compare.js: offset (a multiple of the 128-sample block), kind, note, velocity
 struct KeyEv { int o, kind, note; double vel; };   // kind 0 keyOn, 1 keyOff, 2 plateOn, 3 plateOff, 4 allNotesOff
 static const KeyEv kChordScript[] = {
   {0, 0, 48, 1}, {0, 0, 67, 0.9}, {12800, 0, 64, 0.7}, {19200, 2, 74, 0.8}, {22400, 3, 74, 0}, {22400, 2, 79, 0.8},
   {25600, 3, 79, 0}, {25600, 1, 67, 0}, {38400, 1, 64, 0}, {38400, 0, 55, 1}, {38400, 0, 60, 0.8}, {64000, 1, 60, 0},
   {70400, 0, 72, 0.85}, {70400, 0, 40, 0.6}, {105600, 4, 0, 0}};
-static void renderChord(const double* params, int idx, const char* name, const char* outdir) {
+static void render(const double* params, int idx, const std::string& name, bool chord, double tempo, const char* outdir) {
   const int sr = 48000, n = sr * 3, blk = 128;
   Engine eng(sr);
-  for (int i = 0; i < kNumParams; i++) eng.setParam(i, params[i]);
-  Tables t; buildTables(params, true, t);
-  eng.setTables(tableRef(t));
-  std::vector<float> L(n), R(n);
-  for (int o = 0; o < n; o += blk) {
-    for (const KeyEv& e : kChordScript) if (e.o == o) {
-      if (e.kind == 0) eng.keyOn(e.note, e.vel); else if (e.kind == 1) eng.keyOff(e.note);
-      else if (e.kind == 2) eng.plateOn(e.note, e.vel); else if (e.kind == 3) eng.plateOff(e.note); else eng.allNotesOff();
-    }
-    eng.process(L.data() + o, R.data() + o, std::min(blk, n - o));
-  }
-  char path[512]; std::snprintf(path, sizeof path, "%s/cpp_%02d.raw", outdir, idx);
-  FILE* f = std::fopen(path, "wb");
-  for (int i = 0; i < n; i++) { std::fwrite(&L[i], 4, 1, f); std::fwrite(&R[i], 4, 1, f); }
-  std::fclose(f);
-  std::printf("%-24s (chord keyboard)\n", name);
-}
-static void render(const double* params, int idx, const char* name, const char* outdir, double tempo = 0) {
-  const int sr = 48000, n = sr * 3, blk = 128;
-  Engine eng(sr);
-  eng.setTempo(tempo);   // beta 0.6: 0 = no tempo (the factory presets, the web app)
+  eng.setTempo(tempo);   // 0 = no tempo (the factory presets, the web app)
   for (int i = 0; i < kNumParams; i++) eng.setParam(i, params[i]);
   Tables t; buildTables(params, true, t);
   eng.setTables(tableRef(t));
   std::vector<float> L(n), R(n);
   auto t0 = std::chrono::steady_clock::now();
   for (int o = 0; o < n; o += blk) {
-    if (o == 0) eng.noteOn(60, 0.9);
-    if (o == 36000) eng.noteOff(60);
-    if (o == 48000) { eng.noteOn(57, 0.8); eng.noteOn(64, 0.8); eng.noteOn(67, 0.8); }
-    if (o == 105600) eng.allNotesOff();
+    if (chord) {
+      for (const KeyEv& e : kChordScript) if (e.o == o) {
+        if (e.kind == 0) eng.keyOn(e.note, e.vel); else if (e.kind == 1) eng.keyOff(e.note);
+        else if (e.kind == 2) eng.plateOn(e.note, e.vel); else if (e.kind == 3) eng.plateOff(e.note); else eng.allNotesOff();
+      }
+    } else {
+      if (o == 0) eng.noteOn(60, 0.9);
+      if (o == 36000) eng.noteOff(60);
+      if (o == 48000) { eng.noteOn(57, 0.8); eng.noteOn(64, 0.8); eng.noteOn(67, 0.8); }
+      if (o == 105600) eng.allNotesOff();
+    }
     eng.process(L.data() + o, R.data() + o, std::min(blk, n - o));
   }
   double us = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count();
-  char path[512]; std::snprintf(path, sizeof path, "%s/cpp_%02d.raw", outdir, idx);
+  char path[512]; std::snprintf(path, sizeof path, "%s/cpp_%03d.raw", outdir, idx);
   FILE* f = std::fopen(path, "wb");
   for (int i = 0; i < n; i++) { std::fwrite(&L[i], 4, 1, f); std::fwrite(&R[i], 4, 1, f); }
   std::fclose(f);
-  std::printf("%-24s %.2f%% CPU\n", name, us / 1e6 / 3 * 100);
+  if (idx % 20 == 0 || idx >= kNumPresets) std::printf("%3d %-46s %.2f%% CPU%s\n", idx, name.c_str(), us / 1e6 / 3 * 100, chord ? " (chord keyboard)" : "");
 }
 int main(int argc, char** argv) {
   const char* outdir = argc > 1 ? argv[1] : ".";
-  double params[kNumParams];
-  for (int pi = 0; pi < kNumPresets; pi++) {
-    for (int i = 0; i < kNumParams; i++) params[i] = kPresets[pi].v[i];
-    render(params, pi, kPresets[pi].name, outdir);
+  std::ifstream in(std::string(outdir) + "/cases.txt");
+  if (!in) { std::fprintf(stderr, "no cases.txt in %s: run `node tools/dsp_compare.js --list %s` first\n", outdir, outdir); return 1; }
+  std::string line; int idx = 0;
+  while (std::getline(in, line)) {
+    if (line.empty()) continue;
+    const size_t bar = line.rfind(" | ");
+    std::istringstream ss(line.substr(0, bar));
+    std::string kind; double tempo; ss >> kind >> tempo;
+    double params[kNumParams];
+    for (int i = 0; i < kNumParams; i++) ss >> params[i];
+    if (!ss) { std::fprintf(stderr, "case %d: not %d values\n", idx, kNumParams); return 1; }
+    render(params, idx, line.substr(bar + 3), kind == "chord", tempo, outdir);
+    idx++;
   }
-  const int targets = (int)(sizeof kLfo2Targets / sizeof *kLfo2Targets);
-  for (int t = 0; t < targets; t++) {   // the same variants as tools/dsp_compare.js
-    const int pi = (t * 17) % kNumPresets;
-    for (int i = 0; i < kNumParams; i++) params[i] = kPresets[pi].v[i];
-    params[P_LFO2_TARGET] = t; params[P_LFO2_AMT] = t % 2 ? -0.8 : 0.8; params[P_LFO2_RATE] = 3; params[P_LFO2_SHAPE] = t % 5;
-    char name[64]; std::snprintf(name, sizeof name, "LFO 2 -> %s", kParams[kLfo2Targets[t]].key);
-    render(params, kNumPresets + t, name, outdir);
-  }
-  // beta 0.4: SOURCE PHASE, static and moved by LFO 2 with WAVELET MORPH and A/B MIX (every phase-set slot); the same
-  // variants as tools/dsp_compare.js
-  const double pht = targets - 1;   // a_phase is the last LFO 2 target
-  struct Set { int p; double v; };
-  const std::vector<std::vector<Set>> variants = {
-    {{P_WAVELET, 0}, {P_A_WAVE, 0}, {P_A_PHASE, 37.0 / 2048}, {P_F_CUTOFF, 5}},
-    {{P_WAVELET, 1}, {P_A_WAVE, 5}, {P_A_PHASE, 0.3}, {P_A_SPARSITY, 0.4}},
-    {{P_WAVELET, 0}, {P_WAV2, 2}, {P_WMORPH, 0.4}, {P_A_PHASE, 0.1}, {P_LFO2_TARGET, pht}, {P_LFO2_AMT, 0.7}, {P_LFO2_RATE, 2.5}, {P_LFO2_SHAPE, 0}},
-    {{P_ENGINE, 1}, {P_AB_MIX, 0.5}, {P_WAV2, 1}, {P_WMORPH, 0.5}, {P_A_PHASE, 0.62}, {P_LFO2_TARGET, pht}, {P_LFO2_AMT, -0.6}, {P_LFO2_RATE, 4}, {P_LFO2_SHAPE, 1}},
-  };
-  const char* names[] = {"phase 37/2048, Haar saw", "phase 0.3, noise", "LFO 2 -> phase + morph", "LFO 2 -> phase + A/B mix"};
-  for (size_t j = 0; j < variants.size(); j++) {
-    for (int i = 0; i < kNumParams; i++) params[i] = kPresets[0].v[i];
-    for (const Set& s : variants[j]) params[s.p] = s.v;
-    render(params, kNumPresets + targets + (int)j, names[j], outdir);
-  }
-  // beta 0.6: TEMPO SYNC of the delay and both LFOs at a tempo; the same variants as tools/dsp_compare.js
-  const std::vector<std::vector<Set>> synced = {
-    {{P_FX_DSYNC, 1}, {P_FX_DDIV, 7}, {P_FX_DMIX, 0.4}, {P_FX_DFB, 0.5}},
-    {{P_LFO_SYNC, 1}, {P_LFO_DIV, 13}, {P_LFO_CUT, 3}, {P_LFO_PITCH, 30}},
-    {{P_LFO2_SYNC, 1}, {P_LFO2_DIV, 12}, {P_LFO2_AMT, 0.7}, {P_LFO2_TARGET, 0}, {P_FX_DSYNC, 1}, {P_FX_DDIV, 13}, {P_FX_DMIX, 0.3}},
-  };
-  const double tempos[] = {120, 97, 133};
-  const char* snames[] = {"sync delay 1/8 D @120", "sync LFO 1 1/16 @97", "sync LFO 2 1/8 T + delay 1/1 @133"};
-  for (size_t j = 0; j < synced.size(); j++) {
-    for (int i = 0; i < kNumParams; i++) params[i] = kPresets[0].v[i];
-    for (const Set& s : synced[j]) params[s.p] = s.v;
-    render(params, kNumPresets + targets + (int)variants.size() + (int)j, snames[j], outdir, tempos[j]);
-  }
-  // Okto MultiWave Synth: the chord keyboard (folded voicing with the bass; stacked with a strum and 4 voices; mono with a long strum),
-  // the same variants as tools/dsp_compare.js, on the first preset
-  const std::vector<std::vector<Set>> chords = {
-    {{P_CHORD_MODE, 1}, {P_CHORD_VOICING, 1}, {P_CHORD_BASS, 1}},
-    {{P_CHORD_MODE, 1}, {P_CHORD_VOICING, 0}, {P_CHORD_STRUM, 0.02}, {P_V_VOICES, 4}, {P_CHORD_TYPE, 2}},
-    {{P_CHORD_MODE, 1}, {P_V_VOICES, 1}, {P_CHORD_STRUM, 0.05}},
-  };
-  const char* cnames[] = {"chord folded + bass", "chord stacked, strum, 4 voices", "chord mono, strum 50 ms"};
-  for (size_t j = 0; j < chords.size(); j++) {
-    for (int i = 0; i < kNumParams; i++) params[i] = kPresets[0].v[i];
-    for (const Set& s : chords[j]) params[s.p] = s.v;
-    renderChord(params, kNumPresets + targets + (int)variants.size() + (int)synced.size() + (int)j, cnames[j], outdir);
-  }
+  std::printf("%d cases rendered\n", idx);
   return 0;
 }
