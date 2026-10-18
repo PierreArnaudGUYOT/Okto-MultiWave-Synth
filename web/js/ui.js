@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre). Release beta 0.1.
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6). Release beta 0.1.
 // Panel UI built from WS_SPEC (same layout as the VST editor).
 'use strict';
 
@@ -11,7 +11,7 @@ const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const SVGNS = 'http://www.w3.org/2000/svg';
 // beta 0.6: where the free plug-in is published (the header's DOWNLOAD VST; index.html's welcome window links there too)
-const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases';
+const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/WaveChord-Synth/releases';
 
 function el(tag, cls, parent, style) {
   const e = document.createElement(tag);
@@ -34,6 +34,14 @@ function arcPath(cx, cy, r, a0, a1) {
   return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large} ${sweep} ${x1.toFixed(2)},${y1.toFixed(2)}`;
 }
 
+// WaveChord Synth: a rounded rectangle path (the pads, the displays of the chord card)
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
 function pill(ctx, text, x, y, align, color) {
   ctx.font = '600 9.5px Segoe UI, system-ui, sans-serif';
   const w = ctx.measureText(text).width + 8, x0 = align === 'right' ? x - w + 4 : x - 4;
@@ -61,7 +69,7 @@ class SynthUI {
     // "#nobrowser" in the address leaves it out (the manual's screenshots of the panel alone).
     this.browserOn = !/nobrowser/.test(location.hash);
     this.bOpen = this.browserOn;
-    try { if (localStorage.getItem('ws.browser') === 'closed') this.bOpen = false; } catch (_) { /* storage unavailable */ }
+    try { if (localStorage.getItem('wc.browser') === 'closed') this.bOpen = false; } catch (_) { /* storage unavailable */ }
     this.build();
     if (this.browserOn) this.makeBrowser();
     window.addEventListener('resize', () => this.fit());
@@ -135,6 +143,7 @@ class SynthUI {
         return;
       }
       case 'label': box.classList.add('wlabel'); box.textContent = w.text; return;
+      case 'toggle': return this.toggle(w, box);   // WaveChord Synth: the web app shows toggles too (CHORD ON, BASS)
       case 'zoom': return;
       case 'credit': {
         // beta 0.6: the author's name larger and brighter (the owner found it too discreet), version and licence small
@@ -350,7 +359,7 @@ class SynthUI {
     const mark = el('div', 'mark', box);
     mark.innerHTML = '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M3 16h5l3-9 4 18 4-13 3 7h7" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
     const t = el('div', 'txt', box);
-    t.innerHTML = '<b>OKTOWAVE</b><span>WAVELET SYNTHESIZER</span>';   // beta 0.3
+    t.innerHTML = '<b>WAVECHORD</b><span>WAVELET CHORD SYNTHESIZER</span>';   // WaveChord Synth
   }
 
   presets(box) {
@@ -428,6 +437,8 @@ class SynthUI {
     this.canvases.push(c);
     if (w.type === 'keyboard') this.keyboardInput(c);
     if (w.type === 'wheels') this.wheelInput(c);
+    if (w.type === 'chordpads') this.padsInput(c);     // WaveChord Synth
+    if (w.type === 'strumplate') this.plateInput(c);
   }
 
   sizeCanvases() {
@@ -444,11 +455,12 @@ class SynthUI {
 
   fit() {
     const stage = this.dev.parentElement;
+    const DH = this.SPEC.DEVICE.h;   // WaveChord Synth: 840 (the chord card)
     const W = 1100 + (this.browser && this.bOpen ? 360 : 0);   // the panel, and the preset browser at its right
     const aw = stage.clientWidth - 24, ah = stage.clientHeight - 24;
-    const s = clamp(Math.min(aw / W, ah / 720), 0.45, 2.5);
+    const s = clamp(Math.min(aw / W, ah / DH), 0.45, 2.5);
     this.scale = s;
-    const left = Math.max(0, (stage.clientWidth - W * s) / 2), top = Math.max(0, (stage.clientHeight - 720 * s) / 2);
+    const left = Math.max(0, (stage.clientWidth - W * s) / 2), top = Math.max(0, (stage.clientHeight - DH * s) / 2);
     this.dev.style.transform = `scale(${s})`;
     this.dev.style.left = left + 'px';
     this.dev.style.top = top + 'px';
@@ -511,7 +523,7 @@ class SynthUI {
   }
   setBrowser(open) {
     this.bOpen = open;
-    try { localStorage.setItem('ws.browser', open ? 'open' : 'closed'); } catch (_) { /* storage unavailable */ }
+    try { localStorage.setItem('wc.browser', open ? 'open' : 'closed'); } catch (_) { /* storage unavailable */ }
     if (open) { this.bReveal(); this.renderBrowser(); }
     this.fit();
   }
@@ -666,7 +678,8 @@ class SynthUI {
   frame() {
     for (const c of this.canvases) {
       const t = c.w.type;
-      const animated = t === 'scope' || t === 'scalogram' || t === 'meter' || t === 'leds' || t === 'keyboard' || t === 'window';
+      const animated = t === 'scope' || t === 'scalogram' || t === 'meter' || t === 'leds' || t === 'keyboard' || t === 'window' ||
+        t === 'chordname' || t === 'strumplate';   // WaveChord Synth: they show the chord sounding
       if (!c.dirty && !animated) continue;
       c.dirty = false;
       const ctx = c.ctx;
@@ -893,10 +906,15 @@ class SynthUI {
     const whites = []; for (let n = KB_LO; n <= KB_HI; n++) if (!isBlack(n)) whites.push(n);
     const ww = W / whites.length, keys = this.host.keysDown();
     this.keyGeom = { ww, whites };
+    // WaveChord Synth: with CHORD on, the selector octave is tinted (its keys choose the chord type and make no sound)
+    const P = this.P, chordOn = this.host.get(P.chord_mode) >= 0.5, selBase = 24 + 12 * Math.round(this.host.get(P.chord_oct));
+    const sel = n => chordOn && n >= selBase && n < selBase + 12;
     whites.forEach((n, k) => {
       const x = k * ww, on = keys.has(n);
       const g = ctx.createLinearGradient(0, 0, 0, H);
-      if (on) { g.addColorStop(0, this.accent()); g.addColorStop(1, '#e9fbf9'); } else { g.addColorStop(0, '#d9dee5'); g.addColorStop(1, '#f6f8fa'); }
+      if (on) { g.addColorStop(0, this.accent()); g.addColorStop(1, '#e9fbf9'); }
+      else if (sel(n)) { g.addColorStop(0, '#9d93e0'); g.addColorStop(1, '#cfc9f2'); }
+      else { g.addColorStop(0, '#d9dee5'); g.addColorStop(1, '#f6f8fa'); }
       ctx.fillStyle = g; ctx.fillRect(x + 0.5, 0, ww - 1, H);
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x + 0.5, H - 3, ww - 1, 3);
       if (n % 12 === 0) { ctx.fillStyle = on ? '#0d1014' : '#7a8594'; ctx.font = '600 9px Segoe UI, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(noteName(n), x + ww / 2, H - 8); ctx.textAlign = 'left'; }
@@ -910,7 +928,9 @@ class SynthUI {
       if (!isBlack(n)) continue;
       const k = whites.indexOf(n - 1), x = (k + 1) * ww - ww * 0.31, bw = ww * 0.62, bh = H * 0.6, on = keys.has(n);
       const g = ctx.createLinearGradient(0, 0, 0, bh);
-      if (on) { g.addColorStop(0, this.accent()); g.addColorStop(1, '#0f5a54'); } else { g.addColorStop(0, '#262b33'); g.addColorStop(1, '#0d0f12'); }
+      if (on) { g.addColorStop(0, this.accent()); g.addColorStop(1, '#0f5a54'); }
+      else if (sel(n)) { g.addColorStop(0, '#4a4280'); g.addColorStop(1, '#1e1a3a'); }
+      else { g.addColorStop(0, '#262b33'); g.addColorStop(1, '#0d0f12'); }
       ctx.fillStyle = g; ctx.fillRect(x, 0, bw, bh);
       ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x + 2, bh - 5, bw - 4, 3);
     }
@@ -974,6 +994,154 @@ class SynthUI {
       ctx.fillStyle = 'rgba(200,210,225,0.45)'; ctx.font = '700 8px Segoe UI, system-ui, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(lab, x + ww / 2, H - 2); ctx.textAlign = 'left';
     });
+  }
+
+  // ------------------------------------------------------------------ WaveChord Synth: toggle, chord pads, chord name, strum plate
+  // an on / off button (CHORD ON, BASS), lit when on: the plug-in's W_TOGGLE
+  toggle(w, box) {
+    const i = this.P[w.param], p = this.params[i];
+    box.classList.add('toggle');
+    const b = el('button', '', box);
+    b.textContent = w.text || p.short;
+    b.title = p.name;
+    b.onclick = () => { this.host.begin(i); this.host.set(i, this.host.get(i) >= 0.5 ? 0 : 1); this.host.end(i); };
+    const widget = { w, p, i, el: box, update: () => b.classList.toggle('on', this.host.get(i) >= 0.5) };
+    this.reg(w.param, widget);
+    widget.update();
+  }
+
+  // The twelve chord pads, laid out like the selector octave: the white-key family (Maj, 7, Maj7, Sus2, Sus4, Add9, Note)
+  // above, the black-key family (Min, m7, Dim, Aug, 5) below, between them. key = 0..11 (C .. B).
+  padRects(W) {
+    const cw = W / 7, pw = cw - 4, ph = 32, rects = [];
+    let wi = 0;
+    for (let k = 0; k < 12; k++) {
+      const black = isBlack(k);
+      rects.push(black ? { x: (wi - 0.5) * cw + 2, y: 36, w: pw, h: ph, key: k } : { x: wi * cw + 2, y: 0, w: pw, h: ph, key: k });
+      if (!black) wi++;
+    }
+    return rects;
+  }
+  draw_chordpads(ctx, W, H, c) {
+    const P = this.P, S = this.SPEC, on = this.host.get(P.chord_mode) >= 0.5, cur = Math.round(this.host.get(P.chord_type));
+    const base = 24 + 12 * Math.round(this.host.get(P.chord_oct));
+    ctx.globalAlpha = on ? 1 : 0.45;
+    for (const r of this.padRects(W)) {
+      const type = S.CHORD_KEYS[r.key], active = type === cur, black = isBlack(r.key), hot = c.hover === r.key;
+      roundRect(ctx, r.x, r.y, r.w, r.h, 6);
+      ctx.fillStyle = active ? this.accent() : black ? (hot ? '#1c2129' : '#121519') : (hot ? '#343b47' : '#262c35');
+      ctx.fill();
+      if (!active) { ctx.strokeStyle = black ? '#2a303a' : '#3a4250'; ctx.lineWidth = 1; ctx.stroke(); }
+      if (active) { ctx.shadowColor = this.accent(); ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; }
+      ctx.textAlign = 'center';
+      ctx.fillStyle = active ? '#0d1014' : black ? '#aeb7c4' : '#eef2f7';
+      ctx.font = '700 11px Segoe UI, system-ui, sans-serif';
+      ctx.fillText(S.CHORDS[type].label, r.x + r.w / 2, r.y + 15);
+      ctx.fillStyle = active ? 'rgba(13,16,20,0.75)' : '#566070';
+      ctx.font = '600 8px Segoe UI, system-ui, sans-serif';
+      ctx.fillText(noteName(base + r.key), r.x + r.w / 2, r.y + 27);
+      ctx.textAlign = 'left';
+    }
+    ctx.globalAlpha = 1;
+  }
+  padAt(c, x, y) { for (const r of this.padRects(c.w.w)) if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return r.key; return -1; }
+  padsInput(c) {
+    const cv = c.cv, P = this.P, S = this.SPEC;
+    cv.style.cursor = 'pointer';
+    c.hover = -1;
+    cv.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const p = this.localPos(c, e), k = this.padAt(c, p.x, p.y);
+      if (k < 0) return;
+      const i = P.chord_type;
+      this.host.begin(i); this.host.set(i, S.CHORD_KEYS[k]); this.host.end(i);
+      if (this.host.get(P.chord_mode) < 0.5) { this.host.begin(P.chord_mode); this.host.set(P.chord_mode, 1); this.host.end(P.chord_mode); }   // a pad switches CHORD on
+    });
+    cv.addEventListener('pointermove', (e) => { const p = this.localPos(c, e), k = this.padAt(c, p.x, p.y); if (k !== c.hover) { c.hover = k; c.dirty = true; } });
+    cv.addEventListener('pointerleave', () => { if (c.hover !== -1) { c.hover = -1; c.dirty = true; } });
+    cv.title = 'Chord type: click a pad (the keys of the selector octave do the same)';
+  }
+
+  // the chord sounding: its name (root and type), its notes; the type chosen while no root is held
+  chordLive() {
+    const P = this.P, live = this.live && this.live.chord;
+    const type = Math.round(this.host.get(P.chord_type)), held = !!(live && live.root >= 0);
+    return { on: this.host.get(P.chord_mode) >= 0.5, type, held, root: held ? live.root : live ? live.last : 60, notes: held ? live.notes : [] };
+  }
+  draw_chordname(ctx, W, H) {
+    const S = this.SPEC, C = this.C, st = this.chordLive();
+    ctx.fillStyle = '#0c0f13'; roundRect(ctx, 0, 0, W, H, 7); ctx.fill();
+    ctx.strokeStyle = '#252b34'; ctx.lineWidth = 1; roundRect(ctx, 0.5, 0.5, W - 1, H - 1, 7); ctx.stroke();
+    pill(ctx, 'CHORD', 8, 14, 'left', 'rgba(200,210,225,0.6)');
+    if (!st.on) {
+      ctx.fillStyle = '#566070'; ctx.font = '600 10px Segoe UI, system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('OFF · the keys play as usual', W / 2, H / 2 + 8); ctx.textAlign = 'left';
+      return;
+    }
+    const name = C.chordName(st.root, st.type), letter = name.slice(0, /^.#/.test(name) ? 2 : 1), suffix = name.slice(letter.length);
+    ctx.textAlign = 'left';
+    ctx.font = '700 26px Segoe UI, system-ui, sans-serif';
+    const lw = ctx.measureText(letter).width;
+    ctx.font = '700 15px Segoe UI, system-ui, sans-serif';
+    const sw = ctx.measureText(suffix).width, x0 = (W - lw - sw - 2) / 2;
+    ctx.fillStyle = st.held ? this.accent() : '#8792a1';
+    if (st.held) { ctx.shadowColor = this.accent(); ctx.shadowBlur = 10; }
+    ctx.font = '700 26px Segoe UI, system-ui, sans-serif'; ctx.fillText(letter, x0, 38);
+    ctx.font = '700 15px Segoe UI, system-ui, sans-serif'; ctx.fillText(suffix, x0 + lw + 2, 38);
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = st.held ? '#eef2f7' : '#566070';
+    ctx.font = '600 9.5px Segoe UI, system-ui, sans-serif';
+    ctx.fillText(st.held ? st.notes.map(n => noteName(n)).join(' · ') : S.CHORDS[st.type].name + ' · play a key above ' + noteName(24 + 12 * Math.round(this.host.get(this.P.chord_oct)) + 11), W / 2, 60);
+    ctx.textAlign = 'left';
+  }
+
+  // the strum plate: the chord's notes over three octaves as strings; drag across them (as on the touch plate of an electronic chord harp)
+  draw_strumplate(ctx, W, H, c) {
+    const C = this.C, st = this.chordLive(), keys = this.host.keysDown();
+    const notes = C.plateNotes(st.root, st.type), n = notes.length, sw = W / n;
+    c.plate = notes;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0e1116'); g.addColorStop(1, '#171b22');
+    ctx.fillStyle = g; roundRect(ctx, 0, 0, W, H, 7); ctx.fill();
+    ctx.strokeStyle = '#252b34'; ctx.lineWidth = 1; roundRect(ctx, 0.5, 0.5, W - 1, H - 1, 7); ctx.stroke();
+    for (let k = 0; k < n; k++) {
+      const x = Math.round((k + 0.5) * sw) + 0.5, lit = keys.has(notes[k]) || c.touch === notes[k];
+      ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, H - 16);
+      ctx.strokeStyle = lit ? this.accent() : 'rgba(200,210,225,0.32)'; ctx.lineWidth = lit ? 2.5 : 1.2;
+      if (lit) { ctx.shadowColor = this.accent(); ctx.shadowBlur = 8; }
+      ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.fillStyle = lit ? this.accent() : '#566070'; ctx.font = '600 7.5px Segoe UI, system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(noteName(notes[k]), x, H - 4);
+    }
+    ctx.textAlign = 'left';
+    pill(ctx, 'STRUM PLATE', 8, 14, 'left', 'rgba(200,210,225,0.5)');
+  }
+  plateInput(c) {
+    const cv = c.cv;
+    cv.style.cursor = 'ew-resize';
+    c.touch = -1;
+    const at = (e) => {
+      const p = this.localPos(c, e), notes = c.plate || [];
+      if (!notes.length) return { n: -1, vel: 0 };
+      const k = clamp(Math.floor(p.x / (c.w.w / notes.length)), 0, notes.length - 1);
+      return { n: notes[k], vel: clamp(0.4 + 0.6 * p.y / c.w.h, 0.2, 1) };
+    };
+    cv.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      cv.setPointerCapture(e.pointerId);
+      const s = at(e); if (s.n < 0) return;
+      c.touch = s.n; this.host.plateOn(s.n, s.vel);
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (c.touch < 0) return;
+      const s = at(e);
+      if (s.n >= 0 && s.n !== c.touch) { this.host.plateOff(c.touch); c.touch = s.n; this.host.plateOn(s.n, s.vel); }
+    });
+    const up = () => { if (c.touch >= 0) { this.host.plateOff(c.touch); c.touch = -1; } };
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', up);
+    cv.title = 'Strum plate: drag across the strings to strum the chord (the RELEASE of the amp envelope is how long they ring)';
   }
 
   wheelInput(c) {

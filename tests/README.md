@@ -1,6 +1,6 @@
-# Wavelet Synthesizer - test tooling
+# WaveChord Synth - test tooling
 
-These are independent test tools for the two products: the VST3 instrument (`vst/` -> `build/WaveletSynthesizer.vst3`)
+These are independent test tools for the two products: the VST3 instrument (`vst/` -> `build/WaveChordSynth.vst3`)
 and the web app (`web/index.html`). They don't use any product code: the VST host is written against the
 VST3 `pluginterfaces` headers only, and the web driver talks to Edge directly over the Chrome DevTools Protocol.
 
@@ -34,7 +34,7 @@ in that one translation unit.
 ### Run
 
 ```bat
-tests\vst3host\vst3host.exe build\WaveletSynthesizer.vst3 tests\vst3host\out
+tests\vst3host\vst3host.exe build\WaveChordSynth.vst3 tests\vst3host\out
 ```
 
 Usage: `vst3host.exe <bundle.vst3 | dll> <outdir> [options]`

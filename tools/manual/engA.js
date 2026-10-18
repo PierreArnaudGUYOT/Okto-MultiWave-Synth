@@ -384,6 +384,7 @@ const extraTrouble = [
 const sections = [
   { id: 'idea', num: '1', title: 'The idea in one minute', html: idea, subs: [{ id: 'fourier', title: 'Partials versus atoms' }, { id: 'bands', title: 'Where the bands are' }, { id: 'wavelets', title: 'The wavelet chooses the atom' }, { id: 'flow', title: 'Signal flow' }, { id: 'haar-square', title: 'The square that will not filter' }] },
   { id: 'quick-start', num: '2', title: 'Quick start', html: S.quickStart(E) },
+  { id: 'chords', title: 'Chord keyboard (WaveChord Synth)', html: S.chordSection(E), subs: [{ id: 'chord-play', title: 'Playing chords' }, { id: 'chord-types', title: 'The selector octave' }, { id: 'chord-settings', title: 'Settings' }, { id: 'strum-plate', title: 'The strum plate' }, { id: 'chord-midi', title: 'MIDI and the DAW' }] },
   { id: 'panel', num: '3', title: 'Panel tour', html: panel, subs: [{ id: 'header-controls', title: 'The header' }, { id: 'handling', title: 'Working with the controls' }] },
   { id: 'engine-a', num: '4', title: 'Engine A: source and sparsity', html: engineA, subs: [{ id: 'source', title: 'Source waves' }, { id: 'sparsity', title: 'Sparsity' }] },
   { id: 'filter', num: '5', title: 'Scale filter', html: S.filterSection(E), subs: [{ id: 'filter-types', title: 'The four types in numbers' }] },
@@ -404,11 +405,11 @@ const sections = [
   { id: 'about', title: 'About & release history', html: S.aboutSection(E), subs: [{ id: 'acknowledgments', title: 'Acknowledgments' }, { id: 'release-history', title: 'Release history' }] },
 ];
 
-const footer = `<footer class="foot"><span>Wavelet Synthesizer · Manual A — Engine A · Wavelet Subtractive</span><span>${SPEC.APP.name} — ${SPEC.APP.credit} (${SPEC.APP.author}). Version ${SPEC.APP.version} (${SPEC.APP.date}). ${SPEC.APP.copyright}. Free software under the GNU General Public License v3 or later, without any warranty.</span><a href="manual-b.html">Manual B — Engine B · Wavelet Additive →</a></footer>`;
+const footer = `<footer class="foot"><span>WaveChord Synth · Manual A — Engine A · Wavelet Subtractive</span><span>${SPEC.APP.name} — ${SPEC.APP.credit} (${SPEC.APP.author}). Version ${SPEC.APP.version} (${SPEC.APP.date}). ${SPEC.APP.copyright}. Free software under the GNU General Public License v3 or later, without any warranty.</span><a href="manual-b.html">Manual B — Engine B · Wavelet Additive →</a></footer>`;
 
 module.exports = {
   engine: E,
-  title: 'Engine A · Wavelet Subtractive — Wavelet Synthesizer manual',
-  description: 'User manual for engine A (wavelet subtractive) of the Wavelet Synthesizer web app and VST3 plugin.',
+  title: 'Engine A · Wavelet Subtractive — WaveChord Synth manual',
+  description: 'User manual for engine A (wavelet subtractive) of the WaveChord Synth web app and VST3 plugin.',
   hero, sections, footer,
 };

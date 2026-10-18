@@ -1,6 +1,39 @@
-# Wavelet Synthesizer — Release history
+# WaveChord Synth — Release history
 
-Created by **Pierre Arnaud GUYOT** ("OktoPierre").
+Created by **Pierre Arnaud GUYOT** ("OktoPierre"). WaveChord Synth is built on his Wavelet Synthesizer; the history of the
+synthesizer follows its own first release below.
+
+## WaveChord Synth beta 0.1 — 2026-10-18 (the chord keyboard)
+
+**In short**
+- **CHORD KEYBOARD** (bottom card of the panel, plug-in and web app): one octave of the keyboard (KEYS OCT, C3–B3 by
+  default, tinted purple) chooses the chord type and makes no sound; every key above it plays the whole chord with one
+  finger; keys pressed while the root is held play as themselves, keys below the selector octave play a bass line.
+- **Twelve chord pads** in the layout of the selector octave: Maj, Min, 7, m7, Maj7, Sus2, Sus4, Dim, Aug, 5, Add9 and
+  Note (the root alone); the white keys carry the major and bright chords, the black keys the minor, altered or bare ones.
+  22 chord types in all (6, m6, m7b5, dim7, 9, m9, maj9, 7sus4, mMaj7, 6/9 through the Chord Type parameter).
+- **Chord display** (name and notes), **STACKED / FOLDED** voicing (folded = in the octave of the root, as on an
+  electronic chord harp), **BASS** (the root one octave down), **STRUM** (0–100 ms between the notes) and a **strum plate** to strum
+  the chord with the mouse.
+- The chord's notes are ordinary notes: sustain, portamento, voice allocation and every sound parameter work as usual; a
+  chord never uses more voices than VOICES. Reference-counted notes: a note shared by the chord and a held key keeps
+  sounding until both release it.
+- The six chord settings are automatable plug-in parameters, saved with the Live Set and never in a preset; a selector key
+  updates the Chord Type parameter (its automation lane follows what you play).
+- Its own plug-in identity (name, class IDs, VST2 ID, presets file `WAVECHORD presets.txt`, macOS bundle id): it installs
+  next to the Wavelet Synthesizer.
+
+**Your sounds**: the 150 presets are those of the Wavelet Synthesizer beta 0.6, and with the chord keyboard off every
+note sounds exactly as there (the chord layer only routes notes; the sound engine is unchanged).
+
+**Checked**: the C++ plug-in matches the JavaScript reference on the 150 presets and on three chord scenarios (folded with
+bass, stacked with strum and 4 voices, mono with strum, the strum plate included); the chord layer's own tests (18
+cases); the VST2 entry point with MIDI (a selector key is silent and changes Chord Type, a root plays the chord, its release
+ends it); the VST3 test host; the web app.
+
+---
+
+# Wavelet Synthesizer — Release history (the synthesizer WaveChord Synth is built on)
 
 ## beta 0.6 — 2026-10-17 (panel ergonomics, tempo sync)
 

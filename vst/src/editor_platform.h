@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Mac port (beta 0.3): what the editor (editor.cpp, the same on every system) needs from the system, and what the system
 // window gives back. editor_win.cpp implements it with Win32 and GDI+, editor_mac.mm with Cocoa, Core Graphics and Core Text.
 // Drawing coordinates are logical (the panel's 1100 x 720 layout); the window applies its scale.

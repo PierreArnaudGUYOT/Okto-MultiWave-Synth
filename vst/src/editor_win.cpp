@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // The editor's Windows side (split from editor.cpp for the Mac port of beta 0.3, unchanged): a native Win32 child window
 // drawn with GDI+ (part of Windows) into a back buffer, its pop-up menus and dialogs. The panel itself is editor.cpp.
 #include <windows.h>
@@ -30,7 +30,7 @@ static G::Color gc(Col c) { return G::Color(c.a, c.r, c.g, c.b); }
 
 static ULONG_PTR gGdiToken = 0;
 static int gGdiUsers = 0, gClassUsers = 0;
-static const wchar_t* kClassName = L"WaveletSynthesizerEditorWnd";
+static const wchar_t* kClassName = L"WaveChordSynthEditorWnd";
 
 static HMODULE thisModule() {
   HMODULE h = nullptr;
@@ -125,7 +125,7 @@ class WinWindow : public EditorWindow {
       wc.hInstance = thisModule(); wc.hCursor = LoadCursor(nullptr, IDC_ARROW); wc.lpszClassName = kClassName;
       RegisterClassExW(&wc);
     }
-    hwnd = CreateWindowExW(0, kClassName, L"Wavelet Synthesizer", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0, 0, w, h, parent, nullptr, thisModule(), this);
+    hwnd = CreateWindowExW(0, kClassName, L"WaveChord Synth", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0, 0, w, h, parent, nullptr, thisModule(), this);
     SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)this);
     SetTimer(hwnd, 1, 33, nullptr);
   }
@@ -169,10 +169,10 @@ class WinWindow : public EditorWindow {
     return cmd;
   }
   void message(const std::wstring& text, bool warning) override {
-    MessageBoxW(hwnd, text.c_str(), L"Wavelet Synthesizer", MB_OK | (warning ? MB_ICONWARNING : MB_ICONINFORMATION));
+    MessageBoxW(hwnd, text.c_str(), L"WaveChord Synth", MB_OK | (warning ? MB_ICONWARNING : MB_ICONINFORMATION));
   }
   bool ask(const std::wstring& text) override {
-    return MessageBoxW(hwnd, text.c_str(), L"Wavelet Synthesizer", MB_YESNO | MB_ICONQUESTION) == IDYES;
+    return MessageBoxW(hwnd, text.c_str(), L"WaveChord Synth", MB_YESNO | MB_ICONQUESTION) == IDYES;
   }
   bool saveDialog(SaveDlg& d, const wchar_t* title, bool withSection, const wchar_t* note) override;
   std::wstring saveFileDialog(const wchar_t* title, const wchar_t* defaultName) override {

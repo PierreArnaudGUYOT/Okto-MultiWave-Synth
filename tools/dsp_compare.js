@@ -65,5 +65,44 @@ const PHT = SPEC.LFO2_TARGETS.indexOf(P.a_phase);
   for (const [key, x] of Object.entries(set)) v[P[key]] = x;
   compare(v, SPEC.PRESETS.length + SPEC.LFO2_TARGETS.length + 4 + k, name, tempo);
 });
+// WaveChord Synth: the chord keyboard driven as a player would (keys through keyOn / keyOff, the strum plate's notes); the same
+// events and variants as vst/devtest/dsp_render.cpp. kind: 0 keyOn, 1 keyOff, 2 plateOn, 3 plateOff, 4 allNotesOff
+const CHORD_SCRIPT = [
+  [0, 0, 48, 1], [0, 0, 67, 0.9], [12800, 0, 64, 0.7], [19200, 2, 74, 0.8], [22400, 3, 74, 0], [22400, 2, 79, 0.8],
+  [25600, 3, 79, 0], [25600, 1, 67, 0], [38400, 1, 64, 0], [38400, 0, 55, 1], [38400, 0, 60, 0.8], [64000, 1, 60, 0],
+  [70400, 0, 72, 0.85], [70400, 0, 40, 0.6], [105600, 4, 0, 0]];
+function compareChord(values, idx, name) {
+  const params = Float64Array.from(values);
+  const eng = new C.Engine(sr); params.forEach((v, i) => eng.setParam(i, v));
+  eng.setTables(C.buildTables(params, true));
+  const L = new Float32Array(n), R = new Float32Array(n);
+  for (let o = 0; o < n; o += blk) {
+    for (const [eo, kind, note, vel] of CHORD_SCRIPT) if (eo === o) {
+      if (kind === 0) eng.keyOn(note, vel); else if (kind === 1) eng.keyOff(note);
+      else if (kind === 2) eng.plateOn(note, vel); else if (kind === 3) eng.plateOff(note); else eng.allNotesOff();
+    }
+    eng.process(L.subarray(o, o + blk), R.subarray(o, o + blk), Math.min(blk, n - o));
+  }
+  const buf = fs.readFileSync(path.join(dir, `cpp_${String(idx).padStart(2, '0')}.raw`));
+  let maxd = 0, peak = 0;
+  for (let i = 0; i < n; i++) {
+    const cl = buf.readFloatLE(i * 8), cr = buf.readFloatLE(i * 8 + 4);
+    maxd = Math.max(maxd, Math.abs(cl - L[i]), Math.abs(cr - R[i]));
+    peak = Math.max(peak, Math.abs(L[i]));
+  }
+  const ok = maxd < 1e-4 && peak > 0.01;
+  if (!ok) fails++;
+  worst = Math.max(worst, maxd);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name.padEnd(20)} max |C++ - JS| = ${maxd.toExponential(2)} (peak ${peak.toFixed(3)})`);
+}
+[
+  ['chord folded + bass', { chord_mode: 1, chord_voicing: 1, chord_bass: 1 }],
+  ['chord stacked, strum, 4 voices', { chord_mode: 1, chord_voicing: 0, chord_strum: 0.02, v_voices: 4, chord_type: 2 }],
+  ['chord mono, strum 50 ms', { chord_mode: 1, v_voices: 1, chord_strum: 0.05 }],
+].forEach(([name, set], j) => {
+  const v = SPEC.PRESETS[0].values.slice();
+  for (const [key, x] of Object.entries(set)) v[P[key]] = x;
+  compareChord(v, SPEC.PRESETS.length + SPEC.LFO2_TARGETS.length + 4 + 3 + j, name);
+});
 console.log(fails ? `${fails} mismatch(es)` : `C++ port matches the JS reference (worst ${worst.toExponential(2)})`);
 process.exit(fails ? 1 : 0);

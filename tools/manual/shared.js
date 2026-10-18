@@ -74,9 +74,9 @@ function quickStart(E) {
     : `Hold a note and pull the drawbars down one by one, starting from drawbar 7: the sawtooth loses brightness step by step until drawbar 1 alone leaves a square wave. Then click the ${ctl('PATTERN')} buttons to hear the other atom patterns.`}</li>
 </ol></div>
 <div class="card"><h4>Ableton Live <span class="badge">VST3 / VST2</span></h4><ol class="steps">
-<li>Download the plug-in from its <a href="${VST_URL}">release page</a> (the web app’s ${ctl('DOWNLOAD VST')} button opens it) and unzip it. Copy the whole <code>WaveletSynthesizer.vst3</code> folder into your VST3 folder (<code>C:\\Program Files\\Common Files\\VST3</code>; <code>vst\\install.bat</code> does it and asks for administrator rights) <b>or</b> into the VST2 plug-in folder you use in Live: the same folder works in both.</li>
+<li>Download the plug-in from its <a href="${VST_URL}">release page</a> (the web app’s ${ctl('DOWNLOAD VST')} button opens it) and unzip it. Copy the whole <code>WaveChordSynth.vst3</code> folder into your VST3 folder (<code>C:\\Program Files\\Common Files\\VST3</code>; <code>vst\\install.bat</code> does it and asks for administrator rights) <b>or</b> into the VST2 plug-in folder you use in Live: the same folder works in both.</li>
 <li>In Live open <b>Preferences → Plug-ins</b>, switch on <b>Use VST3 Plug-in System Folders</b> (VST3) or <b>Use VST2 Plug-in Custom Folder</b> (VST2) and click <b>Rescan</b>.</li>
-<li>In Live’s browser open <b>Plug-ins → ${SPEC.APP.credit.replace(/^created by /, '')} → Wavelet Synthesizer</b> and drag it onto a MIDI track. A new instance starts on <b>${SPEC.PRESETS[SPEC.DEFAULT_PRESET].name}</b>.</li>
+<li>In Live’s browser open <b>Plug-ins → ${SPEC.APP.credit.replace(/^created by /, '')} → WaveChord Synth</b> and drag it onto a MIDI track. A new instance starts on <b>${SPEC.PRESETS[SPEC.DEFAULT_PRESET].name}</b>.</li>
 <li>Arm the track and play your MIDI keyboard, or press ${kbd('M')} to use Live’s Computer MIDI Keyboard.</li>
 <li>Click ${ctl(a ? 'A · SUBTRACTIVE' : 'B · ADDITIVE')} in the plugin header, choose <b>${a ? 'A · Init' : 'B · Init'}</b> from the preset menu (click the preset name) and repeat step 5 of the web column.</li>
 </ol></div>
@@ -541,6 +541,57 @@ ${table(['MIDI message', 'Effect'], [
 </ul>`;
 }
 
+// ---------------------------------------------------------------- WaveChord Synth: the chord keyboard (beta 0.1)
+function chordSection(E) {
+  const S = SPEC, keys = S.CHORD_KEYS, names = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const black = k => [1, 3, 6, 8, 10].includes(k);
+  const ivName = c => c.iv.map(i => ['root', 'm2', '2', 'm3', '3', '4', '♭5', '5', '♯5', '6', '♭7', '7', 'oct', '♭9', '9'][i] || i).join(' · ');
+  const octs = S.PARAMS.find(p => p.key === 'chord_oct').choices.join(', ');
+  return `<p><b>WaveChord Synth</b> adds an <b>chord harp / arranger keyboard</b> way of playing to the synthesizer: the left hand chooses a <b>chord type</b> on one octave of the keyboard, and <b>one finger</b> of the right hand plays the whole chord. Everything else is the synthesizer you know — same engines, same panel above, same presets — and with the chord keyboard off it plays exactly as before.</p>
+${fig('chord-card.png', 'The CHORD KEYBOARD card (bottom of the panel), here with G major 7 held: the chord pads (Maj7 lit), the chord shown with its notes, KEYS OCT, the voicing, BASS, STRUM and the strum plate (one string touched).', 'shot')}
+<h3 id="chord-play">Playing chords</h3>
+<ol class="steps">
+<li>Click ${ctl('ON')} in the title row of the CHORD KEYBOARD card (or click any chord pad: it switches the chord keyboard on).</li>
+<li>Choose a chord type: press a key of the <b>selector octave</b> (C3–B3 by default, tinted purple on the on-screen keyboard) or click a <b>chord pad</b>. Those keys make no sound; the type stays until you choose another one.</li>
+<li>Press <b>one key above the selector octave</b>: it is the root, and the whole chord sounds. Release it and the chord stops.</li>
+</ol>
+${fig('chord-keys.png', 'With the chord keyboard on, the selector octave is tinted: its twelve keys choose the chord type. Keys above it play chords, keys below it play single notes (a bass line).', 'shot')}
+<ul>
+<li><b>Above the selector octave</b>, the first key you press becomes the root. While you hold it, <b>other keys play as themselves</b>, each with its own velocity: a melody over the chord, or a note added by hand (a 6th, a 9th…). Releasing the root releases only the chord’s notes; a note that belongs to both the chord and a key you still hold keeps sounding.</li>
+<li><b>Below the selector octave</b>, keys always play single notes: a left-hand bass.</li>
+<li>The chord takes the root’s velocity and follows the sustain pedal, the portamento (${ctl('POLY')} glides chord changes voice by voice) and every sound parameter, as notes played by hand would.</li>
+<li>A new chord type applies to the <b>next</b> root; the chord already sounding is not changed.</li>
+<li>Switching the chord keyboard off, or moving ${ctl('KEYS OCT')}, releases the chord first. Loading a preset does not change the chord keyboard: a preset is a sound, the chord keyboard is the way you play it.</li>
+</ul>
+<h3 id="chord-types">The selector octave</h3>
+<p>White keys carry the major and bright chords, black keys the minor, altered or bare ones, so the left hand finds them without looking: a white key and the black key beside it are often a pair (C major / C♯ minor, D seventh / D♯ minor seventh).</p>
+${table(['Key', 'Pad', 'Chord type', 'Notes from the root', 'Example on C'], keys.map((t, k) => {
+    const c = S.CHORDS[t];
+    return [black(k) ? '<b>' + names[k] + '</b> (black)' : names[k], ctl(c.label), c.name, ivName(c), 'C' + c.suffix];
+  }), 'compact')}
+<p>The chord types after the twelfth (${S.CHORDS.slice(12).map(c => c.label).join(', ')}) are already in the instrument: choose them with the Chord Type parameter of the plug-in, in your DAW’s automation. A later version will let you put them on the pads.</p>
+<h3 id="chord-settings">Settings</h3>
+${table(['Control', 'Values', 'What it does'], [
+    [ctl('ON'), 'off / on', 'The chord keyboard. Off: the synthesizer behaves exactly as without it.'],
+    [ctl('KEYS OCT'), octs, 'Which octave chooses the chord type (default C3–B3, MIDI notes 48–59; middle C = C4 = 60). Move it down on a long keyboard, up on a short one.'],
+    [ctl('STACKED') + ' / ' + ctl('FOLDED'), 'default FOLDED', '<b>Stacked</b>: the notes above the root (C4 → C4 E4 G4; G4 → G4 B4 D5). <b>Folded</b>: the chord’s notes inside the octave of the root (C to B), so successive chords stay in one register and move smoothly, as on an electronic chord harp (C4 → C E G, G4 → D G B, A4 → C E A).'],
+    [ctl('BASS'), 'off / on', 'Adds the root one octave lower (below the folded octave).'],
+    [ctl('STRUM'), '0 – 100 ms', 'Starts the chord’s notes one after the other, lowest first, this time apart: 0 = all at once, 20–40 ms = a strummed guitar, 80–100 ms = a slow harp arpeggio.'],
+  ], 'compact')}
+<ul>
+<li><b>Polyphony.</b> A chord never uses more notes than ${P('v_voices')}: it is cut from the top, the root is always kept, then the bass. With one voice (mono presets) the root plays alone.</li>
+<li><b>The chord display</b> shows the chord sounding (for example <b>G#m7</b>) and its notes (G♯ · B · D♯ · F♯); when no root is held, the type chosen and where to play.</li>
+</ul>
+<h3 id="strum-plate">The strum plate</h3>
+<p>Like the touch plate of an electronic chord harp, the ${ctl('STRUM PLATE')} lays the chord’s notes out as strings over three octaves above the root. <b>Drag the mouse across it</b> to strum: every string you cross plays (higher on the plate = softer, lower = louder). It plays the last chord chosen, even after you release the root, so the left hand can hold the type, a finger the root, and the mouse strum. The notes ring for the ${ctl('RELEASE')} time of the amp envelope: pads and plucks with a long release make it shimmer.</p>
+<h3 id="chord-midi">MIDI and the DAW</h3>
+<ul>
+<li>The chord keyboard works the same with a MIDI keyboard, a DAW clip and the on-screen keyboard: the selector keys and the roots are ordinary notes. In a clip, put the selector note at the same time as the root or a little before it.</li>
+<li>The six settings (on / off, type, octave, voicing, bass, strum) are automatable parameters of the plug-in and are saved with your Live Set, but not in presets. A selector key changes the type parameter, so its automation lane follows what you play.</li>
+<li>The demo songs of the web app play the synthesizer directly: the chord keyboard does not change them.</li>
+</ul>`;
+}
+
 // ---------------------------------------------------------------- presets: browsing & saving
 function presetsSaving(E) {
   return `<h3 id="saving">Browsing and saving presets</h3>
@@ -565,15 +616,15 @@ ${note('<p>User presets saved in the browser live in that browser profile only. 
 
 // ---------------------------------------------------------------- VST
 function vstSection(E) {
-  return `<p>The plugin runs the same sound engine with the same panel. It is a single self-contained file inside a <code>WaveletSynthesizer.vst3</code> bundle folder, which also carries these manuals; nothing else needs to be installed. The same file is both a VST3 and a VST2 plug-in (a copy named <code>WaveletSynthesizer.dll</code> sits next to it for VST2 hosts), so the folder works in a VST3 folder and in a VST2 folder. This section lists only what is specific to the plugin.</p>
+  return `<p>The plugin runs the same sound engine with the same panel. It is a single self-contained file inside a <code>WaveChordSynth.vst3</code> bundle folder, which also carries these manuals; nothing else needs to be installed. The same file is both a VST3 and a VST2 plug-in (a copy named <code>WaveChordSynth.dll</code> sits next to it for VST2 hosts), so the folder works in a VST3 folder and in a VST2 folder. This section lists only what is specific to the plugin.</p>
 <h3 id="vst-install">Installation (Windows 10/11, 64-bit)</h3>
 <ol class="steps">
 <li>Download the release zip from the <a href="${VST_URL}">plug-in’s release page</a> — the web app’s ${ctl('DOWNLOAD VST')} button and the welcome window’s <b>Download the VST</b> open it — and unzip it.</li>
-<li>Copy the <b>whole</b> <code>WaveletSynthesizer.vst3</code> folder — the manuals live inside it — into one of these:
+<li>Copy the <b>whole</b> <code>WaveChordSynth.vst3</code> folder — the manuals live inside it — into one of these:
 <ul><li><b>VST3</b> (recommended): <code>C:\\Program Files\\Common Files\\VST3</code>. <code>vst\\install.bat</code> does it and asks for administrator rights.</li>
 <li><b>VST2</b>: the folder set as <b>VST2 Plug-in Custom Folder</b> in Live (no administrator rights needed).</li></ul></li>
 <li>Start Live and open <b>Preferences → Plug-ins</b>. Switch on <b>Use VST3 Plug-in System Folders</b> (VST3) or <b>Use VST2 Plug-in Custom Folder</b> (VST2) and click <b>Rescan</b>. If both are on and see the folder, Live lists the plugin twice, once as VST3 and once as VST2; use either.</li>
-<li>In the browser, open <b>Plug-ins</b>: <b>Wavelet Synthesizer</b> is listed under the vendor <b>${SPEC.APP.credit.replace(/^created by /, '')}</b>. Drag it onto a MIDI track (or double-click it with a MIDI track selected).</li>
+<li>In the browser, open <b>Plug-ins</b>: <b>WaveChord Synth</b> is listed under the vendor <b>${SPEC.APP.credit.replace(/^created by /, '')}</b>. Drag it onto a MIDI track (or double-click it with a MIDI track selected).</li>
 </ol>
 <p class="small muted">Building the plugin from source (with the portable llvm-mingw toolchain and <code>vst\\build.bat</code>) is described in the project’s <code>README.md</code>.</p>
 <h3 id="vst-diff">Differences from the web app</h3>
@@ -584,7 +635,7 @@ function vstSection(E) {
 <li><b>Preset browser</b> (beta 0.3). A panel at the right of the synth (${ctl('HIDE ▸')} folds it away and the window gets narrower; a click on the preset name brings it back). Two tabs: <b>FACTORY</b> and <b>USER BANK</b>. The left column lists the sound types with their number of sounds — <b>TOP Sounds</b> first (OktoPierre’s selection), then <b>Source Phase</b>, Bass, Lead, Keys, Organ, Pad… — and the right column the sounds of the type selected: <b>one click loads a sound</b>, and so do the <b>arrow keys</b> (beta 0.5) once you have clicked in the browser: ${kbd('↑')} ${kbd('↓')} the sound above or below, ${kbd('←')} ${kbd('→')} the category above or below. A long list scrolls with the mouse wheel or with the <b>scroll bar</b> at its right (beta 0.4: wide enough for a trackpad — drag it, or click the bar where you want to go). Each sound shows its engine letters (A, B or AB), ★ for a TOP sound, OktoPierre’s vote (7–10) for the voted ones and ${ctl('ADJ')} for a preset you adjusted. Above the list, ${ctl('▲')} ${ctl('▼')} move the sound playing up or down in that list. <b>Moving a sound to another category</b> (beta 0.5): drag it onto a category of the left column — onto TOP Sounds it is added there — or right-click it: <b>Move to ▸</b> a category, <b>Back to</b> its own category, <b>Add to TOP Sounds</b> / <b>Remove from TOP Sounds</b>. In the USER BANK tab a sound dragged onto a section moves to that section. All of it is kept in the presets file (and shared with EXPORT / IMPORT). Below: ${ctl('TO BANK…')} (save the sound to the user bank), ${ctl('RESTORE')} (the original of an adjusted factory preset), ${ctl('DELETE')} (a factory preset leaves the lists, a bank sound is deleted), ${ctl('EXPORT…')} (a copy of the presets file) and ${ctl('IMPORT…')} (beta 0.4: another presets file replaces yours, see <b>The presets file</b> below). <b>Show the presets file</b> (in Windows Explorer or the Finder), the former ${ctl('FILE')} button, is in the right-click menu of the preset name.</li>
 <li><b>SAVE PRESET</b> (beta 0.3; beta 0.6: its own button left of MANUAL, where the web app has DOWNLOAD VST, so the preset box is wider) overwrites the preset playing. A factory preset is <b>adjusted</b> in place, optionally under a new name (a small window proposes its name); a sound of the user bank is replaced. ${ctl('RESTORE')} brings a factory preset’s original back.</li>
 <li><b>User bank</b> (beta 0.3). Your own sounds, sorted in 12 sections: Bass, Lead, Keys, Organ, Pad, Strings, Brass &amp; Wind, Pluck, Bells &amp; Mallets, Chords, FX, Drums &amp; Perc. It is empty at first. ${ctl('TO BANK…')} (or <b>Save to user bank…</b> in the menu) proposes the current name (change it if you like) and a section; the preset name then reads <b>USER · <i>name</i></b>. Saving a name that already exists in that section asks before replacing it.</li>
-<li><b>The presets file</b> (beta 0.3). Everything above lives in one readable text file, <code>OKTOWAVE presets.txt</code>, kept <b>next to</b> the <code>WaveletSynthesizer.vst3</code> folder (so that installing a new version keeps it), shared by every instance and Live Set, and read again when you reopen Live: every factory preset (“Adjusted: yes” for those you saved, “Deleted: yes” for those you deleted), the order of every list, and the user bank; for each sound it lists the parameters that differ from the defaults. That folder must allow writing: the VST3 system folder <code>C:\\Program Files\\Common Files\\VST3</code> needs administrator rights, so the plugin says so if it cannot save there. A deleted factory preset comes back with a right-click on the preset name, <b>Deleted presets</b>. ${ctl('IMPORT…')} (beta 0.4; also <b>Import presets (.txt), replacing yours…</b> in the right-click menu) reads such a file — an ${ctl('EXPORT…')} copy, a friend’s <code>OKTOWAVE presets.txt</code> — and, after a question, <b>replaces</b> your adjusted and deleted presets, list order and user bank with its own; your previous file is first kept next to it as <code>OKTOWAVE presets (backup <i>date time</i>).txt</code> (to go back, import that copy). A file without presets is refused and nothing changes.</li>
+<li><b>The presets file</b> (beta 0.3). Everything above lives in one readable text file, <code>WAVECHORD presets.txt</code>, kept <b>next to</b> the <code>WaveChordSynth.vst3</code> folder (so that installing a new version keeps it), shared by every instance and Live Set, and read again when you reopen Live: every factory preset (“Adjusted: yes” for those you saved, “Deleted: yes” for those you deleted), the order of every list, and the user bank; for each sound it lists the parameters that differ from the defaults. That folder must allow writing: the VST3 system folder <code>C:\\Program Files\\Common Files\\VST3</code> needs administrator rights, so the plugin says so if it cannot save there. A deleted factory preset comes back with a right-click on the preset name, <b>Deleted presets</b>. ${ctl('IMPORT…')} (beta 0.4; also <b>Import presets (.txt), replacing yours…</b> in the right-click menu) reads such a file — an ${ctl('EXPORT…')} copy, a friend’s <code>WAVECHORD presets.txt</code> — and, after a question, <b>replaces</b> your adjusted and deleted presets, list order and user bank with its own; your previous file is first kept next to it as <code>WAVECHORD presets (backup <i>date time</i>).txt</code> (to go back, import that copy). A file without presets is refused and nothing changes.</li>
 <li><b>Mouse.</b> Drag vertically (${kbd('Shift')} = fine), use the mouse wheel (${kbd('Shift')} = fine), and double-click or ${kbd('Ctrl')} + click to reset a control to its default. A knob with only a few positions (the SUB OSC’s ${ctl('OCT')} and ${ctl('SHAPE')}) moves with a short drag, and a <b>click</b> goes to its next value. Hovering shows the value, as in the web app.</li>
 <li><b>Playing.</b> The on-screen keyboard and wheels work with the mouse, but there are no computer-keyboard notes: arm the track and use a MIDI keyboard or Live’s Computer MIDI Keyboard (${kbd('M')}). Pitch bend, the mod wheel and the sustain pedal arrive from the track’s MIDI.</li>
 <li><b>Manuals.</b> ${ctl('MANUAL')} opens the manual of the engine shown in your default web browser, from the copy stored in the bundle: <code>Contents\\Resources\\manual\\manual-a.html</code> on the A · SUBTRACTIVE tab, <code>manual-b.html</code> on B · ADDITIVE. Each manual links to the other.</li>
@@ -603,7 +654,7 @@ function troubleshooting(E, extra) {
   const items = [
     ['No sound in the web app', `<ul><li>Did you choose <b>Play the synth</b> (or <b>Run the demo</b>) in the welcome window? The status bar must read <i>Audio on</i>.</li><li>Check the header ${ctl('VOLUME')} knob (double-click resets it to −3 dB) and your system volume. The meter should move when you play.</li><li>Check the patch: an AMP ${P('amp_s')} of 0 % with a very short DECAY, ${a ? `a ${P('f_cutoff')} plus ${P('f_env')} below about 1, or a high-pass with a high cutoff` : 'all drawbars down, a low CUTOFF, or a SCALE SUSTAIN of 0 % with very short BODY and BRIGHT times'} can all make a note almost silent. Load <b>${a ? 'A · Init' : 'B · Init'}</b> to start from a known sound.</li></ul>`],
     ['“Audio error: …” in the status bar', `<p>The browser could not start the audio engine. Use a current Chrome, Edge or Firefox (the engine needs AudioWorklet support) and reload the page. As a last resort, if a locked-down browser refuses pages opened from disk, serve the folder locally — for example run <code>python -m http.server 8000</code> in the <code>web</code> folder and open <code>http://localhost:8000/</code>.</p>`],
-    ['“The manual was not found” (plugin)', '<p>The MANUAL button opens the manuals stored inside the plugin bundle. Install the complete <code>WaveletSynthesizer.vst3</code> folder, not only the file inside it.</p>'],
+    ['“The manual was not found” (plugin)', '<p>The MANUAL button opens the manuals stored inside the plugin bundle. Install the complete <code>WaveChordSynth.vst3</code> folder, not only the file inside it.</p>'],
     ['I hear two pieces at once, or the sound continues after closing', `<p>The web app plays in only one window or tab at a time: starting the audio in one pauses the others, whose welcome window comes back with “The synthesizer is playing in another window or tab, so this one was paused.”, and closing or leaving the page stops its demo and audio at once. If you still hear two pieces, or sound after closing, close the other window or tab of the app (or choose ${ctl('Play the synth')} in its welcome window to take the audio there), then reload the page.</p>`],
     ['There is no SYNC button / the delay does not follow the tempo', `<p>Tempo sync (beta 0.6) exists only in the plug-in, which gets the tempo from the host: the ${ctl('SYNC')} buttons sit at the right of the PING-PONG DELAY heading and of the LFO 1 and LFO 2 titles. A browser page has no tempo, so the web app keeps TIME in seconds and RATE in hertz. In the plug-in, check that SYNC is lit: it is off by default.</p>`],
     ['No sound from the plugin', '<p>Make sure the MIDI track is armed (or its monitor is set to <i>In</i>), that MIDI from your keyboard reaches the track, and that the plugin’s VOLUME is up.</p>'],
@@ -693,6 +744,7 @@ function releaseNotes() {
   const close = () => { if (inList) { h += '</ul>'; inList = false; } };
   for (const raw of md.split(/\r?\n/)) {
     const ln = raw.trim();
+    if (started && ln === '---') break;   // WaveChord Synth: its own history only (the synthesizer's follows the rule)
     if (ln.startsWith('## ')) { close(); started = true; h += `<h4>${inl(ln.slice(3))}</h4>`; continue; }
     if (!started || !ln) { if (!ln) close(); continue; }
     if (ln.startsWith('- ')) { if (!inList) { h += '<ul>'; inList = true; } h += `<li>${inl(ln.slice(2))}</li>`; continue; }
@@ -704,12 +756,13 @@ function releaseNotes() {
 }
 function aboutSection(E) {
   const A = SPEC.APP;
-  return `<p><b>${A.name}</b> — ${A.credit} (${A.author}). Version <b>${A.version}</b> (${A.date}).</p>
+  return `<p><b>${A.name}</b> — ${A.credit} (${A.author}). Version <b>${A.version}</b> (${A.date}).${A.base ? ` Built on his <b>${A.base}</b> (same engines, panel and presets), with the chord keyboard added.` : ''}</p>
 <ul>
 <li>The panel shows “${CREDIT}” at the bottom right, under the keyboard, in the web app and in the plugin.</li>
 <li>The VST3 plugin is published under the vendor name <b>${A.credit.replace(/^created by /, '')}</b> — that is where Ableton Live lists it in its browser — with version number ${A.versionNum}.</li>
 <li>These manuals are generated from the instrument’s own parameter list and sound engine (<code>tools/manual/</code>), so ranges, defaults and presets always match this version.</li>
-<li><b>How to cite:</b> Guyot, P. A. (2026). <i>${A.name}</i> [Computer software]. Zenodo. <a href="https://doi.org/${A.doi}">https://doi.org/${A.doi}</a> (<a href="https://zenodo.org/records/${A.doi.split('.').pop()}">Zenodo record</a>).</li>
+<li><b>How to cite:</b> ${A.doi ? `Guyot, P. A. (2026). <i>${A.name}</i> [Computer software]. Zenodo. <a href="https://doi.org/${A.doi}">https://doi.org/${A.doi}</a> (<a href="https://zenodo.org/records/${A.doi.split('.').pop()}">Zenodo record</a>).`
+    : `Guyot, P. A. (2026). <i>${A.name}</i> [Computer software]. <a href="${VST_URL.replace(/\/releases$/, '')}">GitHub</a>. Its sound engine is the Wavelet Synthesizer: Guyot, P. A. (2026). <i>Wavelet Synthesizer</i> [Computer software]. Zenodo. <a href="https://doi.org/10.5281/zenodo.23431760">https://doi.org/10.5281/zenodo.23431760</a>.`}</li>
 </ul>
 <h3 id="acknowledgments">Acknowledgments</h3>
 ${ACKNOWLEDGMENTS.map(t => `<p>${t}</p>`).join('\n')}
@@ -768,6 +821,7 @@ const PLABEL = {
   a_phase: 'PHASE',
   fx_dsync: 'DLY SYNC', fx_ddiv: 'DLY TIME (sync)', lfo_sync: 'LFO 1 SYNC', lfo_div: 'LFO 1 RATE (sync)',   // beta 0.6
   lfo2_sync: 'LFO 2 SYNC', lfo2_div: 'LFO 2 RATE (sync)',
+  chord_mode: 'CHORD', chord_type: 'CHORD TYPE', chord_oct: 'KEYS OCT', chord_voicing: 'VOICING', chord_bass: 'BASS', chord_strum: 'STRUM',   // WaveChord Synth (never in a preset)
 };
 // every parameter a preset can set needs a label in the preset tables (else they would read "undefined")
 for (const p of SPEC.PARAMS) if (!p.hidden && p.key !== 'engine' && !p.key.startsWith('b_bar') && !PLABEL[p.key]) throw new Error('PLABEL: no label for ' + p.key);
@@ -813,5 +867,5 @@ function presetTable(E, desc) {   // the presets of one engine's panel, by categ
   return `<div class="tbl"><table class="presets"><thead><tr>${head.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
-module.exports = { DEMO, demoSection, subSection, mixSection, chorusSection, aboutSection, bandMap, waveletTable, quickStart, controlsHowTo,
+module.exports = { DEMO, chordSection, demoSection, subSection, mixSection, chorusSection, aboutSection, bandMap, waveletTable, quickStart, controlsHowTo,
   headerPins, sharedPins, panelSame, headerControls, filterSection, positionSection, envelopesSection, lfoSection, voiceSection, fxSection, displaysSection, playingSection, presetsSaving, vstSection, troubleshooting, glossary, presetTable };

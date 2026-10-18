@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // VST3 processor, controller and factory.
 // Written directly against the VST3 interfaces (pluginterfaces, MIT); no SDK helper library.
@@ -41,8 +41,9 @@ using namespace Steinberg::Vst;
 
 namespace ws {
 
-static const FUID kProcessorUID(0x2EF18A52, 0xA3A44A9E, 0x8C2C40AC, 0xE9D6925E);
-static const FUID kControllerUID(0xF2AA9A30, 0xE06A4D4E, 0xABE441AC, 0xA7CBFEB3);
+// WaveChord Synth: its own class IDs (the Wavelet Synthesizer and WaveChord Synth can be installed side by side)
+static const FUID kProcessorUID(0x7C3E9A1B, 0x5D2F4C8A, 0x9E6B41D3, 0xA8F27E55);
+static const FUID kControllerUID(0x1F8D6B2C, 0x3A7E49F1, 0xB5C2D084, 0x6E9A3F17);
 static constexpr uint32_t kStateMagic = 0x31595357;  // "WSY1"
 static constexpr uint32_t kCtlMagic = 0x31435357;    // "WSC1" (beta 0.1): zoom, preset index, modified flag
 static constexpr uint32_t kCtlMagic2 = 0x32435357;   // "WSC2": zoom, modified flag, preset name
@@ -439,10 +440,11 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     // 3. notes from the on-screen keyboard
     if (shared) {
       SharedState::Ev e;
-      while (shared->pop(e)) {
+      while (shared->pop(e)) {   // WaveChord Synth: keys go through the chord layer, the strum plate's notes play as themselves
         if (e.vel < 0) engine.allNotesOff();
-        else if (e.vel == 0) engine.noteOff(e.note);
-        else engine.noteOn(e.note, e.vel / 127.0);
+        else if (e.kind == 1) { if (e.vel == 0) engine.plateOff(e.note); else engine.plateOn(e.note, e.vel / 127.0); }
+        else if (e.vel == 0) engine.keyOff(e.note);
+        else engine.keyOn(e.note, e.vel / 127.0);
       }
     }
 
@@ -465,11 +467,25 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
       if (events->getEvent(i, e) != kResultOk) continue;
       int32 off = std::max(0, std::min(ns, e.sampleOffset));
       if (L && off > pos) { engine.process(L + pos, R + pos, off - pos); pos = off; }
-      if (e.type == Event::kNoteOnEvent) engine.noteOn(e.noteOn.pitch, e.noteOn.velocity);
-      else if (e.type == Event::kNoteOffEvent) engine.noteOff(e.noteOff.pitch);
+      if (e.type == Event::kNoteOnEvent) engine.keyOn(e.noteOn.pitch, e.noteOn.velocity);   // WaveChord Synth: the chord layer
+      else if (e.type == Event::kNoteOffEvent) engine.keyOff(e.noteOff.pitch);
     }
     if (L && pos < ns) engine.process(L + pos, R + pos, ns - pos);
     if (L) data.outputs[0].silenceFlags = 0;
+    // WaveChord Synth: a key of the selector octave chose a chord type: the parameter follows, the host and its controller are
+    // told through the output parameter changes (and the editor through the shared state, for hosts that do not forward)
+    if (engine.chordTypeChanged) {
+      engine.chordTypeChanged = false;
+      const double ct = engine.p[P_CHORD_TYPE];
+      plain[P_CHORD_TYPE].store(ct);
+      if (data.outputParameterChanges) {
+        int32 qi = 0;
+        IParamValueQueue* q = data.outputParameterChanges->addParameterData((ParamID)P_CHORD_TYPE, qi);
+        int32 pi = 0;
+        if (q) q->addPoint(0, toNorm(kParams[P_CHORD_TYPE], ct), pi);
+      }
+      if (shared) shared->chordTypeEdits.fetch_add(1);
+    }
 
     // 5. recycle tables that are no longer referenced
     for (int k = 0; k < engine.nReleased; k++)
@@ -490,6 +506,12 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
         for (int k = 0; k < 32; k++) if (engine.keys[w * 32 + k]) bits |= 1u << k;
         shared->keys[w].store(bits);
       }
+      // WaveChord Synth: the chord sounding for the panel (its name, its notes, the strum plate)
+      uint32_t cb[4] = {0, 0, 0, 0};
+      for (int k = 0; k < engine.chordN; k++) if (engine.chordOn[k]) cb[engine.chordNote[k] >> 5] |= 1u << (engine.chordNote[k] & 31);
+      for (int w = 0; w < 4; w++) shared->chordBits[w].store(cb[w]);
+      shared->chordRoot.store(engine.chordRoot); shared->chordLast.store(engine.chordLastRoot);
+      shared->chordType.store((int)jsRound(engine.p[P_CHORD_TYPE]));
       shared->blocks.fetch_add(1);
     }
     return kResultOk;
@@ -756,8 +778,9 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     double v = toNorm(kParams[id], pv);
     if (norm[id] == v) return;
     norm[id] = v; version++;
-    // the ENGINE tabs only choose the panel shown: switching them does not modify the sound
-    if (!kParams[id].hidden && id != P_ENGINE && !dirty) { dirty = true; }
+    // the ENGINE tabs only choose the panel shown: switching them does not modify the sound; WaveChord Synth: the chord keyboard's
+    // settings (perf) are not a sound either
+    if (!kParams[id].hidden && !kParams[id].perf && id != P_ENGINE && !dirty) { dirty = true; }
     if (handler) handler->performEdit(id, v);
   }
   void endEdit(int id) override { if (handler) handler->endEdit(id); }
@@ -801,13 +824,14 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
   bool browserOpen_ = true;   // the preset browser panel of the editor (beta 0.3)
   float zoomFactor = 1.0f;
 
-  // every non-hidden parameter to these plain values, sent to the host as one group edit
+  // every non-hidden parameter to these plain values, sent to the host as one group edit (WaveChord Synth: the chord keyboard's
+  // settings stay as they are: a preset is a sound, not a playing setup)
   void applySound(const double* pv) {
     IComponentHandler2* h2 = nullptr;
     if (handler) handler->queryInterface(IComponentHandler2::iid, (void**)&h2);
     if (h2) h2->startGroupEdit();
     for (int i = 0; i < kNumParams; i++) {
-      if (kParams[i].hidden) continue;
+      if (kParams[i].hidden || kParams[i].perf) continue;
       double v = toNorm(kParams[i], pv[i]);
       if (norm[i] == v) continue;
       norm[i] = v;
@@ -822,7 +846,7 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     for (int k = 0; k < kNumPresets; k++) {
       bool same = true;
       for (int i = 0; i < kNumParams && same; i++)
-        if (!kParams[i].hidden && i != P_ENGINE && std::fabs(toNorm(kParams[i], lib[k][i]) - norm[i]) > 1e-6) same = false;
+        if (!kParams[i].hidden && !kParams[i].perf && i != P_ENGINE && std::fabs(toNorm(kParams[i], lib[k][i]) - norm[i]) > 1e-6) same = false;
       if (same) return k;
     }
     return -1;

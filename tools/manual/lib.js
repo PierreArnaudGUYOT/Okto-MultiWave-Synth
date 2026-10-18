@@ -74,11 +74,11 @@ const snip = name => { if (!SNIPS[name]) throw new Error('missing diagram ' + na
 const fig = (src, cap, cls, alt) => `<figure class="${cls || 'frame'}"><img src="img/${src}" alt="${alt || cap.replace(/<[^>]+>/g, '').replace(/"/g, '')}"><figcaption>${cap}</figcaption></figure>`;
 const figInline = (name, cap) => `<figure class="frame inline">${snip(name)}<figcaption>${cap}</figcaption></figure>`;
 
-// annotated screenshot: image is 1124 x 782 CSS px, device panel at offset (12,12)
+// annotated screenshot: image is 1124 x 902 CSS px (WaveChord Synth), device panel at offset (12,12)
 function annotated(img, alt, pins) {
   const pct = (v, tot) => (Math.round(v / tot * 10000) / 100) + '%';
   let h = `<div class="annot"><img src="img/${img}" alt="${alt}">`;
-  pins.forEach((p, i) => { h += `<a class="pin" href="#${p.href}" style="left:${pct(12 + p.x, 1124)};top:${pct(12 + p.y, 782)}" title="${p.title}">${i + 1}</a>`; });
+  pins.forEach((p, i) => { h += `<a class="pin" href="#${p.href}" style="left:${pct(12 + p.x, 1124)};top:${pct(12 + p.y, 902)}" title="${p.title}">${i + 1}</a>`; });
   h += '</div>';
   let lg = '<ol class="legend">';
   pins.forEach((p, i) => { lg += `<li><span class="no">${i + 1}</span><span><b><a href="#${p.href}">${p.title}</a></b> — ${p.desc}</span></li>`; });

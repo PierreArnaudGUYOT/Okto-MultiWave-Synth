@@ -38,7 +38,7 @@ function staticChecks() {
   const t2 = Date.now(), stale = [];
   const specSrc = newest([R('tools', 'spec.js'), R('tools', 'gen_spec.js'), R('tools', 'wavelets.json')]);
   if (mtime(R('web', 'js', 'spec.js')) < specSrc || mtime(R('vst', 'src', 'generated', 'spec.h')) < specSrc) stale.push('generated spec is older than tools/spec.js: run  node tools/gen_spec.js');
-  const dll = R('build', 'WaveletSynthesizer.vst3', 'Contents', 'x86_64-win', 'WaveletSynthesizer.vst3');
+  const dll = R('build', 'WaveChordSynth.vst3', 'Contents', 'x86_64-win', 'WaveChordSynth.vst3');
   if (mtime(dll) < newest([...listFiles(R('vst', 'src'), /\.(cpp|h|rc)$/), R('tools', 'spec.js')])) stale.push('VST3 build is older than its sources: run  vst\\build.bat');
   const man = newest([...listFiles(R('tools', 'manual'), /\.js$/), R('tools', 'spec.js')]);
   if (mtime(R('web', 'manual', 'manual-a.html')) < man || mtime(R('web', 'manual', 'manual-b.html')) < man) stale.push('manuals are older than their sources: run  node tools/manual/build.js a b');
@@ -66,6 +66,10 @@ function jsEngine() {
     else if (r.pk < 1e-4) bad.push(`${pr.name}: silent`);
     else if (r.pk > 1.0001) bad.push(`${pr.name}: peak ${r.pk.toFixed(3)} > 0 dBFS`);
   }
+  // WaveChord Synth: the chord keyboard on the opening preset: a selector key, a root, a strum, a plate note
+  const ch = SPEC.PRESETS[SPEC.DEFAULT_PRESET].values.slice(); ch[P.chord_mode] = 1; ch[P.chord_strum] = 0.02; ch[P.chord_bass] = 1;
+  const c = run(ch, (e, b) => { if (b === 0) { e.keyOn(50, 1); e.keyOn(67, 0.9); } if (b === 60) e.plateOn(79, 0.8); if (b === 90) { e.plateOff(79); e.keyOff(67); } }, 150);
+  if (c.nan || c.pk < 1e-3) bad.push(`chord keyboard (G7 strummed, plate): ${c.nan} non-finite, peak ${c.pk.toFixed(3)}`);
   const hi = SPEC.PRESETS[SPEC.DEFAULT_PRESET].values.slice(); hi[P.v_oct] = 3; hi[P.sub_level] = 0.8;
   const x = run(hi, (e, b) => { if (b === 0) e.noteOn(127, 1); if (b === 40) { e.noteOff(127); e.noteOn(60, 0.9); } }, 120);
   if (x.nan || x.pk < 1e-4) bad.push(`note 127 at Octave +3 then C4: ${x.nan} non-finite, peak ${x.pk.toFixed(3)}`);
@@ -74,7 +78,7 @@ function jsEngine() {
   const bomb = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, 0, 1, 1, 0xe0, 0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 9, 0, 0xff, 1, 0x8f, 0xff, 0xff, 0xff, 0x7f, 0x41];
   const tm = Date.now(); try { midi(new Uint8Array(bomb)); } catch (_) { /* rejecting it is fine */ }
   if (Date.now() - tm > 200) bad.push(`hostile MIDI file took ${Date.now() - tm} ms`);
-  report('JS engine', bad.length === 0, bad.length ? bad.join('; ') : `${SPEC.PRESETS.length} presets sound, finite, <= 0 dBFS; extreme notes and a hostile MIDI file are safe`, t);
+  report('JS engine', bad.length === 0, bad.length ? bad.join('; ') : `${SPEC.PRESETS.length} presets sound, finite, <= 0 dBFS; the chord keyboard, extreme notes and a hostile MIDI file are safe`, t);
 }
 
 // ---------------------------------------------------------------- 3. VST3 (test host, fast sections only)
@@ -86,7 +90,7 @@ function vst3() {
   const sections = 'params,audio,offline,attrlist';
   return new Promise((resolve) => {
     const p = cp.spawn(R('tests', 'vst3host', 'vst3host.exe'),
-      [R('build', 'WaveletSynthesizer.vst3'), out, '--quick', '--skip-editor', '--no-reload', '--only', sections, '--presets', presets, '--timeout', '60'],
+      [R('build', 'WaveChordSynth.vst3'), out, '--quick', '--skip-editor', '--no-reload', '--only', sections, '--presets', presets, '--timeout', '60'],
       { stdio: 'ignore', windowsHide: true });
     p.on('error', (e) => { report('VST3', false, e.message, t); resolve(); });
     p.on('exit', (code) => {
@@ -162,7 +166,7 @@ function dspCompare() {
 
 // ---------------------------------------------------------------- run
 (async () => {
-  console.log('Wavelet Synthesizer - quick check' + (opt.dsp ? ' (+ C++/JS cross-check)' : ''));
+  console.log('WaveChord Synth - quick check' + (opt.dsp ? ' (+ C++/JS cross-check)' : ''));
   staticChecks();
   jsEngine();
   await Promise.all([vst3(), web()]);   // the two slowest parts run side by side

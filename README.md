@@ -1,9 +1,42 @@
-# Wavelet Synthesizer
+# WaveChord Synth
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23431760.svg)](https://doi.org/10.5281/zenodo.23431760)
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — version **beta 0.1** (2026-10-18), see [RELEASE_HISTORY.md](RELEASE_HISTORY.md).
+Built on his [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST) beta 0.6
+(DOI [10.5281/zenodo.23431760](https://doi.org/10.5281/zenodo.23431760)). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — version **beta 0.6** (2026-10-17), see [RELEASE_HISTORY.md](RELEASE_HISTORY.md).
-Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
+**One-finger chords on a wavelet synthesizer.** WaveChord Synth is the Wavelet Synthesizer with a **CHORD KEYBOARD**, in the
+spirit of electronic chord harps and arranger keyboards: the left hand chooses a **chord type** on one octave of the keyboard, one
+finger of the right hand plays the **whole chord**. Switched off, it is exactly the Wavelet Synthesizer.
+
+![The CHORD KEYBOARD card: chord pads, chord display, voicing, bass, strum and strum plate](web/manual/img/chord-card.png)
+
+- **Selector octave** (C3–B3 by default, tinted purple; KEYS OCT moves it from C1 to C5): its twelve keys choose the chord
+  type and make no sound. White keys carry the major and bright chords, black keys the minor, altered or bare ones:
+  C Maj · C# Min · D 7 · D# m7 · E Maj7 · F Sus2 · F# Dim · G Sus4 · G# Aug · A Add9 · A# 5 (power chord) · B single note.
+- **Above it**, the first key you press is the root and the whole chord sounds; other keys pressed while you hold it play as
+  themselves (a melody over the chord). **Below it**, keys play single notes (a left-hand bass).
+- **Chord pads** on the panel (laid out like the selector octave), a **chord display** (name and notes, e.g. *G#m7 —
+  G# · B · D# · F#*), a **STACKED / FOLDED** voicing (folded keeps successive chords in one register, as on an electronic chord harp),
+  a **BASS** note one octave down, a **STRUM** (0–100 ms between the notes, lowest first) and a **strum plate**: drag the
+  mouse across its strings to strum the chord over three octaves.
+- 22 chord types are in the engine (6, m6, m7b5, dim7, 9, m9, maj9, 7sus4, mMaj7 and 6/9 after the twelve of the pads).
+- The generated notes are ordinary notes of the synthesizer: sustain pedal, polyphonic portamento, unison, filters,
+  envelopes, LFOs and effects work as usual; a chord never uses more voices than VOICES (cut from the top, root kept).
+- The same in the **web app** and the **VST3 / VST2 plug-in** (Windows; VST3 for macOS from the same code), with a MIDI
+  keyboard, a DAW clip or the on-screen keyboard. The six settings are automatable and saved with the Live Set, never in a
+  preset: changing the sound keeps your way of playing.
+
+The manuals (**MANUAL** button) have a *Chord keyboard (WaveChord Synth)* chapter. Everything below describes the synthesizer
+WaveChord Synth is built on; it applies unchanged.
+
+**Play online:** https://pierrearnaudguyot.github.io/WaveChord-Synth/ (Chrome or Edge; with Web MIDI, a hardware
+keyboard, sequencer or controller plays it directly, no DAW needed). The web app also works offline: download the
+repository and open `web/index.html`.
+**Download the plug-in:** the [Releases](https://github.com/PierreArnaudGUYOT/WaveChord-Synth/releases) page — one zip for
+**Windows** 64-bit (VST3 / VST2) and one for **macOS** 10.13 or later (VST3, one universal plug-in for Apple silicon and
+Intel Macs; `INSTALL-mac.txt` in the zip explains the first start).
+
+## The synthesizer underneath (Wavelet Synthesizer beta 0.6)
 
 A polyphonic synthesizer that shapes sound with the **discrete wavelet transform** instead of Fourier filters.
 It comes as a **web application** and a **VST3 / VST2 instrument for Ableton Live** (Windows x64), also as a **VST3 for
@@ -21,23 +54,13 @@ filter then acts on other atoms and the timbre changes — something no Fourier 
 browser** (TOP Sounds and the sound types) sits at the right of the panel; **SAVE PRESET** adjusts a factory preset,
 **DELETE** clears out the ones you do not want, ▲ ▼ reorder the lists, a sound **dragged onto a category** moves there (or
 joins TOP Sounds), the **arrow keys** choose sounds, and a **user bank** keeps your own sounds — all in one readable text
-file, `OKTOWAVE presets.txt`, kept next to the plug-in; EXPORT / IMPORT share it.
+file, `WAVECHORD presets.txt`, kept next to the plug-in; EXPORT / IMPORT share it.
 beta 0.6 rearranges the panel (SUB OSC beside the oscillator, LFO 1 and LFO 2 side by side, the chorus inside EFFECTS,
 one MANUAL button) and adds **tempo SYNC** to the plug-in: the delay and both LFOs can follow the DAW's tempo in note
 values (1/4, 1/8 D, 1/16 T…); the web app opens with a welcome window (run the demo, play the synth, download the VST).
 A **sub oscillator** (sine, triangle or square, one or two octaves below) adds low end and infra-bass, and a
 **polyphonic portamento** selector (Off / Poly / Legato, Poly by default) works with the GLIDE time: in Poly mode every voice
 glides from its own previous note, so chord changes glide voice by voice.
-
-**Play online:** https://pierrearnaudguyot.github.io/Free-Wavelet-Synthesizer-VST/ (Chrome or Edge; with Web MIDI,
-a hardware keyboard, sequencer or controller plays it directly, no DAW needed).
-**Download the plugin**: see the
-[Releases](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases) page of the
-[GitHub repository](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST) —
-*V0.6 (beta)*, this version, with one zip for **Windows** 64-bit (VST3 / VST2) and one for **macOS** 10.13 or later (VST3,
-one universal plug-in for Apple silicon and Intel Macs; `INSTALL-mac.txt` in the zip explains the first start). The
-earlier versions (V0.5, V0.4, V0.3, V0.3 for Mac…) stay on the same page. The web app also works offline:
-download the repository and open `web/index.html`.
 
 **MIDI without a DAW (web app):** all inputs, notes, pitch bend, mod wheel, sustain; a channel selector in the status
 bar (all or 1–16); Program Change selects a preset; **MIDI learn**: right-click a panel control, then move a knob or
@@ -73,17 +96,17 @@ DOWNLOAD VST). **MANUAL** (header) opens the manual of the engine shown.
   (Copyrighted songs are not bundled; load your own files for those.)
 
 ### VST3 / VST2 in Ableton Live
-1. Build the plugin (see below), or use an existing `build\WaveletSynthesizer.vst3` folder.
-2. Copy the **whole** `WaveletSynthesizer.vst3` folder into **either**
+1. Build the plugin (see below), or use an existing `build\WaveChordSynth.vst3` folder.
+2. Copy the **whole** `WaveChordSynth.vst3` folder into **either**
    - your VST3 folder `C:\Program Files\Common Files\VST3` (`vst\install.bat` does this and asks for administrator rights), **or**
    - your VST2 plug-in folder (the one set as *VST2 Plug-in Custom Folder* in Live; no administrator rights needed).
 3. In Live: *Preferences → Plug-ins* → enable **Use VST3 Plug-in System Folders** (VST3) or
    **Use VST2 Plug-in Custom Folder** (VST2) → **Rescan**.
-4. Drag *Plug-ins → Wavelet Synthesizer* onto a MIDI track.
+4. Drag *Plug-ins → WaveChord Synth* onto a MIDI track.
 
 The plugin is a single self-contained DLL. It depends only on Windows system libraries, so nothing else
-needs to be installed. The same DLL is both a VST3 plug-in (`Contents\x86_64-win\WaveletSynthesizer.vst3`) and a VST2
-plug-in (the copy `WaveletSynthesizer.dll` next to it, found by hosts that scan a VST2 folder). The VST2 entry point
+needs to be installed. The same DLL is both a VST3 plug-in (`Contents\x86_64-win\WaveChordSynth.vst3`) and a VST2
+plug-in (the copy `WaveChordSynth.dll` next to it, found by hosts that scan a VST2 folder). The VST2 entry point
 (`vst/src/vst2.cpp`) hosts the same processor, controller and editor in-process; its declarations are written from
 the public VST 2.4 binary layout (Steinberg no longer licenses the VST2 SDK). The **MANUAL** button opens
 the manual of the engine shown, bundled inside the `.vst3` folder.
@@ -93,10 +116,10 @@ gives no tempo).
 Pitch bend, the mod wheel (vibrato) and the sustain pedal are supported. All parameters can be automated.
 
 ### VST3 on a Mac
-1. Copy `WaveletSynthesizer.vst3` into your own plug-in folder `~/Library/Audio/Plug-Ins/VST3` (Finder: *Go → Go to
-   Folder…*): the presets file `OKTOWAVE presets.txt` is written next to the plug-in.
+1. Copy `WaveChordSynth.vst3` into your own plug-in folder `~/Library/Audio/Plug-Ins/VST3` (Finder: *Go → Go to
+   Folder…*): the presets file `WAVECHORD presets.txt` is written next to the plug-in.
 2. First start: the plug-in is free and not signed with a paid Apple developer certificate, so macOS blocks it once.
-   In Terminal: `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/WaveletSynthesizer.vst3`
+   In Terminal: `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/WaveChordSynth.vst3`
    (or *System Settings → Privacy & Security → Open Anyway*).
 3. In Live: *Settings → Plug-ins* → **Use VST3 Plug-in System Folders** → **Rescan**. Other VST3 hosts (Cubase, Bitwig,
    Reaper, Studio One…) work too; Logic Pro and GarageBand only load Audio Units.
@@ -114,10 +137,10 @@ Node.js is optional: if present, the build regenerates the C++ parameter table f
 set LLVM_MINGW=C:\Users\<you>\tools\llvm-mingw   (default: %USERPROFILE%\tools\llvm-mingw)
 vst\build.bat
 ```
-Output: `build\WaveletSynthesizer.vst3\Contents\x86_64-win\WaveletSynthesizer.vst3` + `Contents\Resources\manual\`.
+Output: `build\WaveChordSynth.vst3\Contents\x86_64-win\WaveChordSynth.vst3` + `Contents\Resources\manual\`.
 
 **macOS**: with the Xcode command line tools (`xcode-select --install`), run `vst/build_mac.sh`: one universal VST3 bundle
-in `build/mac/WaveletSynthesizer.vst3` (signed ad hoc). GitHub's Macs build and test it on every push
+in `build/mac/WaveChordSynth.vst3` (signed ad hoc). GitHub's Macs build and test it on every push
 (`.github/workflows/mac.yml`: the sound against the web engine on both architectures, then `tests/machost`, a small
 macOS host that plays notes and drives the editor); the release zip is one of the workflow's artifacts.
 
@@ -171,21 +194,21 @@ The difference between the two engines is below 3.4e-7 for all 150 presets.
 
 ## How to cite
 
-Guyot, P. A. (2026). *Wavelet Synthesizer* [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23431760
-(Zenodo record: https://zenodo.org/records/23431760; all versions: https://doi.org/10.5281/zenodo.23431759).
-GitHub shows the same reference under **Cite this repository** (`CITATION.cff`).
+Guyot, P. A. (2026). *WaveChord Synth* [Computer software]. https://github.com/PierreArnaudGUYOT/WaveChord-Synth
+Its sound engine is the Wavelet Synthesizer: Guyot, P. A. (2026). *Wavelet Synthesizer* [Computer software]. Zenodo.
+https://doi.org/10.5281/zenodo.23431760. GitHub shows the reference under **Cite this repository** (`CITATION.cff`).
 
 ## Licence
 
 Copyright (C) 2026 Pierre Arnaud GUYOT ("OktoPierre").
 
-Wavelet Synthesizer (web app, VST3 plugin, tools and tests) is free software: you can redistribute it and/or modify
+WaveChord Synth (web app, VST3 plugin, tools and tests) is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License in the file `LICENSE` for more details.
 
-If you share the compiled plugin (`WaveletSynthesizer.vst3`) or the web app, share the source code with it as well
+If you share the compiled plugin (`WaveChordSynth.vst3`) or the web app, share the source code with it as well
 (for example a link to the project's repository), as the GPL requires.
 
 Parts that keep their own licence:

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Wavelet Synthesizer — created by Pierre Arnaud GUYOT (OktoPierre).
+// WaveChord Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.6).
 // Release history: beta 0.1 (2026-10-14) — first release (see RELEASE_HISTORY.md).
 // Web application: audio, parameters, presets, MIDI, keyboard, manuals, demo.
 (function () {
@@ -23,13 +23,15 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (_) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* storage unavailable */ } },
   };
-  let userPresets = store.get('ws.user', []);
+  let userPresets = store.get('wc.user', []);
   if (!Array.isArray(userPresets)) userPresets = [];
   // beta 0.6 (security review): stored data is untrusted (other pages of the same site share it): well-formed entries only
   userPresets = userPresets.filter(p => p && typeof p === 'object' && typeof p.name === 'string' && p.values && typeof p.values === 'object')
     .map(p => ({ name: p.name.slice(0, 40), values: p.values }));
 
-  const toKeyed = () => { const o = {}; PARAMS.forEach((p, i) => { if (!p.hidden) o[p.key] = +values[i].toFixed(6); }); return o; };
+  // WaveChord Synth: the performance settings (perf: CHORD, its type, octave, voicing, bass, strum) are not part of a sound: a
+  // preset or an export never holds them (withPerf = false); the state saved by this page keeps them
+  const toKeyed = (withPerf) => { const o = {}; PARAMS.forEach((p, i) => { if (!p.hidden && (withPerf || !p.perf)) o[p.key] = +values[i].toFixed(6); }); return o; };
 
   // ---------------------------------------------------------------- parameters
   function post(msg, transfer) { if (node) node.port.postMessage(msg, transfer || []); }
@@ -48,7 +50,7 @@
     if (p.structural || (i === P.ab_mix && C.tableNeeds(values) !== needs) || C.morphNeeded(values) !== morph ||
         C.phaseModNeeded(values) !== phm) scheduleBuild();
     // the ENGINE tabs only choose the panel shown: switching them does not modify the sound
-    if (user && !p.hidden && i !== P.engine) { if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
+    if (user && !p.hidden && !p.perf && i !== P.engine) { if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
     if (user && !p.hidden) saveStateSoon();
   }
 
@@ -80,7 +82,7 @@
   let saveTimer = null;
   function saveStateSoon() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => store.set('ws.state', { id: presetId, name: presetName, dirty, values: toKeyed() }), 300);
+    saveTimer = setTimeout(() => store.set('wc.state', { id: presetId, name: presetName, dirty, values: toKeyed(true) }), 300);
   }
 
   function applyKeyed(obj) {
@@ -88,6 +90,7 @@
     if (obj && obj.ab_mix === undefined && obj.engine !== undefined) obj = Object.assign({}, obj, { ab_mix: obj.engine });
     PARAMS.forEach((p, i) => {
       if (p.hidden) return;
+      if (p.perf && !(obj && obj[p.key] !== undefined)) return;   // WaveChord Synth: a preset leaves the chord keyboard as it is
       const v = obj && obj[p.key] !== undefined && isFinite(obj[p.key]) ? +obj[p.key] : p.def;
       setParam(i, v, false);
     });
@@ -109,7 +112,7 @@
     const [kind, ks] = String(id).split(':'), k = +ks;
     if (kind === 'f' && SPEC.PRESETS[k]) {
       const pr = SPEC.PRESETS[k], o = {};
-      PARAMS.forEach((p, i) => { o[p.key] = pr.values[i]; });
+      PARAMS.forEach((p, i) => { if (!p.perf) o[p.key] = pr.values[i]; });   // WaveChord Synth: a preset leaves the chord keyboard as it is
       applyKeyed(o); presetName = pr.name;
     } else if (kind === 'u' && userPresets[k]) {
       applyKeyed(userPresets[k].values); presetName = userPresets[k].name;
@@ -129,20 +132,20 @@
     if (!userPresets[k]) return;
     if (!confirm(`Delete user preset "${userPresets[k].name}"?`)) return;
     userPresets.splice(k, 1);
-    store.set('ws.user', userPresets);
+    store.set('wc.user', userPresets);
     if (presetId === id) { presetId = 'x'; dirty = true; ui.setPresetName(presetName, true); }
   }
   function savePreset() {
     const name = prompt('Save current sound as user preset:', dirty ? presetName + ' (edit)' : presetName);
     if (!name) return;
     userPresets.push({ name: name.slice(0, 40), values: toKeyed() });
-    store.set('ws.user', userPresets);
+    store.set('wc.user', userPresets);
     presetId = 'u:' + (userPresets.length - 1); presetName = name.slice(0, 40); dirty = false;
     ui.setPresetName(presetName, false);
     saveStateSoon();
   }
   function exportPreset() {
-    const data = { format: 'wavelet-synthesizer-preset', version: 1, name: presetName, values: toKeyed() };
+    const data = { format: 'wavechord-synth-preset', version: 1, name: presetName, values: toKeyed() };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     a.download = presetName.replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '_') + '.json';
@@ -154,10 +157,10 @@
     r.onload = () => {
       try {
         const data = JSON.parse(r.result);
-        if (!data || !data.values || typeof data.values !== 'object') throw new Error('not a Wavelet Synthesizer preset');
+        if (!data || !data.values || typeof data.values !== 'object') throw new Error('not a WaveChord Synth preset');
         const name = String(data.name || file.name.replace(/\.json$/i, '')).slice(0, 40);
         userPresets.push({ name, values: data.values });
-        store.set('ws.user', userPresets);
+        store.set('wc.user', userPresets);
         loadPreset('u:' + (userPresets.length - 1));
       } catch (e) { alert('Could not import preset: ' + e.message); }
     };
@@ -172,6 +175,9 @@
     post({ t: 'on', n, v });
   }
   function noteOff(n) { localKeys.delete(n); post({ t: 'off', n }); }
+  // WaveChord Synth: the strum plate's notes (played as themselves, whatever CHORD says)
+  function plateOn(n, v) { if (n < 0 || n > 127) return; if (!actx) startAudio(); post({ t: 'plateon', n, v }); }
+  function plateOff(n) { post({ t: 'plateoff', n }); }
   function allOff() { localKeys.clear(); heldCodes.clear(); post({ t: 'alloff' }); }
 
   // ---------------------------------------------------------------- audio
@@ -212,6 +218,9 @@
     if (m.t !== 'disp') return;
     live = m;
     lastLevel = { peakL: m.peakL, peakR: m.peakR };
+    // WaveChord Synth: a key of the selector octave chose a chord type in the engine: the panel follows (not a sound change)
+    // (only on that event: a pad clicked here reaches the engine a little later, the engine's older value must not undo it)
+    if (m.chord && m.chord.changed && m.chord.type !== values[P.chord_type]) { values[P.chord_type] = m.chord.type; ui.refresh(P.chord_type); saveStateSoon(); }
     ui.setLive(m);
     if (demo) demo.onSeqTime(m.seqTime);
   }
@@ -221,7 +230,7 @@
   // copies (same browser) stop their demo and pause their audio. Closing or leaving the page
   // stops everything immediately.
   const INSTANCE = Math.random().toString(36).slice(2);
-  function claimAudio() { store.set('ws.audioOwner', { id: INSTANCE, t: Date.now() }); }
+  function claimAudio() { store.set('wc.audioOwner', { id: INSTANCE, t: Date.now() }); }
   // The welcome window (index.html) comes back with the reason in place of its sub-title; its choices take the audio back.
   // While it is shown, the panel behind it is inert, so the Tab key stays in the window.
   const WELCOME_SUB = $('w-sub').textContent;
@@ -254,7 +263,7 @@
     }).catch(() => {});
   }
   window.addEventListener('storage', (e) => {
-    if (e.key !== 'ws.audioOwner' || !e.newValue || !actx) return;
+    if (e.key !== 'wc.audioOwner' || !e.newValue || !actx) return;
     try { if (JSON.parse(e.newValue).id !== INSTANCE) pauseAudio('The synthesizer is playing in another window or tab, so this one was paused.'); } catch (_) { /* ignore */ }
   });
   window.addEventListener('pagehide', () => {
@@ -268,9 +277,9 @@
   // default), Program Change selects a preset, and MIDI learn links a control change to a panel control: right-click
   // the control, then move a knob or fader on the controller. The channel and the links are kept in this browser.
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-  let midiCh = store.get('ws.midiCh', 0);                   // 0 = all channels, else 1..16
+  let midiCh = store.get('wc.midiCh', 0);                   // 0 = all channels, else 1..16
   if (!(Number.isInteger(midiCh) && midiCh >= 0 && midiCh <= 16)) midiCh = 0;
-  let ccMap = store.get('ws.ccMap', {});                    // CC number -> parameter key
+  let ccMap = store.get('wc.ccMap', {});                    // CC number -> parameter key
   if (!ccMap || typeof ccMap !== 'object' || Array.isArray(ccMap)) ccMap = {};
   for (const cc of Object.keys(ccMap)) if (!(/^\d+$/.test(cc) && +cc < 120 && typeof ccMap[cc] === 'string' && own(P, ccMap[cc]))) delete ccMap[cc];
   let learn = -1;                                           // parameter waiting for a control change
@@ -316,7 +325,7 @@
     const key = PARAMS[i].key;
     for (const c of Object.keys(ccMap)) if (ccMap[c] === key) delete ccMap[c];
     if (!unlink) ccMap[cc] = key;
-    store.set('ws.ccMap', ccMap);
+    store.set('wc.ccMap', ccMap);
     ui.setMidiMap(ccMap);
     stopLearn(unlink ? `MIDI: ${PARAMS[i].name} unlinked` : `MIDI: CC ${cc} → ${PARAMS[i].name}`);
   }
@@ -406,6 +415,7 @@
     set: (i, v) => setParam(i, v, true),
     begin() {}, end() {},
     noteOn, noteOff,
+    plateOn, plateOff,   // WaveChord Synth: the strum plate
     presetStep, presetList, loadPreset, deletePreset,
     openManual,
     keysDown: () => {   // keys played here + notes playing in the engine (MIDI, demo)
@@ -425,7 +435,7 @@
       sel.appendChild(o);
     }
     sel.value = String(midiCh);
-    sel.onchange = () => { midiCh = +sel.value; store.set('ws.midiCh', midiCh); allOff(); sel.blur(); };
+    sel.onchange = () => { midiCh = +sel.value; store.set('wc.midiCh', midiCh); allOff(); sel.blur(); };
   }
 
   // ---------------------------------------------------------------- demo (Bach, Toccata in D minor)
@@ -438,7 +448,7 @@
     applyPreset: (name) => {
       const k = SPEC.PRESETS.findIndex(p => p.name === name);
       if (k < 0) return;
-      const o = {}; PARAMS.forEach((p, i) => { o[p.key] = SPEC.PRESETS[k].values[i]; });
+      const o = {}; PARAMS.forEach((p, i) => { if (!p.perf) o[p.key] = SPEC.PRESETS[k].values[i]; });
       applyKeyed(o);
     },
     snapshot: () => ({ values: toKeyed(), presetId, presetName, dirty }),
@@ -504,6 +514,9 @@
     demoStop: () => demo.stop(),
     demoState: () => demo.state(),
     midi: (bytes) => onMIDI({ data: bytes }),
+    chord: () => (live && live.chord ? Object.assign({}, live.chord) : null),   // WaveChord Synth: the chord sounding
+    plateOn: (n, v) => plateOn(n, v == null ? 0.8 : v),
+    plateOff: n => plateOff(n),
     midiLearn: (key) => midiLearn(P[key]),
     midiMap: () => Object.assign({}, ccMap),
     midiStatus: () => $('st-midi').textContent,
