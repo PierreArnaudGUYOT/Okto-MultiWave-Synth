@@ -630,6 +630,7 @@ class Engine {
   bool chordTypeChanged = false;   // a selector key set chord_type: the host reads it and tells its controller / panel
   bool noMicro = false;            // the demo and the evaluation passage play in equal temperament whatever the oriental tuning says
   bool chordHasBass = false;       // the first note of the chord is the bass (louder)
+  double chordTrim = 1;            // the level of a chord's notes: a chord of more than a triad's power is scaled down (see chordNotes)
   double nextGain = 1;             // the gain the next note on gives its voice (the chord's bass note)
 
   explicit Engine(double sampleRate = 48000) {
@@ -815,7 +816,7 @@ class Engine {
   void holdOn(int note, double vel, double gain = 1) { holdCnt[note]++; nextGain = gain; noteOn(note, vel); nextGain = 1; }
   void holdOff(int note, bool quick = false) { if (holdCnt[note] > 0 && --holdCnt[note] == 0) noteOff(note, quick); }
   // the gain of chord note k: the bass (the first note of a chord that has one) plays louder
-  double chordGain(int k) const { return k == 0 && chordHasBass ? BASS_GAIN : 1.0; }
+  double chordGain(int k) const { return (k == 0 && chordHasBass ? BASS_GAIN : 1.0) * chordTrim; }
   void keyOn(int note, double vel) {
     if (note < 0 || note > 127) return;
     if (!(vel > 0)) { keyOff(note); return; }
@@ -872,6 +873,10 @@ class Engine {
       for (int i = k; i + 1 < ln; i++) list[i] = list[i + 1];
       ln--;
     }
+    // a chord keeps the level of a triad: the notes' total power (the bass counts BASS_GAIN squared) over that of three notes scales them
+    // down, so that a seventh with its bass does not hit the limiter (a triad, a power chord or a single note: 1)
+    const double power = ln + (withBass ? BASS_GAIN * BASS_GAIN : 0);
+    chordTrim = power > 3 ? std::sqrt(3 / power) : 1;
     int n = 0;
     if (withBass) out[n++] = (int16_t)bassNote;
     for (int i = 0; i < ln; i++) if (n < MAXV) out[n++] = (int16_t)list[i];

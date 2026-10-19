@@ -399,10 +399,14 @@ section('mix', 'OSC MIX', 564, 56, 124, 260, -1, [
   { type: 'knobT', param: 'sub_oct', x: 42, y: 192, w: 40, h: 46 },
   { type: 'knobT', param: 'sub_shape', x: 82, y: 192, w: 40, h: 46 },
 ]);
+// beta 0.2: the oriental tuning's MAQAM and TONIC sit under the scalogram and show while TUNING (next to the keyboard) is not Western
 section('display', 'SCOPE', 696, 56, 392, 260, -1, [
-  { type: 'scope', x: 12, y: 30, w: 368, h: 106 },
-  { type: 'label', text: 'SCALOGRAM', x: 12, y: 140, w: 368, h: 14 },
-  { type: 'scalogram', x: 12, y: 156, w: 368, h: 92 },
+  { type: 'scope', x: 12, y: 30, w: 368, h: 80 },
+  { type: 'label', text: 'SCALOGRAM', x: 12, y: 114, w: 368, h: 14 },
+  { type: 'scalogram', x: 12, y: 130, w: 368, h: 72 },
+  { type: 'menu', param: 'mt_scale', text: 'MAQAM', x: 12, y: 228, w: 176, h: 24, vis: 'mt_mode', visOn: true },
+  { type: 'label', text: 'TONIC', x: 200, y: 212, w: 100, h: 14, vis: 'mt_mode', visOn: true },
+  { type: 'step', param: 'mt_tonic', x: 200, y: 226, w: 100, h: 26, vis: 'mt_mode', visOn: true },
 ]);
 section('ampenv', 'AMP ENVELOPE', 12, 472, 284, 128, -1, [
   { type: 'adsr', env: 'amp', x: 12, y: 30, w: 260, h: 26 },
@@ -447,7 +451,9 @@ section('voice', 'VOICE', 714, 608, 374, 128, -1, [
 section('keys', '', 0, 744, 1100, 112, -1, [
   { type: 'toggle', param: 'chord_mode', text: 'CHORD MODE', x: 12, y: 6, w: 100, h: 34 },
   // beta 0.2: BASS (on by default) sits under CHORD MODE and shows with it: a bass note two octaves below the root, a little louder
-  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 12, y: 46, w: 100, h: 34, vis: 'chord_mode', visOn: true },
+  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 12, y: 40, w: 100, h: 26, vis: 'chord_mode', visOn: true },
+  // beta 0.2: the three-position TUNING switch (Western | Arabic | Turkish): the oriental keyboard with quarter tones
+  { type: 'seg', param: 'mt_mode', x: 12, y: 72, w: 100, h: 20 },
   { type: 'wheels', x: 122, y: 0, w: 60, h: 100 },
   { type: 'keyboard', x: 190, y: 0, w: 898, h: 100 },
   { type: 'credit', x: 14, y: 97, w: 170, h: 15 },
@@ -484,19 +490,29 @@ function convertLegacy(v0) {
 }
 // The new presets (tools/presets_new.js, written with tools/make_presets.js): { name, cat, v } in this version's parameters,
 // numbered in their names ("012 A1A2 · Glass Bell": the oscillators they use) for the listening test (EVALUATE SOUNDS).
-let NEW_RAW = [];
-try { NEW_RAW = require('./presets_new.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+let OLD_RAW = [], SUPER_RAW = [];
+try { OLD_RAW = require('./presets_new.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }   // the 200 presets of beta 0.1 (001-200), unchanged
+// beta 0.2: 300 more (201-500, tools/supermod/build.js); MW_NO_SUPER=1 leaves them out (the builder measures the others)
+if (!process.env.MW_NO_SUPER) try { SUPER_RAW = require('./presets_super.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+const NEW_RAW = [...SUPER_RAW, ...OLD_RAW];   // the presets EVALUATE SOUNDS rates: the new 300 first, then the 200 of beta 0.1
 const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
 // Categories (preset menu groups, like the banks of a hardware synthesizer), in menu order.
-const CATEGORIES = ['Bass', 'Lead', 'Keys', 'Organ', 'Pad', 'Strings', 'Brass & Wind', 'Pluck', 'Bells & Mallets', 'FX', 'Drums & Perc'];
+// (beta 0.2: SuperModulation first: the presets whose life is the LFOs moving the wavelet-domain controls)
+const CATEGORIES = ['SuperModulation', 'Bass', 'Lead', 'Keys', 'Organ', 'Pad', 'Strings', 'Brass & Wind', 'Pluck', 'Bells & Mallets', 'FX', 'Drums & Perc'];
 const TOP_RAW = require('./presets_top.js');
 const PRESETS = [];
 for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: convertLegacy(r.v) });
 const TOP_COUNT = PRESETS.length;
 for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: r.v });
-PRESETS.forEach((p, i) => { p.rank = i; });   // the factory order is each category's order too (TOP Sounds first, then 001 ...)
+// the factory order is each category's order too (TOP Sounds first, then the new presets, then 001 ...). Beta 0.2: "Wobble Bass" is the first of the
+// Bass list (it comes right after the TOP Sounds in the order of the lists; the numbering of the presets does not change)
+{
+  const order = PRESETS.map((p, i) => i), wob = PRESETS.findIndex(p => p.cat === 'Bass' && /· Wobble Bass$/.test(p.name));
+  if (wob >= 0) { order.splice(wob, 1); order.splice(TOP_COUNT, 0, wob); }
+  order.forEach((idx, rank) => { PRESETS[idx].rank = rank; });
+}
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
 const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new plugin instance opens

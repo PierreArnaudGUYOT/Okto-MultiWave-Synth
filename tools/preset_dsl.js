@@ -7,7 +7,7 @@
 //   penv [semitones, seconds]; subtractive (A1 A2): wave width sparsity phase wavelet, filter ftype fcut fslope fres fkey fenv fvel,
 //   window pcen pwid pdep; additive (B1 B2): pattern seed tilt bars [11 levels] atk spread body bright sus, wavelet, filter, window.
 // and the voice and effects in g:
-//   amp [a d s r vel], mod [a d s r], lfo { shape rate pitch cut pos wav }, lfo2 { shape rate amt target }, uni [copies, detune cents],
+//   amp [a d s r vel], mod [a d s r], lfo { shape rate pitch cut pos wav sp res ew }, lfo2 { shape rate amt target }, uni [copies, detune cents],
 //   width, voices, glide, porta, oct, fine, sub [level, oct, shape], drive, delay [time, feedback, mix], reverb [size, mix],
 //   chorus [mix, rate, depth], master, morph [wavelet 2, amount, lfo, env]; win: the window (s) of the loudness match for a short sound.
 'use strict';
@@ -19,7 +19,9 @@ const FTYPE = { lp: 0, hp: 1, bp: 2, br: 3 };
 const PAT = { ramp: 0, mirror: 1, alt: 2, walsh: 3, impulse: 4, random: 5 };
 const WAVELET = { haar: 0, db2: 1, db4: 2, db8: 3, sym8: 4, coif3: 5, db20: 6 };
 const LFO = { sine: 0, tri: 1, saw: 2, square: 3, sh: 4 };
-const L2T = { cutoff: 0, slope: 1, reso: 2, keytrk: 3, envamt: 4, velamt: 5, position: 6, width: 7, depth: 8, phase: 9 };
+// (beta 0.2: LFO 1 also has sp = SPARSITY, res = RESO, ew = ENV>WAV; LFO 2 targets from sparsity on)
+const L2T = { cutoff: 0, slope: 1, reso: 2, keytrk: 3, envamt: 4, velamt: 5, position: 6, width: 7, depth: 8, phase: 9,
+  sparsity: 10, srcwidth: 11, tilt: 12, odd: 13, even: 14, sus: 15, morph: 16 };
 const SLOT_IDS = ['A1', 'A2', 'B1', 'B2'];
 const num = (m, v, what) => { if (typeof v === 'string') { if (!(v in m)) throw new Error('unknown ' + what + ' ' + v); return m[v]; } return v; };
 
@@ -50,7 +52,7 @@ function globalValues(g, out) {
   if (g.lfo) {
     const l = g.lfo;
     if (l.shape !== undefined) set('lfo_shape', num(LFO, l.shape, 'LFO shape'));
-    for (const f of ['rate', 'pitch', 'cut', 'pos', 'wav']) if (l[f] !== undefined) set('lfo_' + f, l[f]);
+    for (const f of ['rate', 'pitch', 'cut', 'pos', 'wav', 'sp', 'res', 'ew']) if (l[f] !== undefined) set('lfo_' + f, l[f]);
   }
   if (g.lfo2) {
     const l = g.lfo2;

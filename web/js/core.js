@@ -538,6 +538,7 @@ function WSCoreFactory(SPEC) {
     this.chordNote = new Int16Array(MAXV); this.chordOn = new Uint8Array(MAXV); this.strumDue = new Float64Array(MAXV);
     this.noMicro = false;        // the demo and the evaluation passage play in equal temperament whatever the oriental tuning says
     this.chordHasBass = false;   // the first note of the chord is the bass (louder)
+    this.chordTrim = 1;          // the level of a chord's notes: a chord of more than a triad's power is scaled down (see chordNotes)
     this.nextGain = 1;           // the gain the next note on gives its voice (the chord's bass note)
     this.clock = 0;   // samples rendered since the start (the strum's timing)
     this.chordTypeChanged = false;   // a selector key set chord_type: the host reads it and tells its controller / panel
@@ -748,7 +749,7 @@ function WSCoreFactory(SPEC) {
   E.holdOn = function (note, vel, gain) { this.holdCnt[note]++; this.nextGain = gain || 1; this.noteOn(note, vel); this.nextGain = 1; };
   E.holdOff = function (note, quick) { if (this.holdCnt[note] > 0 && --this.holdCnt[note] === 0) this.noteOff(note, quick); };
   // the gain of chord note k: the bass (the first note of a chord that has one) plays louder
-  E.chordGain = function (k) { return k === 0 && this.chordHasBass ? BASS_GAIN : 1; };
+  E.chordGain = function (k) { return (k === 0 && this.chordHasBass ? BASS_GAIN : 1) * this.chordTrim; };
   E.keyOn = function (note, vel) {
     if (note < 0 || note > 127) return;
     if (!(vel > 0)) { this.keyOff(note); return; }
@@ -803,6 +804,10 @@ function WSCoreFactory(SPEC) {
       if (list[k] === rootNote) break;
       list.splice(k, 1);
     }
+    // a chord keeps the level of a triad: the notes' total power (the bass counts BASS_GAIN squared) over that of three notes scales them
+    // down, so that a seventh with its bass does not hit the limiter (a triad, a power chord or a single note: 1)
+    const power = list.length + (withBass ? BASS_GAIN * BASS_GAIN : 0);
+    this.chordTrim = power > 3 ? Math.sqrt(3 / power) : 1;
     let n = 0;
     if (withBass) out[n++] = bassNote;
     for (const x of list) if (n < MAXV) out[n++] = x;

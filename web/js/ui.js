@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.1.
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.2.
 // Panel UI built from WS_SPEC (same layout as the VST editor).
 'use strict';
 
@@ -126,6 +126,9 @@ class SynthUI {
     if (w.only === 'vst') return;
     const box = el('div', 'w ' + w.type, parent, { left: w.x + 'px', top: w.y + 'px', width: w.w + 'px', height: w.h + 'px' });
     const ab = { x: sec.x + w.x, y: sec.y + w.y, sec };
+    // beta 0.2: a widget that shows only while a performance setting is on (BASS and the MAQAM / TONIC of the oriental tuning). The plug-in's
+    // SYNC twins are not concerned: they keep the "always shown" rule above
+    if (w.vis && this.params[this.P[w.vis]].perf) (this.visWidgets || (this.visWidgets = [])).push({ box, i: this.P[w.vis], on: !!w.visOn });
     switch (w.type) {
       case 'knobL': case 'knobM': case 'knobS': case 'knobT': return this.knob(w, box);
       case 'seg': return this.seg(w, box);
@@ -389,7 +392,13 @@ class SynthUI {
   }
   setPresetName(nm, dirty) {
     if (this.presetNameEl) this.presetNameEl.innerHTML = `<span>${nm.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>${dirty ? '<span class="dirty" title="Modified">•</span>' : ''}<span class="chev">▼</span>`;
-    if (this.browser) this.renderBrowser();   // the sound playing is highlighted there
+    if (this.browser) {
+      // beta 0.2: a new sound (the preset box, its arrows, a MIDI program change, the demo) shows its bank in the browser, so that the
+      // sound selected is always seen there; a knob moved on the same sound leaves the bank the player is looking at
+      const cur = this.host.presetList().find(x => x.current), id = cur ? cur.id : null;
+      if (id !== this.bShown) { this.bShown = id; this.bReveal(); }
+      this.renderBrowser();   // the sound playing is highlighted there
+    }
   }
   togglePresetMenu(box) {
     if (this.pmenu) { this.closePresetMenu(); return; }
@@ -611,6 +620,7 @@ class SynthUI {
     if (ws) for (const w of ws) w.update();
     if (i === this.P.osc_view) this.setView(Math.round(this.host.get(i)));
     if (i === this.P.chord_mode) { this.chordOn = this.host.get(i) >= 0.5; this.setView(this.view); this.fit(); }
+    this.applyWidgetVis(i);
     this.updateEnables();
     for (const c of this.canvases) c.dirty = true;
   }
@@ -618,9 +628,14 @@ class SynthUI {
     for (const [, ws] of this.byParam) for (const w of ws) w.update();
     this.chordOn = this.host.get(this.P.chord_mode) >= 0.5;
     this.setView(Math.round(this.host.get(this.P.osc_view)));
+    this.applyWidgetVis();
     this.fit();
     this.updateEnables();
     for (const c of this.canvases) c.dirty = true;
+  }
+  // the widgets that depend on a performance setting (only the ones of parameter i when given)
+  applyWidgetVis(i) {
+    for (const x of this.visWidgets || []) if (i === undefined || x.i === i) x.box.style.display = (this.host.get(x.i) >= 0.5) === x.on ? '' : 'none';
   }
   // the oscillator shown (0..3 = A1 A2 B1 B2): the cards of the other oscillators and a hidden chord card are not shown
   setView(v) {
@@ -972,6 +987,20 @@ class SynthUI {
       else { g.addColorStop(0, '#262b33'); g.addColorStop(1, '#0d0f12'); }
       ctx.fillStyle = g; ctx.fillRect(x, 0, bw, bh);
       ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x + 2, bh - 5, bw - 4, 3);
+    }
+    // beta 0.2, the oriental tuning: a small amber arrow on every key the tuning moves (down = lower than the equal-tempered key)
+    const mode = Math.round(this.host.get(P.mt_mode));
+    if (mode > 0 && this.SPEC.MICRO) {
+      const t = this.SPEC.MICRO[mode - 1][Math.round(this.host.get(P.mt_scale))], tonic = Math.round(this.host.get(P.mt_tonic));
+      ctx.fillStyle = '#ffae42';
+      for (let n = KB_LO; n <= KB_HI; n++) {
+        const off = t[(((n - tonic) % 12) + 12) % 12];
+        if (Math.abs(off) < 8) continue;
+        const k = isBlack(n) ? whites.indexOf(n - 1) : whites.indexOf(n), cx = isBlack(n) ? (k + 1) * ww : k * ww + ww / 2, cy = isBlack(n) ? H * 0.5 : H * 0.72;
+        ctx.beginPath();
+        if (off < 0) { ctx.moveTo(cx - 3.5, cy - 3); ctx.lineTo(cx + 3.5, cy - 3); ctx.lineTo(cx, cy + 3); } else { ctx.moveTo(cx - 3.5, cy + 3); ctx.lineTo(cx + 3.5, cy + 3); ctx.lineTo(cx, cy - 3); }
+        ctx.closePath(); ctx.fill();
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.1.
+// Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.2.
 // Demo player: plays public-domain pieces (MIDI from the Mutopia Project) or your own MIDI file as a tour of the presets (a new
 // preset about every 4 s, on a change of chord). A small window says which preset plays and what it is made of.
 function WSDemo(api) {

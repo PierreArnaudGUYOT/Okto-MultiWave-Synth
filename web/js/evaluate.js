@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — EVALUATE SOUNDS: a listening session on the new presets (001-200), started by the header's button.
+// Okto MultiWave Synth — EVALUATE SOUNDS: a listening session on the new presets (beta 0.2: 201-500, then the 001-200 of beta 0.1), started by the header's button.
 // Each new preset plays the same 5 s of Beethoven's Appassionata (III) — the busy passage from 0:13 of the demo — then a window
 // asks for a rating from 1 to 10 stars. Above 5 stars it offers to modify the preset: the preset is reloaded exactly as
 // designed, the window shrinks to a bar, the player changes the panel (mouse or MIDI controller) and plays it (MIDI
@@ -15,7 +15,7 @@ function WSEvaluate(api) {
   const START = 12.9, LEN = 5;                 // the passage (seconds of the default demo) and its length
   const LEAD = 0.12;                           // seconds between loading a preset and its first note
   const STORE = 'mw.votes';
-  const FIRST = WS_SPEC.NEW_FIRST, PRESETS = WS_SPEC.PRESETS.slice(FIRST);   // 001-200
+  const FIRST = WS_SPEC.NEW_FIRST, PRESETS = WS_SPEC.PRESETS.slice(FIRST);   // 201-500, then 001-200 (the order of the factory list)
   const DESC = WS_SPEC.DESCRIPTIONS || {};
   const TITLE = `LISTEN AND RATE · ${PRESETS.length} NEW PRESETS`;
   const ASK_ABOVE = 5;                         // a rating above this offers to modify the preset
@@ -232,8 +232,8 @@ function WSEvaluate(api) {
     const next = nextFree();
     const list = [];
     if (window.showSaveFilePicker) list.push([fileHandle ? 'Change the ratings file…' : 'Choose the ratings file (.txt)…', async () => { await chooseFile(); status(fileLabel()); showStart(); }, !fileHandle]);
-    if (next < PRESETS.length) list.push([done ? `Continue at ${num(next)}` : 'Start at 001', () => play(next), !!fileHandle || !window.showSaveFilePicker]);
-    if (done) list.push(['Start again at 001', () => play(0)]);
+    if (next < PRESETS.length) list.push([done ? `Continue at ${num(next)}` : `Start at ${num(0)}`, () => play(next), !!fileHandle || !window.showSaveFilePicker]);
+    if (done) list.push([`Start again at ${num(0)}`, () => play(0)]);
     if (done) list.push(['Save as…', saveCopy, next >= PRESETS.length]);
     if (done) list.push(['Clear all ratings', () => { if (confirm('Clear all your ratings and recorded changes?')) { data = { votes: {}, changes: {} }; saveFile(); showStart(); } }]);
     list.push(['Close', stop]);

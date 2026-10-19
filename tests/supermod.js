@@ -96,7 +96,8 @@ console.log('3. chord keyboard');
   const s1 = sounding();
   check(s1[0] === 43 && s1.includes(67) && s1.includes(71) && s1.includes(62), 'G major: bass G2 (two octaves below G4), then G B D folded in the octave of the root', JSON.stringify(s1));
   const bass = eng.voices.find(v => v.active && v.note === 43), other = eng.voices.find(v => v.active && v.note === 67);
-  check(bass && other && Math.abs(bass.gain - 1.4) < 1e-12 && other.gain === 1, 'the bass plays 1.4 times louder (+2.9 dB), the others at 1');
+  const trim = Math.sqrt(3 / (3 + 1.96));
+  check(bass && other && Math.abs(bass.gain - 1.4 * trim) < 1e-12 && Math.abs(other.gain - trim) < 1e-12, 'the bass plays 1.4 times louder (+2.9 dB) than the others; a chord with its bass keeps the level of a triad (all notes x ' + trim.toFixed(3) + ')');
   // the left hand changes the chord: Gm7 (selector D#), then G7 (selector D)
   eng.keyOn(51, 1);
   const s2 = sounding();
@@ -119,6 +120,9 @@ console.log('3. chord keyboard');
   e2.keyOn(40, 1);   // the root E2 with the selector octave at C1-B1 (24..35)
   const low = e2.voices.filter(v => v.active && v.gate).map(v => v.note);
   check(Math.min(...low) >= 24, 'a low root: the bass is kept at C1 or above', JSON.stringify(low));
+  // BASS off: a triad plays at the plain level
+  const e4 = make({ chord_mode: 1, chord_bass: 0, v_voices: 8 }).eng; e4.keyOn(67, 1);
+  check(e4.voices.filter(v => v.active).every(v => v.gain === 1), 'a triad without BASS: every note at the plain level (1)');
   // BASS off
   const e3 = make({ chord_mode: 1, chord_bass: 0, v_voices: 8 }).eng; e3.keyOn(67, 1);
   check(e3.voices.filter(v => v.active).every(v => v.note >= 55), 'BASS off: no bass note');

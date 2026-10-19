@@ -1,6 +1,6 @@
 /* Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
    SPDX-License-Identifier: GPL-3.0-or-later */
-/* Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.1.
+/* Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.2.
    Web UI. The device is a fixed 1100×860 panel (+ 120 with CHORD MODE) scaled to fit. */
 :root {
   --page: #0b0d10;

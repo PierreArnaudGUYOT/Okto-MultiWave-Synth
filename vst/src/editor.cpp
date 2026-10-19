@@ -241,6 +241,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         for (size_t k = 0; k < items.size(); k++) if (items[k].w->param == i || items[k].w->vis == i) invalidateItem((int)k);
         // Okto MultiWave Synth: the pads, the chord shown, the strum plate and the keyboard's selector octave follow these
         if (i == P_CHORD_MODE || i == P_CHORD_TYPE || i == P_CHORD_OCT) for (int t : {W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_KEYBOARD}) invalidateType(t);
+        if (i == P_MT_MODE || i == P_MT_SCALE || i == P_MT_TONIC) invalidateType(W_KEYBOARD);   // the keys the oriental tuning moves are marked
       }
       if (any) {
         rebuildDisplay(false);
@@ -249,7 +250,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         else for (int t : {W_SCOPE, W_SCALOGRAM, W_WINDOW, W_ADSR, W_LEDS, W_WHEELS, W_PRESETS}) invalidateType(t);
       }
       invalidateType(W_PRESETS);
-      if (host->browserOpen()) invalidateLogical(bCard());
+      if (host->browserOpen()) { bFollow(); invalidateLogical(bCard()); }
     }
     // the presets file may be changed by another instance: read it again about once a second
     if (++libTick >= 30) { libTick = 0; Library::get().refresh(); }
@@ -683,6 +684,21 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       g.fillRect(R{x, r.y, bw, bh}, Brush(Pt{0, r.y}, Pt{0, r.y + bh}, on ? rgb(accent()) : sel(n) ? rgb(0x4a4280) : rgb(0x262b33),
                                         on ? rgb(0x0f5a54) : sel(n) ? rgb(0x1e1a3a) : rgb(0x0d0f12)));
       g.fillRect(R{x + 2, r.y + bh - 5, bw - 4, 3.f}, argb(20, 255, 255, 255));
+    }
+    // beta 0.2, the oriental tuning: a small amber arrow on every key the tuning moves (down = lower than the equal-tempered key)
+    const int mode = (int)jsRound(plainOf(P_MT_MODE));
+    if (mode > 0) {
+      const double* t = kMicro[mode - 1][(int)jsRound(plainOf(P_MT_SCALE))]; const int tonic = (int)jsRound(plainOf(P_MT_TONIC));
+      for (int n = KB_LO; n <= KB_HI; n++) {
+        const double off = t[(((n - tonic) % 12) + 12) % 12];
+        if (std::fabs(off) < 8) continue;
+        const int k = (int)(std::find(whites.begin(), whites.end(), isBlack(n) ? n - 1 : n) - whites.begin());
+        const float cx = r.x + (isBlack(n) ? (k + 1) * ww : k * ww + ww / 2), cy = r.y + (isBlack(n) ? r.h * 0.5f : r.h * 0.72f);
+        Pt tri[3];
+        if (off < 0) { tri[0] = Pt{cx - 3.5f, cy - 3}; tri[1] = Pt{cx + 3.5f, cy - 3}; tri[2] = Pt{cx, cy + 3}; }
+        else { tri[0] = Pt{cx - 3.5f, cy + 3}; tri[1] = Pt{cx + 3.5f, cy + 3}; tri[2] = Pt{cx, cy - 3}; }
+        g.fillPolygon(tri, 3, Brush(rgb(0xffae42)));
+      }
     }
   }
 
@@ -1130,7 +1146,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   // ================================================================ EVALUATE SOUNDS: listen-and-rate session
-  // EVALUATE SOUNDS plays each of the new presets (001-200) with the same 5 s of Beethoven as the web app (the plug-in plays it
+  // EVALUATE SOUNDS plays each of the new presets (201-500, then 001-200) with the same 5 s of Beethoven as the web app (the plug-in plays it
   // itself: vote_data.h), then asks a rating from 1 to 10 stars. Above 5 stars it offers to modify the preset: it is loaded
   // exactly as designed, a bar replaces the on-screen keyboard, the player changes the panel with the mouse and plays it on the
   // MIDI keyboard, then keeps the initial settings or records the change (the parameters that differ from the preset). Ratings and
@@ -1318,7 +1334,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
   void voteBegin() {
     if (vPhase != V_OFF) return;
-    if (vList.empty()) for (int k = 0; k < kNumNew; k++) vList.push_back(kFirstNew + k);   // the new presets, numbered 001...
+    if (vList.empty()) for (int k = 0; k < kNumNew; k++) vList.push_back(kFirstNew + k);   // the new presets (the order of the factory list)
     if (vList.empty()) return;
     vPath = voteRememberedPath(); vSaveErr.clear();
     voteLoad();
@@ -1333,8 +1349,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
             L"(excellent). Above 5 stars you can modify the preset and record the change. The ratings are saved in a .txt file.";
     vProgress = (float)done / n;
     std::vector<VBtn> b;
-    if (next < n) b.push_back({done ? L"Continue at " + toW(vNum(next)) : L"Start at 001", [this, next] { votePlay(next); }, true, {}});
-    if (done) b.push_back({L"Restart at 001", [this] { votePlay(0); }, false, {}});
+    if (next < n) b.push_back({done ? L"Continue at " + toW(vNum(next)) : L"Start at " + toW(vNum(0)), [this, next] { votePlay(next); }, true, {}});
+    if (done) b.push_back({L"Restart at " + toW(vNum(0)), [this] { votePlay(0); }, false, {}});
     b.push_back({L"Change file…", [this] { voteChooseFile(); }, false, {}});
     if (done) b.push_back({L"Save as…", [this] { voteSaveAs(); }, false, {}});
     if (fileExists(vPath)) b.push_back({L"Show file", [this] { voteOpenFile(); }, false, {}});
@@ -1569,6 +1585,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   struct BCat { std::wstring label; std::vector<int> presets; };   // a factory category of the browser
   std::vector<BCat> fCats;                                 // TOP Sounds, then the categories in factory order
   int bTab = 0, bCat = 0, bScroll = 0, bHover = -1;        // tab (0 factory, 1 user bank), category row, first row, hover
+  std::string bFollowKey;                                  // the sound the browser last followed (bFollow)
   bool bDrag = false; float bDragOff = 0;                  // dragging the scroll bar's thumb (grabbed bDragOff below its top)
   // beta 0.5: a sound of the list pressed (a factory preset, or an index into menuBank), dragged onto a category
   int rowDrag = -1, dropCat = -1; bool rowMoving = false; float rowX0 = 0, rowY0 = 0, rowX = 0, rowY = 0;
@@ -1920,6 +1937,22 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (open) bReveal();
     requestResize();
     invalidateAll();
+  }
+  // beta 0.2: a new sound is playing (the preset box, its arrows, its menu, the host's program change): the browser shows its bank and its
+  // row, so that the sound selected is always seen at the right. The same sound (a knob moved) leaves the bank the player is looking at,
+  // and a row clicked in the list stays where it is.
+  void bFollow() {
+    const std::string user = host->userPresetName();
+    const std::string key = user.empty() ? "f" + std::to_string(host->presetIndex()) : user;
+    if (key == bFollowKey) return;
+    bFollowKey = key;
+    const int oldTab = bTab, oldCat = bCat, oldScroll = bScroll;
+    bReveal();
+    if (oldTab == bTab && oldCat == bCat) {   // the bank is already shown: keep its scroll when the row is in view
+      const std::vector<int> rows = bRows();
+      const int vis = bVisibleRows();
+      for (int j = 0; j < (int)rows.size(); j++) if (bRowIsCurrent(rows[j]) && j >= oldScroll && j < oldScroll + vis) bScroll = oldScroll;
+    }
   }
   // the tab, category and scroll of the sound shown
   void bReveal() {

@@ -274,7 +274,11 @@ int wmain(int argc, wchar_t** argv) {
   h.ctrl->setParamNormalized(P_MASTER, h.ctrl->plainParamToNormalized(P_MASTER, master0));
   h.changes.clear(); h.handler.pending.push_back({P_MASTER, h.ctrl->plainParamToNormalized(P_MASTER, master0)});
 
-  const int P1 = kFirstNew, P2 = kFirstNew + 1, P3 = kFirstNew + 2;   // presets 001 002 003
+  const int P1 = kFirstNew, P2 = kFirstNew + 1, P3 = kFirstNew + 2;   // the first three presets to rate (beta 0.2: 201 202 203)
+  const std::string N1(kPresets[P1].name, 3), N2(kPresets[P2].name, 3), N3(kPresets[P3].name, 3);
+  const std::wstring startLbl = L"Start at " + std::wstring(N1.begin(), N1.end()), contLbl = L"Continue at " + std::wstring(N3.begin(), N3.end()),
+                     restartLbl = L"Restart at " + std::wstring(N1.begin(), N1.end());
+  const std::string ofAll = " / " + std::to_string(kNumNew);
   float evalX = 0, evalY = 0, cutX = 0, cutY = 0;
   check(widgetCenter(W_EVALUATE, -1, 0, evalX, evalY), "EVALUATE SOUNDS button in the layout", fmt("(%.0f, %.0f)", evalX, evalY));
   check(widgetCenter(W_KNOBM, P_F_CUTOFF, 0, cutX, cutY) || widgetCenter(W_KNOBL, P_F_CUTOFF, 0, cutX, cutY) || widgetCenter(W_KNOBS, P_F_CUTOFF, 0, cutX, cutY),
@@ -297,8 +301,8 @@ int wmain(int argc, wchar_t** argv) {
   h.click(evalX, evalY);
   h.run(0.3);
   h.shot(out + L"\\1_start.png");
-  std::printf("2. Start at 001: preset 001 with the listening rules, the passage plays\n");
-  h.click(buttonCenter({{L"Start at 001", true}, {L"Change file…", false}, {L"Close", false}}, 0, CARD_X), CARD_Y);
+  std::printf("2. Start at %s: the first preset with the listening rules, the passage plays\n", N1.c_str());
+  h.click(buttonCenter({{startLbl.c_str(), true}, {L"Change file…", false}, {L"Close", false}}, 0, CARD_X), CARD_Y);
   h.run(0.12);
   check(h.plain(P_V_VOICES) == 16 && h.plain(P_V_OCT) == 0 && h.plain(P_V_GLIDE) == 0, "listening rules (16 voices, octave 0, no glide)",
         fmt("voices %.0f oct %.0f glide %.3f", h.plain(P_V_VOICES), h.plain(P_V_OCT), h.plain(P_V_GLIDE)));
@@ -317,8 +321,8 @@ int wmain(int argc, wchar_t** argv) {
     return 1;
   }
   const std::string name1 = std::string(kPresets[P1].name);
-  check(has(txt, "001 |  7 |         | " + name1.substr(4)), "ratings file written after the rating (001 = 7)");
-  check(has(txt, "Rated: 1 / 200"), "ratings file header");
+  check(has(txt, N1 + " |  7 |         | " + name1.substr(4)), "ratings file written after the rating (" + N1 + " = 7)");
+  check(has(txt, "Rated: 1" + ofAll), "ratings file header");
   h.shot(out + L"\\4_ask.png");
   std::printf("4. Yes, modify it: the preset exactly as designed\n");
   h.click(buttonCenter({{L"Yes, modify it", true}, {L"No, next preset", false}, {L"Stop", false}}, 0, CARD_X), CARD_Y);
@@ -342,7 +346,7 @@ int wmain(int argc, wchar_t** argv) {
   txt = readFile(votes);
   auto js = [](double v) { char b[64]; std::snprintf(b, sizeof b, "%.6f", v); std::string s = b; while (s.back() == '0') s.pop_back(); if (s.back() == '.') s.pop_back(); return s; };
   const std::string chLine = "  f_cutoff: " + js(kPresets[P1].v[P_F_CUTOFF]) + " -> " + js(cut);
-  check(has(txt, "001 |  7 | yes     | ") && has(txt, name1 + "   (7 stars)") && has(txt, chLine), "change recorded in the ratings file", chLine);
+  check(has(txt, N1 + " |  7 | yes     | ") && has(txt, name1 + "   (7 stars)") && has(txt, chLine), "change recorded in the ratings file", chLine);
   {
     // only the cutoff: nothing else differs from the preset
     const size_t a = txt.find("(7 stars)"), b = txt.find("\r\n\r\n", a);
@@ -355,7 +359,7 @@ int wmain(int argc, wchar_t** argv) {
   h.click(starX(3), STAR_Y);
   h.run(0.4);
   txt = readFile(votes);
-  check(has(txt, "002 |  3 |"), "002 = 3 saved");
+  check(has(txt, N2 + " |  3 |"), N2 + " = 3 saved");
   check(std::fabs(h.plain(P_F_CUTOFF) - kPresets[P3].v[P_F_CUTOFF]) < 1e-6 && h.plain(P_V_VOICES) == 16, "3 stars: no question, 003 plays");
   h.run(1.0);
   h.click(buttonCenter({{L"Stop", false}}, 0, CARD_X), CARD_Y);
@@ -370,11 +374,11 @@ int wmain(int argc, wchar_t** argv) {
     const std::wstring copy = votesDir + L"\\my special ratings.txt";
     DeleteFileW(copy.c_str());
     SetEnvironmentVariableW(L"MW_SAVEAS_PATH", copy.c_str());
-    h.click(buttonCenter({{L"Continue at 003", true}, {L"Restart at 001", false}, {L"Change file…", false}, {L"Save as…", false}, {L"Show file", false}, {L"Clear all", false}, {L"Close", false}}, 3, CARD_X), CARD_Y);
+    h.click(buttonCenter({{contLbl.c_str(), true}, {restartLbl.c_str(), false}, {L"Change file…", false}, {L"Save as…", false}, {L"Show file", false}, {L"Clear all", false}, {L"Close", false}}, 3, CARD_X), CARD_Y);
     h.run(0.3);
     const std::string cp = readFile(copy), main = readFile(votes);
-    check(has(cp, "Rated: 2 / 200") && has(cp, "001 |  7 | yes     |") && has(cp, "002 |  3 |"), "Save as…: a copy of the ratings so far under another name", std::to_string(cp.size()) + " bytes");
-    check(!main.empty() && has(main, "Rated: 2 / 200"), "the ratings file being rewritten is untouched");
+    check(has(cp, "Rated: 2" + ofAll) && has(cp, N1 + " |  7 | yes     |") && has(cp, N2 + " |  3 |"), "Save as…: a copy of the ratings so far under another name", std::to_string(cp.size()) + " bytes");
+    check(!main.empty() && has(main, "Rated: 2" + ofAll), "the ratings file being rewritten is untouched");
     h.shot(out + L"\\7b_saved_as.png");
     SetEnvironmentVariableW(L"MW_SAVEAS_PATH", nullptr);
   }

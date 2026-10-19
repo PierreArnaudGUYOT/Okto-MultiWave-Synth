@@ -16,6 +16,7 @@ const URL0 = pathToFileURL(path.join(ROOT, 'web', 'index.html')).href + '#noaudi
 let fails = 0;
 const check = (ok, what, detail = '') => { console.log(`  [${ok ? 'PASS' : 'FAIL'}] ${what}${detail ? '  -- ' + detail : ''}`); if (!ok) fails++; };
 const first = SPEC.PRESETS[SPEC.NEW_FIRST], second = SPEC.PRESETS[SPEC.NEW_FIRST + 1];
+const n1 = first.name.slice(0, 3), n2 = second.name.slice(0, 3);   // beta 0.2: the first preset to rate is 201
 
 (async () => {
   const B = await Browser.launch({ width: 1280, height: 900 });
@@ -35,11 +36,11 @@ const first = SPEC.PRESETS[SPEC.NEW_FIRST], second = SPEC.PRESETS[SPEC.NEW_FIRST
     await sleep(300);
     check((await phase()) === 'start', 'the start window is shown', String(await phase()));
     const txt0 = await ev(`document.querySelector('.vote-win').textContent`);
-    check(/Start at 001/.test(txt0) && new RegExp(`${SPEC.NEW_COUNT} new presets to rate`).test(txt0), "it offers 'Start at 001' and says how many presets", txt0.slice(0, 120));
+    check(txt0.includes('Start at ' + n1) && new RegExp(`${SPEC.NEW_COUNT} new presets to rate`).test(txt0), `it offers 'Start at ${n1}' and says how many presets`, txt0.slice(0, 120));
     await B.screenshot(path.join(__dirname, 'out', 'evaluate_start.png')).catch(() => {});
 
     console.log('2. preset 001 plays with the listening rules');
-    check(await clickButton('Start at 001'), 'Start at 001 clicked');
+    check(await clickButton('Start at ' + n1), `Start at ${n1} clicked`);
     await sleep(500);
     check((await phase()) === 'play', 'the passage is playing', String(await phase()));
     check((await ev(`WS_TEST.getParam('v_voices')`)) === 16 && (await ev(`WS_TEST.getParam('v_oct')`)) === 0 && (await ev(`WS_TEST.getParam('v_glide')`)) === 0, 'listening rules: 16 voices, octave 0, no glide');
@@ -78,8 +79,8 @@ const first = SPEC.PRESETS[SPEC.NEW_FIRST], second = SPEC.PRESETS[SPEC.NEW_FIRST
     const votes = await ev('WS_TEST.evaluate.votes()');
     check(JSON.stringify(votes).includes('3') && (await phase()) === 'play', 'a rating of 3 (no question) goes on to 003', `${JSON.stringify(votes)} / ${await phase()}`);
     const txt2 = await ev('WS_TEST.evaluate.text()');
-    check(/Okto MultiWave Synth - preset ratings/.test(txt2) && new RegExp(`Rated: 2 / ${SPEC.NEW_COUNT}`).test(txt2) && /001 \| {2}7 \| yes/.test(txt2) && /002 \| {2}3 \|/.test(txt2),
-      'the ratings text has the header, 001 = 7 (changed), 002 = 3', txt2.split(/\r?\n/).slice(3, 4).join(''));
+    check(/Okto MultiWave Synth - preset ratings/.test(txt2) && new RegExp(`Rated: 2 / ${SPEC.NEW_COUNT}`).test(txt2) && new RegExp(`${n1} \\| {2}7 \\| yes`).test(txt2) && new RegExp(`${n2} \\| {2}3 \\|`).test(txt2),
+      `the ratings text has the header, ${n1} = 7 (changed), ${n2} = 3`, txt2.split(/\r?\n/).slice(3, 4).join(''));
     await B.key('Escape', { code: 'Escape' });
     await sleep(600);
     check((await phase()) === null || (await phase()) === 'off' || (await phase()) === undefined || !(await ev(`!!document.querySelector('.vote-win') && getComputedStyle(document.querySelector('.vote-win')).display !== 'none'`)), 'Esc closes the session');
