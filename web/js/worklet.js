@@ -44,6 +44,7 @@ function WSWorkletMain() {
       ev.sort((a, b) => a[0] - b[0] || a[1] - b[1]);   // note-offs before note-ons on the same frame
       this.seq = { ev, i: 0, start, count: new Uint8Array(128) };
       this.seqDone = false;
+      this.eng.noMicro = true;   // the demo and the evaluation passage play in equal temperament (whatever the oriental tuning says), tails included
     }
 
     process(inputs, outputs) {
@@ -64,6 +65,7 @@ function WSWorkletMain() {
         }
         if (s.i >= s.ev.length) { this.seq = null; this.seqDone = true; }
       }
+      if (eng.noMicro && !this.seq && !eng.anyVoice()) eng.noMicro = false;   // the passage and its tails are over
       if (pos === 0) eng.process(L, R, n);   // no sequencer: the buffers as they are (no view created per quantum)
       else if (pos < n) eng.process(L.subarray(pos), R.subarray(pos), n - pos);
       this.since += n;

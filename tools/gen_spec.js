@@ -9,7 +9,7 @@ const spec = require('./spec.js');
 const wav = JSON.parse(fs.readFileSync(path.join(__dirname, 'wavelets.json'), 'utf8'));
 
 const root = path.join(__dirname, '..');
-const { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS,
+const { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, MICRO_TABLES,
   CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR } = spec;
 // the fields of an oscillator, in the order of the C++ SlotDef (a field an oscillator lacks is -1: the subtractive ones have no
 // atom pattern, the additive ones no source wave)
@@ -31,6 +31,7 @@ const web = {
   DEVICE, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
   PRESETS: presetValues,
   LFO2_TARGETS: LFO2_TARGETS.map(k => INDEX[k]),   // beta 0.3: the parameters LFO 2 can move (lfo2_target order, the parameters of A1)
+  MICRO: MICRO_TABLES,   // beta 0.2: the oriental tunings: [Arabic, Turkish][scale][semitone above the tonic] = cents from the equal-tempered key
   ROLES, LFO2_ROLE: LFO2_ROLE.map(r => ROLES.indexOf(r)),   // the role (index in ROLES) of each target: LFO 2 moves it in every oscillator
   SLOTS: SLOTS.map(s => ({ id: s.id, mode: s.mode, name: s.name, k: Object.fromEntries(Object.entries(s.k).map(([f, key]) => [f, INDEX[key]])) })),
   DELAY_BEATS, LFO_BEATS,   // beta 0.6: the note values of the tempo sync in beats (fx_ddiv / lfo_div choice order)
@@ -142,7 +143,15 @@ h += `inline constexpr int kLfo2Role[] = { ${LFO2_ROLE.map(r => ROLES.indexOf(r)
 h += `// Okto MultiWave Synth: the four oscillators A1 A2 B1 B2 (mode 0 subtractive, 1 additive) and the parameter of each field (-1: none);\n// kSlotRole[slot][role]: the parameter of an oscillator that LFO 2 moves for each role (cutoff, slope, resonance, key tracking,\n// envelope amount, velocity amount, position, window width, window depth, source phase)\n`;
 h += `struct SlotDef { int mode; ${SLOT_FIELDS.map(f => 'int ' + f).join('; ')}; };\n`;
 h += 'inline constexpr SlotDef kSlots[4] = {\n' + SLOTS.map(s => `  { ${s.mode}, ${SLOT_FIELDS.map(f => (s.k[f] ? 'P_' + s.k[f].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n';
-h += 'inline constexpr int kSlotRole[4][10] = {\n' + SLOTS.map(s => `  { ${ROLES.map(r => (s.k[r] ? 'P_' + s.k[r].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n\n';
+h += `// the roles (ROLES): the column of kSlotRole that each LFO 2 target moves; ODD / EVEN bars and MORPH have no single field (-1)\n`;
+h += `inline constexpr int ${ROLES.map((r, i) => 'ROLE_' + r.toUpperCase() + ' = ' + i).join(', ')};\n`;
+h += `inline constexpr int kNumRoles = ${ROLES.length};\n`;
+h += `inline constexpr int kSlotRole[4][${ROLES.length}] = {\n` + SLOTS.map(s => `  { ${ROLES.map(r => (s.k[r] ? 'P_' + s.k[r].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n\n';
+
+h += `// beta 0.2: the oriental tunings: kMicro[tuning (0 Arabic, 1 Turkish)][scale][semitones above the tonic] = cents from the equal-tempered key\n`;
+h += `inline constexpr int kNumMicroScales = ${MICRO_TABLES[0].length};\n`;
+h += `inline constexpr double kMicro[2][${MICRO_TABLES[0].length}][12] = {\n` +
+  MICRO_TABLES.map(t => '  {\n' + t.map(r => '    { ' + r.map(v => v.toPrecision(17)).join(', ') + ' },').join('\n') + '\n  },').join('\n') + '\n};\n\n';
 
 const maxLen = Math.max(...wavelets.map(w => w.h.length));
 h += `inline constexpr int kNumWavelets = ${wavelets.length};\ninline constexpr int kMaxWaveletLen = ${maxLen};\n`;

@@ -26,6 +26,12 @@ const CHORD_SCRIPT = [
   [0, 0, 48, 1], [0, 0, 67, 0.9], [12800, 0, 64, 0.7], [19200, 2, 74, 0.8], [22400, 3, 74, 0], [22400, 2, 79, 0.8],
   [25600, 3, 79, 0], [25600, 1, 67, 0], [38400, 1, 64, 0], [38400, 0, 55, 1], [38400, 0, 60, 0.8], [64000, 1, 60, 0],
   [70400, 0, 72, 0.85], [70400, 0, 40, 0.6], [105600, 4, 0, 0]];
+// kind 'chordlive' (beta 0.2): the held chord changes while the root is held (selector keys, then BASS and VOICING switched live);
+// kind 5 = setParam(note = parameter key index, vel = value)
+const LIVE_SCRIPT = [
+  [0, 0, 48, 1], [0, 0, 67, 0.9], [12800, 0, 51, 1], [25600, 0, 50, 1], [38400, 0, 59, 1], [51200, 0, 53, 1],
+  [64000, 5, 'chord_bass', 0], [70400, 5, 'chord_bass', 1], [76800, 0, 56, 1], [83200, 5, 'chord_voicing', 0], [89600, 0, 49, 1],
+  [96000, 1, 67, 0], [100000, 4, 0, 0]];
 let worst = 0, fails = 0;
 cases.forEach((c, idx) => {
   const params = Float64Array.from(c.values);
@@ -34,7 +40,11 @@ cases.forEach((c, idx) => {
   eng.setTables(C.buildTables(params, true));
   const L = new Float32Array(n), R = new Float32Array(n);
   for (let o = 0; o < n; o += blk) {
-    if (c.kind === 'chord') {
+    if (c.kind === 'chordlive') {
+      for (const [eo, kind, note, vel] of LIVE_SCRIPT) if (eo === o) {
+        if (kind === 0) eng.keyOn(note, vel); else if (kind === 1) eng.keyOff(note); else if (kind === 4) eng.allNotesOff(); else eng.setParam(C.P[note], vel);
+      }
+    } else if (c.kind === 'chord') {
       for (const [eo, kind, note, vel] of CHORD_SCRIPT) if (eo === o) {
         if (kind === 0) eng.keyOn(note, vel); else if (kind === 1) eng.keyOff(note);
         else if (kind === 2) eng.plateOn(note, vel); else if (kind === 3) eng.plateOff(note); else eng.allNotesOff();

@@ -21,6 +21,14 @@ function WSCoreFactory(SPEC) {
   // (phase + k / PHASE_K). 12 (30°) is not a power of two, so neighbouring positions differ in every band (a shift by a
   // multiple of 2^(12-b) samples would leave band b unchanged), and each extra position costs one more table set.
   const PHASE_K = 12;
+  // SUPERMODULATION (Okto MultiWave Synth beta 0.2): the same idea for SPARSITY and SOURCE WIDTH of the subtractive oscillators,
+  // moved by LFO 1 (sparsity) or LFO 2. The tables are built at SPARSE_K sparsities 0, 1/8 .. 1 (or WIDTH_K widths 0.02 .. 0.98)
+  // and each voice crossfades between the two nearest; one kind of variant per oscillator (VK_*), see slotVariant.
+  const SPARSE_K = 9, WIDTH_K = 9, VK_PHASE = 0, VK_SPARSITY = 1, VK_WIDTH = 2;
+  const VK_N = [PHASE_K, SPARSE_K, WIDTH_K];
+  const WIDTH_MIN = 0.02, WIDTH_MAX = 0.98;
+  const BASS_GAIN = 1.4;    // the chord's bass note plays this much louder (about +3 dB)
+  const QUICK_REL = 0.06;   // a chord note dropped by a live chord change fades out in at most this many seconds
   const LN1000 = Math.log(1000);
   const VOICE_GAIN = 0.4;   // about -8 dB per voice: headroom for chords
   const LIMIT_T = 0.7;      // output soft limiter: transparent below -3 dBFS, never above 0 dBFS
@@ -231,7 +239,9 @@ function WSCoreFactory(SPEC) {
   const SLOTS = SPEC.SLOTS, ROLES = SPEC.ROLES, LFO2_ROLE = SPEC.LFO2_ROLE;
   const NS = SLOTS.length;
   const K = SLOTS.map(s => s.k);
-  const ROLE_PCEN = ROLES.indexOf('pcen'), ROLE_PHASE = ROLES.indexOf('phase');
+  const ROLE_PCEN = ROLES.indexOf('pcen'), ROLE_PHASE = ROLES.indexOf('phase'), ROLE_SPARSITY = ROLES.indexOf('sparsity'), ROLE_WIDTH = ROLES.indexOf('width'),
+    ROLE_TILT = ROLES.indexOf('tilt'), ROLE_ODD = ROLES.indexOf('odd'), ROLE_EVEN = ROLES.indexOf('even'), ROLE_SUS = ROLES.indexOf('sus'),
+    ROLE_MORPH = ROLES.indexOf('morph'), ROLE_FRES = ROLES.indexOf('fres');
   const LVL_EPS = 1e-5;     // an oscillator whose smoothed level is below this is not rendered
 
   // Which oscillators the sound needs: bit s = oscillator s has a level above 0.
@@ -242,18 +252,36 @@ function WSCoreFactory(SPEC) {
   }
   // WAVELET MORPH (beta 0.3): the amounts that can move the sound away from WAVELET; an oscillator whose wavelet is WAVELET 2 has
   // nothing to morph to
-  function morphOn(params) { return params[P.wmorph] > 0 || params[P.lfo_wav] > 0 || params[P.env_wav] !== 0; }
+  // the role LFO 2 moves now (-1: its amount is 0)
+  function lfo2Role(params) { return params[P.lfo2_amt] !== 0 ? LFO2_ROLE[Math.round(params[P.lfo2_target])] : -1; }
+  function morphOn(params) {
+    return params[P.wmorph] > 0 || params[P.lfo_wav] > 0 || params[P.env_wav] !== 0 || params[P.lfo_ew] > 0 || lfo2Role(params) === ROLE_MORPH;
+  }
   function slotMorph(params, s) { return morphOn(params) && Math.round(params[P.wav2]) !== Math.round(params[K[s].wavelet]); }
   function morphNeeded(params) {
     for (let s = 0; s < NS; s++) if (params[K[s].lvl] > 0 && slotMorph(params, s)) return true;
     return false;
   }
-  // SOURCE PHASE (beta 0.4) moved by LFO 2: it targets the phase with an amount; the subtractive oscillators that play get the sets
-  function phaseModOn(params) { return LFO2_ROLE[Math.round(params[P.lfo2_target])] === ROLE_PHASE && params[P.lfo2_amt] !== 0; }
-  function slotPhaseMod(params, s) { return phaseModOn(params) && SLOTS[s].mode === 0 && params[K[s].lvl] > 0; }
-  function phaseModNeeded(params) {
-    for (let s = 0; s < NS; s++) if (slotPhaseMod(params, s)) return true;
+  // SOURCE PHASE (beta 0.4), SPARSITY and SOURCE WIDTH (beta 0.2) moved by an LFO: a subtractive oscillator that plays gets its tables
+  // built at several values (the kind of variant, VK_*, or -1 for none). One kind per oscillator: SPARSITY (LFO 1's amount above 0, or
+  // LFO 2 on SPARSITY) before PHASE (LFO 2) before WIDTH (LFO 2; only a pulse or triangle source has a width).
+  function slotVariant(params, s) {
+    if (SLOTS[s].mode !== 0 || !(params[K[s].lvl] > 0)) return -1;
+    const r = lfo2Role(params);
+    if (params[P.lfo_sp] > 0 || r === ROLE_SPARSITY) return VK_SPARSITY;
+    if (r === ROLE_PHASE) return VK_PHASE;
+    if (r === ROLE_WIDTH) { const w = Math.round(params[K[s].wave]); if (w === 2 || w === 3) return VK_WIDTH; }
+    return -1;
+  }
+  function variantNeeded(params) {
+    for (let s = 0; s < NS; s++) if (slotVariant(params, s) >= 0) return true;
     return false;
+  }
+  // the kinds of all oscillators in one number: the tables are rebuilt when it changes
+  function variantSig(params) {
+    let m = 0;
+    for (let s = 0; s < NS; s++) m |= (slotVariant(params, s) + 1) << (2 * s);
+    return m;
   }
 
   // Builds everything that depends only on structural parameters.
@@ -273,26 +301,35 @@ function WSCoreFactory(SPEC) {
         const w = buildSet(params, s, true, { wavelet: params[P.wav2] });
         t.w2 = { mode: w.mode, mips: w.mips, rms: w.rms };
       }
-      if (slotPhaseMod(params, s)) {
-        t.ph = phaseSets(params, s, params[K[s].wavelet]);
-        if (t.w2) t.w2.ph = phaseSets(params, s, params[P.wav2]);
+      const vk = slotVariant(params, s);
+      if (vk >= 0) {   // SOURCE PHASE / SPARSITY / SOURCE WIDTH moved by an LFO: the other sets of the variant (also for WAVELET 2)
+        t.vk = vk; t.ph = variantSets(params, s, params[K[s].wavelet], vk);
+        if (t.w2) { t.w2.vk = vk; t.w2.ph = variantSets(params, s, params[P.wav2], vk); }
       }
       out.slots.push(t);
     }
     return out;
   }
-  // the tables of subtractive oscillator s at phases a_phase + k / PHASE_K (k = 1 .. PHASE_K - 1), wavelet wav
-  function phaseSets(params, s, wav) {
+  // The other sets of a variant of subtractive oscillator s with wavelet wav. PHASE: phase a_phase + k / PHASE_K for k = 1 .. PHASE_K - 1
+  // (set 0 is the oscillator's own). SPARSITY and WIDTH: the SPARSE_K sparsities k / (SPARSE_K - 1) and the WIDTH_K widths
+  // WIDTH_MIN + k (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1), k = 0 .. K - 1 (all of them; the oscillator's own set is not one of them).
+  function variantSets(params, s, wav, vk) {
     const sets = [];
-    for (let k = 1; k < PHASE_K; k++) {
-      let v = params[K[s].phase] + k / PHASE_K; v -= Math.floor(v);
-      const b = buildSet(params, s, true, { wavelet: wav, phase: v });
+    const first = vk === VK_PHASE ? 1 : 0;
+    for (let k = first; k < VK_N[vk]; k++) {
+      const over = { wavelet: wav };
+      if (vk === VK_PHASE) { let v = params[K[s].phase] + k / PHASE_K; v -= Math.floor(v); over.phase = v; }
+      else if (vk === VK_SPARSITY) over.sparsity = k / (SPARSE_K - 1);
+      else over.width = WIDTH_MIN + k * (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1);
+      const b = buildSet(params, s, true, over);
       sets.push({ mode: 0, mips: b.mips, rms: b.rms });
     }
     return sets;
   }
+  // the set k of a table set t with variants (PHASE: k = 0 is t itself)
+  function variantSet(t, k) { return t.vk === VK_PHASE ? (k === 0 ? t : t.ph[k - 1]) : t.ph[k]; }
 
-  // over: { wavelet, phase } replace the oscillator's own (the WAVELET MORPH set, the phase sets)
+  // over: { wavelet, phase, sparsity, width } replace the oscillator's own (the WAVELET MORPH set, the variants' sets)
   function buildSet(params, s, withMips, over) {
     const k = K[s], mode = SLOTS[s].mode;
     const f = FILTERS[Math.round(over && over.wavelet !== undefined ? over.wavelet : params[k.wavelet])];
@@ -301,10 +338,10 @@ function WSCoreFactory(SPEC) {
     const bandScale = new Float64Array(NB).fill(1);
     if (mode === 0) {
       const ph = over && over.phase !== undefined ? over.phase : params[k.phase];
-      const src = sourceCycle(Math.round(params[k.wave]), params[k.width], ph);
+      const src = sourceCycle(Math.round(params[k.wave]), over && over.width !== undefined ? over.width : params[k.width], ph);
       c = dwt(src, f);
       c[0] = 0;
-      const sp = sparsify(c, params[k.sparsity]);
+      const sp = sparsify(c, over && over.sparsity !== undefined ? over.sparsity : params[k.sparsity]);
       kept = sp.K; nonzero = sp.nz;
       const dry = new Float64Array(N);
       for (let b = 1; b <= NB; b++) {
@@ -429,6 +466,8 @@ function WSCoreFactory(SPEC) {
     this.f0 = 261.63; this.mip = 0; this.pc = 0; this.pw = 1; this.pd = 0;   // its pitch, mip level and position window
     this.own = new Env(); this.pe = 1;                      // its own envelope; its pitch envelope (1 -> 0)
     this.live = false;                                      // rendered in the last block
+    // its place among the sets of each kind of variant (VK_*: phase, sparsity, width), from the start to the end of the block
+    this.vq0 = new Float64Array(3); this.vq1 = new Float64Array(3);
   }
   function Voice() {
     this.active = false; this.gate = false; this.held = false;
@@ -441,7 +480,7 @@ function WSCoreFactory(SPEC) {
     for (let s = 0; s < NS; s++) this.sl.push(new Slot());
     this.fresh = true;
     this.wm0 = 0; this.wm1 = 0;   // WAVELET MORPH position
-    this.ap0 = 0; this.ap1 = 0;   // SOURCE PHASE moved by LFO 2: position among the PHASE_K phase sets (0 .. PHASE_K)
+    this.gain = 1; this.quick = false;   // the chord's bass note plays louder; a note dropped by a live chord change fades out quickly
   }
   // releases the voice's own envelopes (with the AMP and MOD envelopes)
   function relOwn(vc) { for (let s = 0; s < NS; s++) vc.sl[s].own.gate(false); }
@@ -480,7 +519,7 @@ function WSCoreFactory(SPEC) {
     this.pr = [];
     for (let s = 0; s < NS; s++) this.pr.push({ tune: 0, ftype: 0, fcut: 0, fslope: 0, fres: 0, fkey: 0, fenv: 0, fvel: 0, pcen: 0, pwid: 0, pdep: 0,
       bar: new Float64Array(NB), norm: 1, atkRate: new Float64Array(NB), decay: new Float64Array(NB), sus: 1 });
-    this.U = 1; this.topMul = 1; this.role2 = -1; this.d2 = 0;
+    this.U = 1; this.topMul = 1; this.role2 = -1; this.d2 = 0; this.dMorph = 0;
     // per voice and block: the amp envelope (with the velocity gain) per sample, each oscillator's own envelope, end states
     this.envA = new Float64Array(CTRL);
     this.ownBuf = []; this.endPh = [];
@@ -497,6 +536,9 @@ function WSCoreFactory(SPEC) {
     this.plateHeld = new Uint8Array(128);  // notes of the strum plate being touched
     this.chordRoot = -1; this.chordN = 0; this.chordVel = 0; this.chordLastRoot = 60;
     this.chordNote = new Int16Array(MAXV); this.chordOn = new Uint8Array(MAXV); this.strumDue = new Float64Array(MAXV);
+    this.noMicro = false;        // the demo and the evaluation passage play in equal temperament whatever the oriental tuning says
+    this.chordHasBass = false;   // the first note of the chord is the bass (louder)
+    this.nextGain = 1;           // the gain the next note on gives its voice (the chord's bass note)
     this.clock = 0;   // samples rendered since the start (the strum's timing)
     this.chordTypeChanged = false;   // a selector key set chord_type: the host reads it and tells its controller / panel
     this.setSampleRate(sr);
@@ -553,6 +595,8 @@ function WSCoreFactory(SPEC) {
     // Okto MultiWave Synth: CHORD switched on / off or the selector octave moved while keys are held: the chord and the counted keys
     // are released first (nothing generated stays behind)
     if ((id === P.chord_mode || id === P.chord_oct) && old !== v) this.chordReset();
+    // beta 0.2: the chord type, voicing or BASS changed while a root is held: the held chord changes at once
+    else if ((id === P.chord_type || id === P.chord_voicing || id === P.chord_bass) && old !== v && this.chordRoot >= 0) this.rechord();
   };
 
   // Tables: { mode, mips, rms }. Switches with a short crossfade.
@@ -586,6 +630,7 @@ function WSCoreFactory(SPEC) {
     } else if (glide <= 0) vc.pitch = note;
     vc.active = true; vc.gate = true; vc.held = false;
     vc.note = note; vc.target = note; vc.vel = vel;
+    vc.gain = this.nextGain; vc.quick = false;
     vc.age = ++this.counter;
     if (!legato) {
       vc.amp.gate(true); vc.mod.gate(true);
@@ -647,7 +692,8 @@ function WSCoreFactory(SPEC) {
 
   // beta 0.4 fix: a note is released whatever VOICES is now — a preset change between its note on and its note off may
   // have switched mono <-> poly (before, the note off then missed its voice, which played on for ever)
-  E.noteOff = function (note) {
+  // quick (beta 0.2): the chord note dropped by a live chord change: its release is at most QUICK_REL long
+  E.noteOff = function (note, quick) {
     this.keys[note] = 0;
     const hold = this.p[P.hold] >= 0.5;
     const i = this.stack.indexOf(note); if (i >= 0) this.stack.splice(i, 1);   // the mono list keeps held keys only
@@ -662,6 +708,7 @@ function WSCoreFactory(SPEC) {
       }
     }
     for (const vc of this.voices) if (vc.active && vc.gate && vc.note === note) {
+      vc.quick = !!quick;
       if (hold) vc.held = true; else { vc.gate = false; vc.amp.gate(false); vc.mod.gate(false), relOwn(vc); }
     }
   };
@@ -697,8 +744,11 @@ function WSCoreFactory(SPEC) {
   // The engine's notes are reference-counted (holdCnt): a note shared by the chord and a held key keeps sounding until
   // both release it. Below this layer nothing changes: sustain pedal, portamento, voice stealing, velocity.
   E.chordBase = function () { return 24 + 12 * Math.round(this.p[P.chord_oct]); };   // the first key of the selector octave
-  E.holdOn = function (note, vel) { this.holdCnt[note]++; this.noteOn(note, vel); };
-  E.holdOff = function (note) { if (this.holdCnt[note] > 0 && --this.holdCnt[note] === 0) this.noteOff(note); };
+  // gain (beta 0.2): the chord's bass note plays louder (the voice keeps it until it is triggered again)
+  E.holdOn = function (note, vel, gain) { this.holdCnt[note]++; this.nextGain = gain || 1; this.noteOn(note, vel); this.nextGain = 1; };
+  E.holdOff = function (note, quick) { if (this.holdCnt[note] > 0 && --this.holdCnt[note] === 0) this.noteOff(note, quick); };
+  // the gain of chord note k: the bass (the first note of a chord that has one) plays louder
+  E.chordGain = function (k) { return k === 0 && this.chordHasBass ? BASS_GAIN : 1; };
   E.keyOn = function (note, vel) {
     if (note < 0 || note > 127) return;
     if (!(vel > 0)) { this.keyOff(note); return; }
@@ -706,11 +756,14 @@ function WSCoreFactory(SPEC) {
     const base = this.chordBase();
     if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
       const t = SPEC.CHORD_KEYS[note - base];
-      if (this.p[P.chord_type] !== t) { this.p[P.chord_type] = t; this.chordTypeChanged = true; }
+      if (this.p[P.chord_type] !== t) {
+        this.p[P.chord_type] = t; this.chordTypeChanged = true;
+        this.rechord();   // beta 0.2: a held root takes the new chord at once (the left hand remembers its last chord for the next root)
+      }
       return;
     }
     if (note === this.chordRoot) {   // the root pressed again (a host repeating a note on): the chord notes start again
-      for (let k = 0; k < this.chordN; k++) if (this.chordOn[k]) this.noteOn(this.chordNote[k], vel);
+      for (let k = 0; k < this.chordN; k++) if (this.chordOn[k]) { this.nextGain = this.chordGain(k); this.noteOn(this.chordNote[k], vel); this.nextGain = 1; }
       return;
     }
     if (this.plainHeld[note]) { this.noteOn(note, vel); return; }   // a key repeated without its release: once in the count
@@ -731,14 +784,19 @@ function WSCoreFactory(SPEC) {
   // stay in one register: C4 -> C E G, G4 -> D G B, A4 -> C E A). BASS: the root's pitch class one octave below (below the
   // window when FOLDED). At most VOICES notes: the chord is cut from the top, the root is always kept, then the bass (never
   // with a single voice). Notes above 127 are dropped.
+  // beta 0.2: BASS = the root two octaves below (never under C1: an octave up when it would be), played louder (chordGain);
+  // it is the first note of the list (chordHasBass).
   E.chordNotes = function (root, out) {
     const c = SPEC.CHORDS[Math.round(this.p[P.chord_type])], folded = this.p[P.chord_voicing] >= 0.5;
-    const win = 12 * Math.floor(root / 12), rootNote = folded ? win + root % 12 : root, bassNote = rootNote - 12;
+    const win = 12 * Math.floor(root / 12), rootNote = folded ? win + root % 12 : root;
+    let bassNote = rootNote - 24;
+    while (bassNote < 24) bassNote += 12;
     const list = [];
     for (const iv of c.iv) { const n = folded ? win + (root + iv) % 12 : root + iv; if (n <= 127 && !list.includes(n)) list.push(n); }
     list.sort((a, b) => a - b);
     const maxV = Math.max(1, Math.round(this.p[P.v_voices]));
-    const withBass = this.p[P.chord_bass] >= 0.5 && bassNote >= 0 && maxV >= 2;
+    const withBass = this.p[P.chord_bass] >= 0.5 && bassNote < rootNote && maxV >= 2;
+    this.chordHasBass = withBass;
     while (list.length + (withBass ? 1 : 0) > maxV) {
       let k = list.length - 1;
       while (k > 0 && list[k] === rootNote) k--;
@@ -760,12 +818,33 @@ function WSCoreFactory(SPEC) {
   // at every block: the chord notes whose time has come (the strum; block boundaries, identical in both engines)
   E.strumTick = function () {
     if (this.chordRoot < 0) return;
-    for (let k = 0; k < this.chordN; k++) if (!this.chordOn[k] && this.strumDue[k] <= this.clock) { this.chordOn[k] = 1; this.holdOn(this.chordNote[k], this.chordVel); }
+    for (let k = 0; k < this.chordN; k++) if (!this.chordOn[k] && this.strumDue[k] <= this.clock) { this.chordOn[k] = 1; this.holdOn(this.chordNote[k], this.chordVel, this.chordGain(k)); }
   };
   E.endChord = function () {   // the root released: its notes (pending ones are forgotten)
     if (this.chordRoot < 0) return;
     for (let k = 0; k < this.chordN; k++) if (this.chordOn[k]) this.holdOff(this.chordNote[k]);
     this.chordRoot = -1; this.chordN = 0;
+  };
+  // beta 0.2: the held root takes the chord of the new type / voicing / BASS at once. Only the notes of the chord now played sound:
+  // the notes that are not in the new chord fade out quickly (QUICK_REL), the ones in both go on untouched, the new ones start with
+  // the root's velocity (without STRUM). A note held by hand over the chord is not touched (it is counted apart).
+  E.rechord = function () {
+    if (this.chordRoot < 0) return;
+    const oldN = this.chordN, oldNote = Array.from(this.chordNote.subarray(0, oldN)), oldOn = Array.from(this.chordOn.subarray(0, oldN));
+    const next = new Int16Array(MAXV), n = this.chordNotes(this.chordRoot, next);
+    for (let i = 0; i < oldN; i++) {
+      if (!oldOn[i]) continue;
+      let stays = false;
+      for (let j = 0; j < n; j++) if (next[j] === oldNote[i]) stays = true;
+      if (!stays) this.holdOff(oldNote[i], true);
+    }
+    for (let j = 0; j < n; j++) {
+      let was = false;
+      for (let i = 0; i < oldN; i++) if (oldOn[i] && oldNote[i] === next[j]) was = true;
+      this.chordNote[j] = next[j]; this.chordOn[j] = 1;
+      if (!was) this.holdOn(next[j], this.chordVel, this.chordGain(j));
+    }
+    this.chordN = n;
   };
   E.chordReset = function () {   // the chord and the counted keys released (CHORD or KEYS OCT changed)
     this.endChord();
@@ -787,6 +866,18 @@ function WSCoreFactory(SPEC) {
   E.plateOff = function (note) {
     if (note < 0 || note > 127 || !this.plateHeld[note]) return;
     this.plateHeld[note] = 0; this.holdOff(note);
+  };
+
+  // ORIENTAL KEYBOARD (beta 0.2): how far, in semitones, the key playing this pitch is moved from its equal-tempered pitch. TUNING 0
+  // (Western) or noMicro: 0 (the sound is bit for bit the old one). Otherwise the cents of MICRO[tuning - 1][scale][semitones above the
+  // tonic], interpolated between the two neighbouring keys while a note glides (an integer pitch gives the table's value).
+  E.microSemis = function (pitch) {
+    const mode = Math.round(this.p[P.mt_mode]);
+    if (mode === 0 || this.noMicro) return 0;
+    const t = SPEC.MICRO[mode - 1][Math.round(this.p[P.mt_scale])];
+    const x = pitch - Math.round(this.p[P.mt_tonic]), f = Math.floor(x), fr = x - f;
+    const a = ((f % 12) + 12) % 12, b = (a + 1) % 12;
+    return (t[a] + fr * (t[b] - t[a])) / 100;
   };
 
   E.lfoTick = function (n) {
@@ -835,6 +926,9 @@ function WSCoreFactory(SPEC) {
     const t2 = Math.round(p[P.lfo2_target]), tp = SPEC.PARAMS[SPEC.LFO2_TARGETS[t2]];
     const role2 = LFO2_ROLE[t2], d2 = p[P.lfo2_amt] * this.lfo2 * 0.5 * (tp.max - tp.min);
     this.role2 = role2; this.d2 = d2;
+    // the odd (1, 3, 5 ...) or even (2, 4 ...) bands' drawbars that LFO 2 moves, and the morph position it adds
+    const dOdd = role2 === ROLE_ODD ? d2 : 0, dEven = role2 === ROLE_EVEN ? d2 : 0;
+    this.dMorph = role2 === ROLE_MORPH ? d2 : 0;
     // unison copies (detune and pan are the same for every oscillator)
     const U = Math.round(p[P.v_unison]), det = p[P.v_detune], width = p[P.v_width], uGain = 1 / Math.sqrt(U);
     this.U = U;
@@ -861,16 +955,20 @@ function WSCoreFactory(SPEC) {
       q.pcen = roleVal(p, k, 6, role2, d2); q.pwid = roleVal(p, k, 7, role2, d2); q.pdep = roleVal(p, k, 8, role2, d2);
       if (SLOTS[s].mode === 1) {   // additive: drawbars x tilt, their sum, the band envelopes' steps (the same for every voice)
         const atk = p[k.atk], spread = p[k.spread], body = p[k.body], bright = p[k.bright];
+        const tilt = roleVal(p, k, ROLE_TILT, role2, d2);
         let norm = 0;
         for (let b = 0; b < NB; b++) {
-          const bar = p[k.bar1 + b] * Math.exp(p[k.tilt] * b * (Math.LN10 / 20));
+          let bv = p[k.bar1 + b];
+          const dBar = (b & 1) === 0 ? dOdd : dEven;   // band b + 1 is odd when b is even
+          if (dBar !== 0) bv = Math.min(1, Math.max(0, bv + dBar));
+          const bar = bv * Math.exp(tilt * b * (Math.LN10 / 20));
           q.bar[b] = bar; norm += bar;
           const t = b / 10;
           q.atkRate[b] = n / (atk * Math.pow(16, spread * (t - 0.5)) * sr);
           const dt = body * Math.pow(bright / body, t);
           q.decay[b] = Math.exp(-n * LN1000 / (dt * sr));
         }
-        q.norm = Math.max(1, norm); q.sus = p[k.sus];
+        q.norm = Math.max(1, norm); q.sus = roleVal(p, k, ROLE_SUS, role2, d2);
       }
     }
   };
@@ -883,17 +981,15 @@ function WSCoreFactory(SPEC) {
       vc.pitch += (vc.target - vc.pitch) * (1 - Math.exp(-n * 4.6 / (glide * sr)));
       if (Math.abs(vc.target - vc.pitch) < 1e-3) vc.pitch = vc.target;
     } else vc.pitch = vc.target;
-    const semis = vc.pitch + 12 * p[P.v_oct] + p[P.v_fine] / 100 + 2 * p[P.bend] +
+    const semis = vc.pitch + this.microSemis(vc.pitch) + 12 * p[P.v_oct] + p[P.v_fine] / 100 + 2 * p[P.bend] +
       this.lfo * (p[P.lfo_pitch] + 50 * p[P.modwheel]) / 100;
     vc.f0 = 440 * Math.pow(2, (semis - 69) / 12);   // the voice's pitch (the sub oscillator follows it); each oscillator adds its tuning
     const mod = vc.mod.step(n, sr, p[P.mod_a], p[P.mod_d], p[P.mod_s], p[P.mod_r]);
     // WAVELET MORPH position of this voice (0 = WAVELET, 1 = WAVELET 2): MORPH + LFO + mod envelope, moving from wm0 to wm1
     // across the block
-    const wm = Math.min(1, Math.max(0, p[P.wmorph] + p[P.lfo_wav] * this.lfo + p[P.env_wav] * mod));
+    // (beta 0.2: LFO 2 can add to the morph, LFO 1 can swing the envelope's reach: ENV>WAV + LFO1 TO ENV>WAV · LFO)
+    const wm = Math.min(1, Math.max(0, p[P.wmorph] + this.dMorph + p[P.lfo_wav] * this.lfo + (p[P.env_wav] + p[P.lfo_ew] * this.lfo) * mod));
     vc.wm0 = vc.fresh ? wm : vc.wm1; vc.wm1 = wm;
-    // SOURCE PHASE moved by LFO 2 (beta 0.4): the voice's place among the PHASE_K phase sets, from ap0 to ap1 (round the cycle)
-    let ap = (this.role2 === ROLE_PHASE ? this.d2 : 0) * PHASE_K; ap -= Math.floor(ap / PHASE_K) * PHASE_K;
-    vc.ap0 = vc.fresh ? ap : vc.ap1; vc.ap1 = ap;
     vc.fresh = false;
 
     for (let s = 0; s < NS; s++) {
@@ -912,8 +1008,22 @@ function WSCoreFactory(SPEC) {
       sl.mip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : Math.min(NMIP - 1, Math.ceil(Math.log2(1024 / maxH) - 1e-9));
       // scale filter
       const cut = q.fcut + (1 - q.fkey) * Math.log2(261.63 / f0) + q.fenv * mod + p[P.lfo_cut] * this.lfo + q.fvel * (vc.vel - 1);
-      filterGains(q.ftype, cut, q.fslope, q.fres, this.fg);
+      // LFO 1 TO RESO: the resonance swings by ± the amount (dB), kept in 0 .. 24
+      const res = p[P.lfo_res] > 0 ? Math.min(24, Math.max(0, q.fres + p[P.lfo_res] * this.lfo)) : q.fres;
+      filterGains(q.ftype, cut, q.fslope, res, this.fg);
       const fresh = !sl.live;   // a note's first block, or the oscillator just came in: the gains start at their target
+      if (SLOTS[s].mode === 0) {
+        // the voice's place among the sets of each kind of variant (the tables' own kind decides which one is read, renderTable):
+        // PHASE: LFO 2's move round the cycle; SPARSITY: the oscillator's sparsity + LFO 1 · LFO 1 TO SPARSITY + LFO 2's move; WIDTH:
+        // the source width + LFO 2's move
+        let qp = (this.role2 === ROLE_PHASE ? this.d2 : 0) * PHASE_K; qp -= Math.floor(qp / PHASE_K) * PHASE_K;
+        const sp = Math.min(1, Math.max(0, p[k.sparsity] + p[P.lfo_sp] * this.lfo + (this.role2 === ROLE_SPARSITY ? this.d2 : 0)));
+        const wd = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, p[k.width] + (this.role2 === ROLE_WIDTH ? this.d2 : 0)));
+        const qs = sp * (SPARSE_K - 1), qw = (wd - WIDTH_MIN) / (WIDTH_MAX - WIDTH_MIN) * (WIDTH_K - 1);
+        sl.vq0[VK_PHASE] = fresh ? qp : sl.vq1[VK_PHASE]; sl.vq1[VK_PHASE] = qp;
+        sl.vq0[VK_SPARSITY] = fresh ? qs : sl.vq1[VK_SPARSITY]; sl.vq1[VK_SPARSITY] = qs;
+        sl.vq0[VK_WIDTH] = fresh ? qw : sl.vq1[VK_WIDTH]; sl.vq1[VK_WIDTH] = qw;
+      }
       if (SLOTS[s].mode === 1) {   // additive: the band envelopes (a returning oscillator starts them again)
         if (fresh) { sl.scale.fill(0); sl.scaleAtk.fill(1); }
         for (let b = 0; b < NB; b++) {
@@ -950,11 +1060,14 @@ function WSCoreFactory(SPEC) {
     let lev = vc.amp.level, st = vc.amp.stage;
     const s = p[P.amp_s];
     const aInc = 1 / (p[P.amp_a] * sr), dC = Math.exp(-LN1000 / (p[P.amp_d] * sr)), rC = Math.exp(-LN1000 / (p[P.amp_r] * sr));
-    const velGain = VOICE_GAIN * (1 - p[P.amp_vel] * (1 - vc.vel));
+    // beta 0.2: the chord's bass note plays louder (vc.gain; exactly the old value when it is 1), and a note dropped by a live chord
+    // change fades out in QUICK_REL at most
+    const velGain = VOICE_GAIN * (1 - p[P.amp_vel] * (1 - vc.vel)) * vc.gain;
+    const rQ = vc.quick && p[P.amp_r] > QUICK_REL ? Math.exp(-LN1000 / (QUICK_REL * sr)) : rC;
     for (let i = 0; i < n; i++) {
       if (st === 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
       else if (st === 2) lev = s + (lev - s) * dC;
-      else if (st === 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
+      else if (st === 3) { lev *= rQ; if (lev < 1e-5) { lev = 0; st = 0; } }
       env[i] = lev * velGain;
     }
     this.endLevel = lev; this.endStage = st;
@@ -1069,12 +1182,14 @@ function WSCoreFactory(SPEC) {
       return;
     }
     const gain1 = gain0 + gainInc * n;
-    const a0 = Math.floor(vc.ap0) % PHASE_K, f0 = vc.ap0 - Math.floor(vc.ap0), b0 = (a0 + 1) % PHASE_K;
-    const a1 = Math.floor(vc.ap1) % PHASE_K, f1 = vc.ap1 - Math.floor(vc.ap1), b1 = (a1 + 1) % PHASE_K;
-    for (let k = 0; k < PHASE_K; k++) {
+    const vk = t.vk, KN = VK_N[vk], sl = vc.sl[s], q0 = sl.vq0[vk], q1 = sl.vq1[vk];
+    // PHASE wraps round the cycle; SPARSITY and WIDTH stop at their ends (the last set has no neighbour above it)
+    const a0 = Math.min(Math.floor(q0), KN - 1) % KN, f0 = q0 - Math.floor(q0), b0 = vk === VK_PHASE ? (a0 + 1) % KN : Math.min(a0 + 1, KN - 1);
+    const a1 = Math.min(Math.floor(q1), KN - 1) % KN, f1 = q1 - Math.floor(q1), b1 = vk === VK_PHASE ? (a1 + 1) % KN : Math.min(a1 + 1, KN - 1);
+    for (let k = 0; k < KN; k++) {
       const s0 = k === a0 ? 1 - f0 : k === b0 ? f0 : 0, s1 = k === a1 ? 1 - f1 : k === b1 ? f1 : 0;
       if (s0 === 0 && s1 === 0) continue;
-      const k0 = gain0 * s0, k1 = gain1 * s1, set = k === 0 ? t : t.ph[k - 1];
+      const k0 = gain0 * s0, k1 = gain1 * s1, set = variantSet(t, k);
       this.renderVoice(vc, n, s, set.mode, set.mips, set.rms, fade0, fadeInc, invert, k0, (k1 - k0) / n);
     }
   };
@@ -1289,9 +1404,9 @@ function WSCoreFactory(SPEC) {
   }
 
   return {
-    N, NB, NL, DRY, NMIP, TW, CTRL, MAXV, PHASE_K, NS, P, NP, K, SLOTS,
+    N, NB, NL, DRY, NMIP, TW, CTRL, MAXV, PHASE_K, SPARSE_K, WIDTH_K, VK_PHASE, VK_SPARSITY, VK_WIDTH, NS, P, NP, K, SLOTS,
     rng, toPlain, toNorm, format, parse, defaults,
-    FILTERS, dwt, idwt, fft, sourceCycle, sparsify, patternCoeffs, buildTables, tableNeeds, morphNeeded, phaseModNeeded,
+    FILTERS, dwt, idwt, fft, sourceCycle, sparsify, patternCoeffs, buildTables, tableNeeds, morphNeeded, slotVariant, variantNeeded, variantSig,
     filterGains, windowValue, staticGains, displayCycle, atomShape, Engine,
     NOTE_NAMES, chordName, plateNotes,   // Okto MultiWave Synth
   };

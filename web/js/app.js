@@ -42,16 +42,16 @@
     v = Math.min(p.max, Math.max(p.min, v));
     if (p.curve === 'int' || p.curve === 'choice') v = Math.round(v);
     if (values[i] === v) return;
-    const needs = C.tableNeeds(values), morph = C.morphNeeded(values), phm = C.phaseModNeeded(values);
+    const needs = C.tableNeeds(values), morph = C.morphNeeded(values), vsig = C.variantSig(values);
     values[i] = v;
     post({ t: 'p', i, v });
     ui.refresh(i);
     // an oscillator's level rebuilds the tables only when it reaches or leaves 0 (it plays or not); the WAVELET MORPH when it
-    // starts or stops needing the WAVELET 2 tables; LFO 2 when it starts or stops moving the SOURCE PHASE (beta 0.4); the
+    // starts or stops needing the WAVELET 2 tables; an LFO when it starts or stops moving the SOURCE PHASE, SPARSITY or SOURCE WIDTH (the variants tables); the
     // OSC tabs only choose the oscillator shown (its display is built again, the sound does not change)
     if (p.structural) scheduleDisplay();
     if ((p.structural && i !== P.osc_view) || C.tableNeeds(values) !== needs || C.morphNeeded(values) !== morph ||
-        C.phaseModNeeded(values) !== phm) scheduleBuild();
+        C.variantSig(values) !== vsig) scheduleBuild();
     // the OSC tabs only choose the panel shown: switching them does not modify the sound
     if (user && !p.hidden && !p.perf && i !== P.osc_view) { if (evalLabel) ui.setPresetName(evalLabel, true); else if (!dirty) { dirty = true; ui.setPresetName(presetName, true); } }
     if (user && !p.hidden) saveStateSoon();
@@ -96,7 +96,7 @@
       if (!s) return null;
       transfer.push(s.mips.buffer, s.rms.buffer);
       const o = { mode: s.mode, mips: s.mips, rms: s.rms };
-      if (s.ph) o.ph = s.ph.map(pack);
+      if (s.ph) { o.vk = s.vk; o.ph = s.ph.map(pack); }
       if (s.w2) o.w2 = pack(s.w2);
       return o;
     };

@@ -16,7 +16,13 @@ static const KeyEv kChordScript[] = {
   {0, 0, 48, 1}, {0, 0, 67, 0.9}, {12800, 0, 64, 0.7}, {19200, 2, 74, 0.8}, {22400, 3, 74, 0}, {22400, 2, 79, 0.8},
   {25600, 3, 79, 0}, {25600, 1, 67, 0}, {38400, 1, 64, 0}, {38400, 0, 55, 1}, {38400, 0, 60, 0.8}, {64000, 1, 60, 0},
   {70400, 0, 72, 0.85}, {70400, 0, 40, 0.6}, {105600, 4, 0, 0}};
-static void render(const double* params, int idx, const std::string& name, bool chord, double tempo, const char* outdir) {
+// beta 0.2, kind "chordlive": the held chord changes while the root is held (same events as LIVE_SCRIPT in tools/dsp_compare.js);
+// kind 5 = setParam(note = parameter id, vel = value)
+static const KeyEv kLiveScript[] = {
+  {0, 0, 48, 1}, {0, 0, 67, 0.9}, {12800, 0, 51, 1}, {25600, 0, 50, 1}, {38400, 0, 59, 1}, {51200, 0, 53, 1},
+  {64000, 5, P_CHORD_BASS, 0}, {70400, 5, P_CHORD_BASS, 1}, {76800, 0, 56, 1}, {83200, 5, P_CHORD_VOICING, 0}, {89600, 0, 49, 1},
+  {96000, 1, 67, 0}, {100000, 4, 0, 0}};
+static void render(const double* params, int idx, const std::string& name, int chord, double tempo, const char* outdir) {
   const int sr = 48000, n = sr * 3, blk = 128;
   Engine eng(sr);
   eng.setTempo(tempo);   // 0 = no tempo (the factory presets, the web app)
@@ -26,7 +32,11 @@ static void render(const double* params, int idx, const std::string& name, bool 
   std::vector<float> L(n), R(n);
   auto t0 = std::chrono::steady_clock::now();
   for (int o = 0; o < n; o += blk) {
-    if (chord) {
+    if (chord == 2) {
+      for (const KeyEv& e : kLiveScript) if (e.o == o) {
+        if (e.kind == 0) eng.keyOn(e.note, e.vel); else if (e.kind == 1) eng.keyOff(e.note); else if (e.kind == 4) eng.allNotesOff(); else eng.setParam(e.note, e.vel);
+      }
+    } else if (chord) {
       for (const KeyEv& e : kChordScript) if (e.o == o) {
         if (e.kind == 0) eng.keyOn(e.note, e.vel); else if (e.kind == 1) eng.keyOff(e.note);
         else if (e.kind == 2) eng.plateOn(e.note, e.vel); else if (e.kind == 3) eng.plateOff(e.note); else eng.allNotesOff();
@@ -59,7 +69,7 @@ int main(int argc, char** argv) {
     double params[kNumParams];
     for (int i = 0; i < kNumParams; i++) ss >> params[i];
     if (!ss) { std::fprintf(stderr, "case %d: not %d values\n", idx, kNumParams); return 1; }
-    render(params, idx, line.substr(bar + 3), kind == "chord", tempo, outdir);
+    render(params, idx, line.substr(bar + 3), kind == "chordlive" ? 2 : kind == "chord" ? 1 : 0, tempo, outdir);
     idx++;
   }
   std::printf("%d cases rendered\n", idx);

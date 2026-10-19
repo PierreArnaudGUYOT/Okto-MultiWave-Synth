@@ -53,5 +53,33 @@ module.exports = function cases(SPEC, C) {
   variant('chord stacked, strum, 4 voices', { chord_mode: 1, chord_voicing: 0, chord_strum: 0.02, v_voices: 4, chord_type: 2 }, { kind: 'chord' });
   variant('chord mono, strum 50 ms', { chord_mode: 1, v_voices: 1, chord_strum: 0.05 }, { kind: 'chord' });
   variant('chord with A1 + A2 own envelope', { chord_mode: 1, a2_lvl: 0.6, a2_oct: 1, a2_eon: 1, a2_ed: 0.1, a2_es: 0 }, { kind: 'chord' });
+  // beta 0.2: SUPERMODULATION. LFO 1 on SPARSITY / RESO / ENV>WAV, LFO 2 on the targets that need the variants' tables (SPARSITY, SOURCE
+  // WIDTH) and on the additive ones (TILT, ODD / EVEN BARS, SCALE SUSTAIN) and the MORPH
+  const A_BASE = SPEC.PRESETS.findIndex(p => p.name === 'A · Warm Pad');
+  const va = (name, set, opt) => variant(name, Object.assign({ a1_lvl: 1 }, set), opt, A_BASE);
+  const T = (role) => SPEC.LFO2_ROLE.indexOf(SPEC.ROLES.indexOf(role));
+  va('LFO 1 -> sparsity, Haar saw', { wavelet: 0, a_wave: 0, a_sparsity: 0.3, lfo_sp: 0.5, lfo_rate: 2.2, f_cutoff: 9 });
+  va('LFO 1 -> sparsity on A1 + A2 + morph', { a1_lvl: 0.6, a2_lvl: 0.5, a2_wave: 2, a2_width: 0.3, a2_wavelet: 2, a_sparsity: 0.1, a2_sparsity: 0.5, lfo_sp: 0.6, lfo_rate: 3,
+    lfo_shape: 1, wav2: 3, wmorph: 0.3, lfo_wav: 0.2 });
+  va('LFO 1 + LFO 2 -> sparsity (two sources)', { wavelet: 1, a_sparsity: 0.4, lfo_sp: 0.3, lfo_rate: 2, lfo2_target: T('sparsity'), lfo2_amt: 0.5, lfo2_rate: 0.7 });
+  va('LFO 2 -> sparsity, sample & hold', { wavelet: 2, a_sparsity: 0.6, lfo2_target: T('sparsity'), lfo2_amt: -0.9, lfo2_rate: 5, lfo2_shape: 4 });
+  va('LFO 2 -> source width, pulse', { wavelet: 1, a_wave: 2, a_width: 0.4, lfo2_target: T('width'), lfo2_amt: 0.8, lfo2_rate: 1.5 });
+  va('LFO 2 -> source width on A1 triangle + A2 pulse', { a1_lvl: 0.5, a2_lvl: 0.5, a_wave: 3, a_width: 0.3, a2_wave: 2, a2_width: 0.7, a2_wavelet: 3, lfo2_target: T('width'),
+    lfo2_amt: -0.7, lfo2_rate: 2.5, lfo2_shape: 1 });
+  va('LFO 1 -> reso', { f_cutoff: 6, f_res: 8, lfo_res: 10, lfo_rate: 3 });
+  va('LFO 1 -> reso on A1 + B1 (kept in range)', { a1_lvl: 0.5, b1_lvl: 0.6, f_cutoff: 7, f_res: 1, lfo_res: 20, lfo_rate: 4, lfo_shape: 3, b1_fcut: 6, b1_fres: 22 });
+  va('LFO 1 -> ENV>WAV with morph', { wav2: 4, wavelet: 0, wmorph: 0.2, env_wav: 0.4, lfo_ew: 0.5, lfo_rate: 2.5, mod_a: 0.3, mod_d: 0.6, mod_s: 0.5 });
+  va('LFO 2 -> morph', { wav2: 5, wavelet: 1, wmorph: 0.3, lfo2_target: T('morph'), lfo2_amt: 0.9, lfo2_rate: 2 });
+  for (const role of ['tilt', 'odd', 'even', 'sus']) {
+    variant('LFO 2 -> ' + role + ' on B1 + B2', { a1_lvl: 0, b1_lvl: 0.6, b2_lvl: 0.5, b2_pattern: 2, b2_oct: 1, b_tilt: -4, b_bar3: 0.5, b_bar4: 0.5, b2_bar1: 0.5, b2_bar2: 0.5, b2_bar5: 0.4,
+      b_body: 2, b_bright: 0.6, b_sus: 0.5, b2_sus: 0.4, lfo2_target: T(role), lfo2_amt: 0.8, lfo2_rate: 2.2 });
+  }
+  // the chord keyboard with BASS two octaves down and louder, and changing while the root is held
+  variant('chord live changes (BASS, VOICING switched live)', { chord_mode: 1, chord_bass: 1, chord_voicing: 1, amp_r: 1.5, v_voices: 8 }, { kind: 'chordlive' });
+  variant('chord live changes, 4 voices, strum', { chord_mode: 1, chord_bass: 1, chord_voicing: 0, v_voices: 4, chord_strum: 0.03, amp_r: 0.4 }, { kind: 'chordlive' });
+  // ORIENTAL KEYBOARD: both tunings, a tonic, a glide (the offset follows the gliding pitch), the sub oscillator and the chord keyboard
+  va('oriental Arabic Rast on C, notes', { mt_mode: 1, mt_scale: 0, mt_tonic: 0 });
+  va('oriental Turkish Hicaz on D, glide', { mt_mode: 2, mt_scale: 2, mt_tonic: 2, v_glide: 0.15, v_porta: 1, sub_level: 0.3 });
+  va('oriental Arabic Bayati on D with chord keyboard', { mt_mode: 1, mt_scale: 1, mt_tonic: 2, chord_mode: 1, chord_bass: 1 }, { kind: 'chord' });
   return out;
 };

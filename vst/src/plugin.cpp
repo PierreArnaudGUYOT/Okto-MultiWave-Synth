@@ -390,17 +390,20 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
             // an oscillator's level rebuilds the tables only when it reaches or leaves 0 (the oscillator plays or not)
             bool levelEnds = false;
             for (int s = 0; s < NS; s++) if (id == (ParamID)kSlots[s].lvl && (old > 0) != (pv > 0)) levelEnds = true;
-            // WAVELET MORPH needs (or no longer needs) the WAVELET 2 tables when one of its amounts leaves 0
-            const bool morphEnds = (id == (ParamID)P_WMORPH || id == (ParamID)P_LFO_WAV || id == (ParamID)P_ENV_WAV) && ((old == 0) != (pv == 0));
-            // SOURCE PHASE moved by LFO 2 (beta 0.4): the phase tables become needed or are no longer needed
-            const bool phaseEnds = (id == (ParamID)P_LFO2_AMT && (old == 0) != (pv == 0)) ||
-                                   (id == (ParamID)P_LFO2_TARGET && (kLfo2Role[(int)jsRound(old)] == ROLE_PHASE) != (kLfo2Role[(int)jsRound(pv)] == ROLE_PHASE));
-            if ((kParams[id].structural && id != (ParamID)P_OSC_VIEW) || levelEnds || morphEnds || phaseEnds) structVersion.fetch_add(1);
+            // WAVELET MORPH needs (or no longer needs) the WAVELET 2 tables, and an LFO starts or stops moving the SOURCE PHASE, SPARSITY or
+            // SOURCE WIDTH (the variants' tables): compared with what the tables in use were built for
+            const bool morph = morphNeeded(engine.p); const int vsig = variantSig(engine.p);
+            const bool tablesEnd = morph != lastMorph || vsig != lastVarSig;
+            lastMorph = morph; lastVarSig = vsig;
+            if ((kParams[id].structural && id != (ParamID)P_OSC_VIEW) || levelEnds || tablesEnd) structVersion.fetch_add(1);
           }
         }
       }
     }
-    if (stateDirty.exchange(false)) for (int i = 0; i < kNumParams; i++) engine.setParam(i, plain[i].load());
+    if (stateDirty.exchange(false)) {
+      for (int i = 0; i < kNumParams; i++) engine.setParam(i, plain[i].load());
+      lastMorph = morphNeeded(engine.p); lastVarSig = variantSig(engine.p);   // (a loaded state rebuilds the tables itself)
+    }
 
     // 2. new tables from the builder thread
     int pend = pendingIdx.exchange(-1);
@@ -463,6 +466,8 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     IEventList* events = data.inputEvents;
     int32 ne = events ? events->getEventCount() : 0;
     const bool seqOn = seqI >= 0 && !seqWait;
+    // the listening passage plays in equal temperament (whatever the oriental tuning says), tails included
+    if (seqOn) engine.noMicro = true; else if (engine.noMicro && seqI < 0 && !engine.anyVoice()) engine.noMicro = false;
     int32 pos = 0, hi = 0;
     for (;;) {
       // the next host event and the next passage event: the earlier first (the passage first on the same sample)
@@ -565,6 +570,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
   std::atomic<double> plain[kNumParams];
   std::atomic<bool> stateDirty{true};
   std::atomic<uint32_t> structVersion{1}, builtVersion{0};
+  bool lastMorph = false; int lastVarSig = 0;   // the morph / variants the tables in use were built for (audio thread)
   Tables sets[kSets];
   std::atomic<int> setState_[kSets];
   std::atomic<int> pendingIdx{-1};

@@ -19,9 +19,9 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: 'beta 0.1',
-  versionNum: '0.1.0',
-  date: '2026-10-18',
+  version: 'beta 0.2',
+  versionNum: '0.2.0',
+  date: '2026-10-19',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
 };
@@ -126,10 +126,15 @@ add('lfo2_shape', 'LFO 2 Shape', 'SHAPE', { curve: 'choice', fmt: 'choice', min:
   choices: ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold'], choiceShort: ['SINE', 'TRI', 'SAW', 'SQR', 'S&H'] });
 add('lfo2_rate', 'LFO 2 Rate', 'RATE', { curve: 'exp', fmt: 'hz', min: 0.05, max: 20, def: 1 });
 add('lfo2_amt', 'LFO 2 Amount', 'AMOUNT', { fmt: 'bipct', min: -1, max: 1, def: 0 });
-add('lfo2_target', 'LFO 2 Target', 'TARGET', { curve: 'choice', fmt: 'choice', min: 0, max: 9, def: 0,
+// Okto MultiWave Synth beta 0.2: SUPERMODULATION. LFO 2 reaches every control of the wavelet oscillators (the choices from SPARSITY on are
+// appended): SPARSITY and SOURCE WIDTH (the subtractive oscillators' tables are then built at several values and each voice
+// crossfades between the two nearest, like SOURCE PHASE), TILT, ODD BARS, EVEN BARS and SCALE SUSTAIN (the additive ones), and the
+// WAVELET MORPH position. LFO 1 gains three more amounts: SPARSITY, RESO and ENV>WAV (the envelope's reach on the morph).
+add('lfo2_target', 'LFO 2 Target', 'TARGET', { curve: 'choice', fmt: 'choice', min: 0, max: 16, def: 0,
   choices: ['Cutoff', 'Slope', 'Resonance', 'Key Tracking', 'Envelope Amount', 'Velocity Amount', 'Position', 'Window Width', 'Window Depth',
-    'Source Phase'],
-  choiceShort: ['CUTOFF', 'SLOPE', 'RESO', 'KEY TRK', 'ENV AMT', 'VEL AMT', 'POSITION', 'WIDTH', 'DEPTH', 'PHASE'] });
+    'Source Phase', 'Sparsity', 'Source Width', 'Tilt', 'Odd Bars', 'Even Bars', 'Scale Sustain', 'Wavelet Morph'],
+  choiceShort: ['CUTOFF', 'SLOPE', 'RESO', 'KEY TRK', 'ENV AMT', 'VEL AMT', 'POSITION', 'WIDTH', 'DEPTH', 'PHASE', 'SPARSITY', 'SRC WIDTH',
+    'TILT', 'ODD BARS', 'EVEN BARS', 'SCALE SUS', 'MORPH'] });
 // beta 0.4: SOURCE PHASE (engine A). The source wave is moved inside the cycle before the wavelet transform: sample i is
 // the wave at frac(i/N + phase) (the noise cycle is shifted by round(phase·N) samples). The transform is shift-variant, so
 // the scale filter, the sparsity and the position window meet other atoms and the timbre changes: strongly with Haar and
@@ -195,7 +200,8 @@ add('chord_type', 'Chord Type', 'TYPE', { curve: 'choice', fmt: 'choice', min: 0
 add('chord_oct', 'Chord Keys Octave', 'KEYS OCT', { curve: 'choice', fmt: 'choice', min: 0, max: CHORD_OCTAVES.length - 1, def: 2, perf: true,
   choices: CHORD_OCTAVES, choiceShort: CHORD_OCTAVES.map(s => s.slice(0, 2)) });
 add('chord_voicing', 'Chord Voicing', 'VOICING', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 1, perf: true, choices: ['Stacked', 'Folded'], choiceShort: ['STACKED', 'FOLDED'] });
-add('chord_bass', 'Chord Bass', 'BASS', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 0, perf: true, choices: ['Off', 'On'], choiceShort: ['OFF', 'BASS'] });
+// beta 0.2: BASS is on by default: a bass note two octaves below the chord's root plays with the chord, a little louder
+add('chord_bass', 'Chord Bass', 'BASS', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 1, perf: true, choices: ['Off', 'On'], choiceShort: ['OFF', 'BASS'] });
 add('chord_strum', 'Chord Strum', 'STRUM', { fmt: 'sec', min: 0, max: 0.1, def: 0, perf: true });
 // ---------------------------------------------------------------- Okto MultiWave Synth: four oscillators (beta 0.1)
 // Two oscillators per engine: A1 A2 (wavelet subtractive) and B1 B2 (wavelet additive). Each one is a complete little voice:
@@ -246,6 +252,38 @@ for (const id of SLOT_IDS) {
   k.ptime = id + '_ptime'; add(k.ptime, name + ' Pitch Env Time', 'TIME', { curve: 'exp', fmt: 'sec', min: 0.005, max: 2, def: 0.08 });
   SLOTS.push({ id, mode, name, k });
 }
+// beta 0.2 (appended after the oscillators' clones): three more amounts of LFO 1. SPARSITY moves every subtractive oscillator's
+// sparsity by ± the amount (its tables are built at several sparsities, see core.js), RESO the resonance of every scale filter by ±
+// the amount in dB (kept in 0 .. 24), ENV>WAV makes the reach of the mod envelope on the WAVELET MORPH swing with the LFO
+// (env_wav + amount · LFO).
+add('lfo_sp', 'LFO 1 to Sparsity', 'SPARSITY', { fmt: 'pct', min: 0, max: 1, def: 0 });
+add('lfo_res', 'LFO 1 to Resonance', 'RESO', { fmt: 'db', min: 0, max: 24, def: 0 });
+add('lfo_ew', 'LFO 1 to Envelope>Wavelet', 'ENV>WAV', { fmt: 'pct', min: 0, max: 1, def: 0 });
+// beta 0.2: ORIENTAL KEYBOARD, quarter tones as on the oriental keyboards of Yamaha. A three-position switch (TUNING: Western, Arabic,
+// Turkish) re-tunes the keys; MAQAM chooses the scale and TONIC the key it starts on. Arabic: 24-tone equal temperament (quarter tones
+// of 50 cents); Turkish: the 53-comma system (a comma = 1200/53 = 22.64 cents, the Arel-Ezgi-Uzdilek values). A key that is not a
+// degree of the scale keeps its equal-tempered pitch, so the sharps and flats stay playable. Each key's pitch is moved from its
+// equal-tempered value by MICRO_TABLES[tuning][scale][semitones above the tonic] cents, whatever plays it (a key, a chord's notes).
+// A performance setting, like CHORD MODE: never in a preset, off in the demo and in EVALUATE SOUNDS.
+const COMMA = 1200 / 53;
+const MICRO_SCALES = [   // degrees: semitone above the tonic -> cents (Arabic) / commas (Turkish) above the tonic
+  { name: 'Rast', short: 'RAST', ar: { 2: 200, 4: 350, 5: 500, 7: 700, 9: 900, 11: 1050 }, tr: { 2: 9, 4: 17, 5: 22, 7: 31, 9: 40, 11: 48 } },
+  { name: 'Bayati / Uşşak', short: 'BAYATI', ar: { 2: 150, 3: 300, 5: 500, 7: 700, 8: 800, 10: 1000 }, tr: { 2: 8, 3: 13, 5: 22, 7: 31, 8: 35, 10: 44 } },
+  { name: 'Hijaz / Hicaz', short: 'HIJAZ', ar: { 1: 100, 4: 400, 5: 500, 7: 700, 8: 800, 10: 1000 }, tr: { 1: 5, 4: 17, 5: 22, 7: 31, 8: 36, 10: 44 } },
+  { name: 'Saba', short: 'SABA', ar: { 2: 150, 3: 300, 4: 400, 7: 700, 8: 800, 10: 1000 }, tr: { 2: 8, 3: 13, 4: 18, 7: 31, 8: 35, 10: 44 } },
+  { name: 'Nahawand / Buselik', short: 'NAHAWAND', ar: { 2: 200, 3: 300, 5: 500, 7: 700, 8: 800, 10: 1000 }, tr: { 2: 9, 3: 13, 5: 22, 7: 31, 8: 35, 10: 44 } },
+];
+const MICRO_TABLES = ['ar', 'tr'].map(t => MICRO_SCALES.map(s => {
+  const o = new Array(12).fill(0);
+  for (const [pc, v] of Object.entries(s[t])) o[+pc] = (t === 'ar' ? v : v * COMMA) - 100 * pc;   // cents above or below the equal-tempered key
+  return o;
+}));
+const NOTE_LETTERS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+add('mt_mode', 'Oriental Tuning', 'TUNING', { curve: 'choice', fmt: 'choice', min: 0, max: 2, def: 0, perf: true,
+  choices: ['Western', 'Arabic', 'Turkish'], choiceShort: ['WEST', 'ARAB', 'TURK'] });
+add('mt_scale', 'Oriental Scale', 'MAQAM', { curve: 'choice', fmt: 'choice', min: 0, max: MICRO_SCALES.length - 1, def: 0, perf: true,
+  choices: MICRO_SCALES.map(s => s.name), choiceShort: MICRO_SCALES.map(s => s.short) });
+add('mt_tonic', 'Oriental Tonic', 'TONIC', { curve: 'choice', fmt: 'choice', min: 0, max: 11, def: 0, perf: true, choices: NOTE_LETTERS, choiceShort: NOTE_LETTERS });
 
 const DELAY_BEATS = DELAY_NOTES.map(noteBeats), LFO_BEATS = LFO_NOTES.map(noteBeats);
 for (const b of [DELAY_BEATS, LFO_BEATS]) for (let i = 1; i < b.length; i++)
@@ -254,18 +292,25 @@ for (const b of [DELAY_BEATS, LFO_BEATS]) for (let i = 1; i < b.length; i++)
 // the parameters LFO 2 can move, in the order of the TARGET choices (all linear: the move is in plain units). With four oscillators
 // the target is a ROLE of an oscillator (cutoff, slope ...): LFO 2 moves that parameter of every oscillator that has it
 // (SOURCE PHASE: the subtractive oscillators only), by the same amount; LFO2_TARGETS names the parameters of A1.
-const LFO2_TARGETS = ['f_cutoff', 'f_slope', 'f_res', 'f_keytrk', 'f_env', 'f_vel', 'p_center', 'p_width', 'p_depth', 'a_phase'];
-const ROLES = ['fcut', 'fslope', 'fres', 'fkey', 'fenv', 'fvel', 'pcen', 'pwid', 'pdep', 'phase'];
-const LFO2_ROLE = LFO2_TARGETS.map(k => ROLES.find(r => SLOTS[0].k[r] === k));
+// beta 0.2: the targets after SOURCE PHASE. LFO2_TARGETS[i] is the parameter whose range gives the size of the move (the first oscillator
+// that has the role; ODD BARS / EVEN BARS: a drawbar; MORPH: the global WAVELET MORPH) and ROLES[i] the role: the field of an oscillator
+// it moves ("odd", "even" and "morph" have no single field: the engine moves the drawbars of odd / even bands and the morph itself).
+const LFO2_TARGETS = ['f_cutoff', 'f_slope', 'f_res', 'f_keytrk', 'f_env', 'f_vel', 'p_center', 'p_width', 'p_depth', 'a_phase',
+  'a_sparsity', 'a_width', 'b_tilt', 'b_bar1', 'b_bar2', 'b_sus', 'wmorph'];
+const ROLES = ['fcut', 'fslope', 'fres', 'fkey', 'fenv', 'fvel', 'pcen', 'pwid', 'pdep', 'phase', 'sparsity', 'width', 'tilt', 'odd', 'even', 'sus', 'morph'];
+const LFO2_ROLE = ROLES.slice();   // target i moves role i
 
 const idx = Object.fromEntries(P.map((p, i) => [p.key, i]));
-if (LFO2_TARGETS.length !== P[idx.lfo2_target].choices.length || LFO2_TARGETS.some(k => !(k in idx) || (P[idx[k]].curve || 'lin') !== 'lin') ||
-    LFO2_ROLE.some(r => r === undefined))
+if (LFO2_TARGETS.length !== P[idx.lfo2_target].choices.length || LFO2_TARGETS.length !== ROLES.length || P[idx.lfo2_target].max !== ROLES.length - 1 ||
+    LFO2_TARGETS.some(k => !(k in idx) || (P[idx[k]].curve || 'lin') !== 'lin'))
   throw new Error('LFO2_TARGETS must match the lfo2_target choices and be linear parameters');
-for (const r of ROLES) for (const s of SLOTS) {   // a role has the same range in every oscillator (LFO 2 moves them by the same amount)
-  if (!s.k[r]) continue;
-  const a = P[idx[SLOTS[0].k[r]]], b = P[idx[s.k[r]]];
-  if (a.min !== b.min || a.max !== b.max) throw new Error('role ' + r + ': ranges differ in ' + s.id);
+for (const r of ROLES) {   // a role has the same range in every oscillator that has it (LFO 2 moves them by the same amount)
+  const first = SLOTS.find(s => s.k[r]);
+  for (const s of SLOTS) {
+    if (!s.k[r]) continue;
+    const a = P[idx[first.k[r]]], b = P[idx[s.k[r]]];
+    if (a.min !== b.min || a.max !== b.max) throw new Error('role ' + r + ': ranges differ in ' + s.id);
+  }
 }
 for (const s of SLOTS) for (const [i, f] of ['ed', 'es', 'er'].entries()) if (idx[s.k[f]] !== idx[s.k.ea] + i + 1)
   throw new Error('own envelope parameters of ' + s.id + ' must be consecutive');
@@ -379,27 +424,30 @@ section('fx', 'EFFECTS', 596, 472, 492, 128, -1, [
   ...synced('fx_dtime', 'fx_ddiv', 'fx_dsync', 220, 58),
   ...row(['fx_dfb', 'fx_dmix', 'fx_rsize', 'fx_rmix'], 272, 58),
 ]);
-section('lfo', 'LFO 1', 12, 608, 284, 128, -1, [
+// beta 0.2: LFO 1 has seven amounts (PITCH CUTOFF POSITION WAVELET SPARSITY RESO ENV>WAV), so its card is wider; LFO 2 and VOICE are narrower
+section('lfo', 'LFO 1', 12, 608, 440, 128, -1, [
   { type: 'seg', param: 'lfo_shape', x: 12, y: 28, w: 260, h: 24 },
-  syncBtn('lfo_sync', 230, 6),
+  syncBtn('lfo_sync', 386, 6),
   ...synced('lfo_rate', 'lfo_div', 'lfo_sync', 12, 58),
-  ...row(['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav'], 64, 58),
+  ...row(['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew'], 64, 58),
 ]);
-section('lfo2', 'LFO 2', 304, 608, 284, 128, -1, [
-  { type: 'seg', param: 'lfo2_shape', x: 12, y: 28, w: 260, h: 24 },
-  syncBtn('lfo2_sync', 230, 6),
+section('lfo2', 'LFO 2', 460, 608, 246, 128, -1, [
+  { type: 'seg', param: 'lfo2_shape', x: 12, y: 28, w: 222, h: 24 },
+  syncBtn('lfo2_sync', 192, 6),
   ...synced('lfo2_rate', 'lfo2_div', 'lfo2_sync', 12, 58),
   kn('lfo2_amt', 64, 58),
-  { type: 'menu', param: 'lfo2_target', text: 'TARGET', x: 128, y: 78, w: 144, h: 24 },
+  { type: 'menu', param: 'lfo2_target', text: 'TARGET', x: 120, y: 78, w: 116, h: 24 },
 ]);
-section('voice', 'VOICE', 596, 608, 492, 128, -1, [
+section('voice', 'VOICE', 714, 608, 374, 128, -1, [
   { type: 'seg', param: 'v_porta', x: 76, y: 6, w: 150, h: 18 },
-  { type: 'leds', x: 250, y: 6, w: 230, h: 18 },
-  ...['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'].map((k, i) => kn(k, 24 + i * 63, 40)),
+  { type: 'leds', x: 236, y: 6, w: 128, h: 18 },
+  ...['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'].map((k, i) => kn(k, 10 + i * 51, 40)),
 ]);
 // the keyboard row: CHORD MODE (switches the chord card on), the wheels, the keyboard (C2-C7, 36 white keys)
 section('keys', '', 0, 744, 1100, 112, -1, [
   { type: 'toggle', param: 'chord_mode', text: 'CHORD MODE', x: 12, y: 6, w: 100, h: 34 },
+  // beta 0.2: BASS (on by default) sits under CHORD MODE and shows with it: a bass note two octaves below the root, a little louder
+  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 12, y: 46, w: 100, h: 34, vis: 'chord_mode', visOn: true },
   { type: 'wheels', x: 122, y: 0, w: 60, h: 100 },
   { type: 'keyboard', x: 190, y: 0, w: 898, h: 100 },
   { type: 'credit', x: 14, y: 97, w: 170, h: 15 },
@@ -414,7 +462,6 @@ section('chord', 'CHORD KEYBOARD', 12, 864, 1076, 104, -1, [
   { type: 'label', text: 'KEYS OCT', x: 570, y: 8, w: 110, h: 14 },
   { type: 'step', param: 'chord_oct', x: 570, y: 26, w: 110, h: 26 },
   { type: 'seg', param: 'chord_voicing', x: 570, y: 64, w: 110, h: 24 },
-  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 692, y: 64, w: 48, h: 24 },
   kn('chord_strum', 746, 22),
   { type: 'strumplate', x: 812, y: 26, w: 252, h: 70 },
 ], { vis: 'chord_mode', visOn: true });
@@ -486,4 +533,4 @@ for (const s of S) {
 }
 
 module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, CATEGORIES,
-  LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };
+  LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };
