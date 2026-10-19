@@ -153,9 +153,10 @@ console.log('8. SOURCE PHASE (beta 0.4)');
   let same = true;
   for (let w = 0; w <= 5; w++) for (const width of [0.02, 0.2, 0.5, 0.77, 0.98]) {
     const a = oldSource(w, width), b = C.sourceCycle(w, width, 0), c = C.sourceCycle(w, width);
-    for (let i = 0; i < C.N; i++) if (a[i] !== b[i] || a[i] !== c[i]) same = false;
+    // (beta 0.2: the sine is computed by the same additions and multiplications in both engines, 7e-16 from Math.sin: the others are bit for bit)
+    for (let i = 0; i < C.N; i++) if (w === 4 ? Math.abs(a[i] - b[i]) > 1e-13 || b[i] !== c[i] : a[i] !== b[i] || a[i] !== c[i]) same = false;
   }
-  check(same, 'phase 0 is the source of beta 0.3, bit for bit (6 waves x 5 widths)');
+  check(same, 'phase 0 is the source of beta 0.3 (6 waves x 5 widths; bit for bit, the sine within 1e-13)');
   // Haar saw with band 6 removed: harmonic magnitudes at phase 37/2048 against phase 0 (a Fourier filter: 0 dB)
   const band6Removed = ph => {
     const f = C.FILTERS[0], c = C.dwt(C.sourceCycle(0, 0.5, ph), f);

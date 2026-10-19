@@ -276,7 +276,8 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
 - Compatibility: every new amount defaults to 0 and every code path is exactly the old one then (`tests/regress_v07.js` and the cross-check pass).
 - Presets: category **SuperModulation** (first in `CATEGORIES`): two oscillators of very different character and both LFOs moving two or more
   wavelet-domain controls, measured by `tools/supermod/audit.js` (the four most moving bands of the spectrum shape move > 3 dB more than without the
-  modulation). Of the 222 older presets only about 30 move at all.
+  modulation). Of the 222 older presets only about 30 move at all. The LFOs of the new presets are sine or triangle only (a saw, a square or a sample & hold jumps and the
+  timbre clicks at the jump: the selection refuses them); a decaying sound is judged by how much its notes differ with the LFO phase (`onsetDiff`).
 
 ### 3.3h ORIENTAL KEYBOARD (beta 0.2)
 - Parameters (appended, `perf`: never in a preset): `mt_mode` (0 Western, 1 Arabic, 2 Turkish: the three-position switch), `mt_scale` (`MICRO_SCALES`:
@@ -315,6 +316,7 @@ The C++ side also sets FTZ/DAZ during `process`. Okto MultiWave Synth beta 0.1 (
   with no voice; `quietNeed = 1.5 · max(delay time, dlyT) + 4096` while the delay can sound (an echo's gap must never fit in it),
   else 4096. `tests/idle_skip.js` checks that dry, delay, reverb and chorus sounds are identical with and without it;
 - the reverb's 16 combs and 8 all-pass filters are flat arrays in JS (`cB cLen cI cF aB aLen aI`).
+- **Crackle** (owner's remark, beta 0.2): the soft limiter acts per sample above `LIMIT_T`, so a loud chord that adds up beyond 0.7 is distorted. Measured on a hand-played six-note chord (velocity 0.9, the chord at master - 12 dB scaled back against it): 9 of the 222 older presets change by more than 3 % (131 Oboe, 121 String Machine II, 067 Pipe Organ Duo, 073 Fair Organ, 130 Clarinet, 064 Jazz Organ, 071 Theatre Organ II, 187 Spaceship, ...; lower VOLUME or the number of notes), 2 of the 300 new ones. They are not changed (the owner asked that the old presets never change; the limiter itself must keep the 22 TOP Sounds as in beta 0.7). The chord keyboard turns its notes down (`chordTrim`) and `tools/supermod/audit.js` refuses a candidate whose chord with its bass changes by more than 0.4 %.
 
 ### 3.6 JS ↔ C++ parity (non-negotiable)
 `core.js` is the reference; `dsp.h` must follow it operation for operation (same constants, same order of floating-point

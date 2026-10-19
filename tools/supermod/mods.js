@@ -23,14 +23,14 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const rate = (ctx, r, lo = 0, hi = 1) => { const [a, b] = ctx.speed; return +(a * Math.pow(b / a, r.f(lo, hi))).toFixed(3); };
 const lfo1 = (ctx, r, shape, lo, hi) => {   // the first LFO 1 recipe sets the shape and rate; the others only add amounts
   const l = ctx.g.lfo = ctx.g.lfo || {};
-  if (l.rate === undefined) { l.shape = shape || r.wpick([['sine', 5], ['tri', 4], ['saw', 1], ['square', 0.3]]); l.rate = rate(ctx, r, lo, hi); }
+  if (l.rate === undefined) { l.shape = shape || r.wpick([['sine', 5], ['tri', 4]]);   l.rate = rate(ctx, r, lo, hi); }
   return l;
 };
 const lfo2 = (ctx, r, target, amt, shape, lo, hi) => {
   const l1 = ctx.g.lfo && ctx.g.lfo.rate, l2 = ctx.g.lfo2 = ctx.g.lfo2 || {};
   let rt = rate(ctx, r, lo, hi);
   if (l1 && Math.abs(Math.log(rt / l1)) < 0.35) rt = +(l1 * r.pick([0.43, 0.61, 1.57, 2.3])).toFixed(3);   // never in lock with LFO 1
-  l2.target = target; l2.amt = +amt.toFixed(2); l2.rate = clamp(rt, 0.05, 20); l2.shape = shape || r.wpick([['sine', 5], ['tri', 4], ['saw', 1]]);
+  l2.target = target; l2.amt = +amt.toFixed(2); l2.rate = clamp(rt, 0.05, 20); l2.shape = shape || r.wpick([['sine', 5], ['tri', 4]]);
   return l2;
 };
 const sign = (r) => (r.p(0.5) ? 1 : -1);
@@ -77,7 +77,7 @@ const MODS = [
     } },
   { id: 'windowSweep', kind: 'lfo1', dest: 'pos', wd: true, words: ['Sweep', 'Beam', 'Orbit'], fits: (c) => allOsc(c).length > 0,
     apply(c, r) {
-      const l = lfo1(c, r, r.p(0.6) ? 'sine' : 'saw', 0, 0.6);
+      const l = lfo1(c, r, r.p(0.6) ? 'sine' : 'tri', 0, 0.6);
       const pick = r.pick(allOsc(c)), o = c.osc[pick];
       o.pdep = +r.f(0.6, 1).toFixed(2); o.pwid = +r.f(0.15, 0.4).toFixed(2); o.pcen = +r.f(0, 1).toFixed(2);
       if (c.osc[pick] && (pick[0] === 'A') && (o.fcut === undefined || o.fcut > 7)) o.fcut = +r.f(3.5, 6).toFixed(2);
@@ -134,7 +134,7 @@ const MODS = [
       const id = r.pick(allOsc(c)), o = c.osc[id];
       o.pdep = +r.f(0.65, 1).toFixed(2); o.pwid = +r.f(0.15, 0.4).toFixed(2); o.pcen = +r.f(0, 1).toFixed(2);
       if (id[0] === 'A' && (o.fcut === undefined || o.fcut > 7)) o.fcut = +r.f(3.5, 6).toFixed(2);
-      lfo2(c, r, 'position', sign(r) * r.f(0.5, 1), r.p(0.5) ? 'saw' : undefined, 0, 0.5);
+      lfo2(c, r, 'position', sign(r) * r.f(0.5, 1), undefined, 0, 0.5);
       return { desc: 'LFO 2 carries the window of the filter round the cycle' };
     } },
   { id: 'l2WinW', kind: 'lfo2', dest: 'width', wd: true, words: ['Pinch', 'Breathe'], fits: (c) => allOsc(c).length > 0 && !c.g.lfo2,

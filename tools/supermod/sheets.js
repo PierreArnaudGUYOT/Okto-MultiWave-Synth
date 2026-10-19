@@ -7,11 +7,11 @@ const path = require('path');
 const lab = require('../preset_lab.js');
 const A = require('./audit.js');
 const SPEC = lab.SPEC, OUT = path.join(__dirname, '..', 'out');
-const want = process.argv.slice(2);
+const fi = process.argv.indexOf('--first'), first = fi >= 0 ? +process.argv[fi + 1] : 0, want = process.argv.slice(2).filter((a, i, arr) => a !== '--first' && arr[i - 1] !== '--first');
 const cats = [...new Set(SPEC.PRESETS.slice(SPEC.NEW_FIRST).filter(p => /^\d{3}/.test(p.name) && +p.name.slice(0, 3) >= 201).map(p => p.cat))];
 for (const cat of cats) {
   if (want.length && !want.includes(cat)) continue;
-  const list = SPEC.PRESETS.filter(p => p.cat === cat && +p.name.slice(0, 3) >= 201);
+  const list = SPEC.PRESETS.filter(p => p.cat === cat && +p.name.slice(0, 3) >= 201).slice(0, first || 1e9);
   const cells = list.map((p) => {
     const r = A.chord(p.values, { root: 60, seconds: 4.2, hold: 3.2 });
     r.note = 60;

@@ -545,7 +545,9 @@ async function stepPresets() {
   if (!check(Array.isArray(names) && names.length > 0, 'presets() returns a non-empty array', JSON.stringify(names))) return;
   log(`  ${names.length} presets`);
   if (SPEC) {
-    const sn = SPEC.PRESETS.map((p) => p.name);
+    // the menu lists the TOP Sounds, then each category's presets by rank (beta 0.2: not the array order, which has the 300 new presets before the 200 of beta 0.1)
+    const sn = SPEC.PRESETS.slice(0, SPEC.TOP).map((p) => p.name);
+    for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.slice(SPEC.TOP).filter((q) => q.cat === c).sort((a, b) => a.rank - b.rank)) sn.push(p.name);
     check(names.length === sn.length, 'preset count matches the spec', `${names.length} vs ${sn.length}`);
     const diff = sn.map((n, i) => (names[i] !== n ? `#${i} '${names[i]}' vs spec '${n}'` : null)).filter(Boolean);
     check(diff.length === 0, 'preset names/order match the spec', short(diff), 'WARN');
@@ -558,8 +560,9 @@ async function stepPresets() {
     const t0 = Date.now();
     await ev(`WS_TEST.loadPreset(${i})`);
     await sleep(250);
-    if (SPEC && SPEC.PRESETS[i]) {
-      const v = SPEC.PRESETS[i].v;
+    const specPreset = SPEC && SPEC.PRESETS.find((p) => p.name === names[i]);
+    if (specPreset) {
+      const v = specPreset.v;
       const vals = await ev(`Object.fromEntries(WS_TEST.paramKeys().map(k => [k, WS_TEST.getParam(k)]))`);
       for (const [k, x] of Object.entries(v))
         if (!(Math.abs(vals[k] - x) <= 1e-6 * Math.max(1, Math.abs(SPEC_BY_KEY[k].max - SPEC_BY_KEY[k].min))))

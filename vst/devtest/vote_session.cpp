@@ -419,6 +419,16 @@ int wmain(int argc, wchar_t** argv) {
     check(h.plain(P_CHORD_MODE) == 0 && vr.getHeight() == 860, "CHORD MODE off: back to 860", fmt("%.0f", vr.getHeight()));
     h.shot(out + L"\\11_chord_off.png");
   }
+  std::printf("9. beta 0.2: the preset browser follows the preset box (the screenshot shows the browser on SuperModulation, the sound selected)\n");
+  {
+    float pr[4];
+    check(widgetBox(W_PRESETS, pr), "the preset box in the layout");
+    SetWindowPos(h.top, nullptr, -4000, 0, 1500, 980, SWP_NOZORDER | SWP_NOACTIVATE);   // wide enough for the browser at the right
+    h.run(0.3);
+    for (int i = 0; i < 40; i++) { h.click(pr[0] + pr[2] - 12, pr[1] + pr[3] / 2); h.run(0.05); }   // the right arrow: out of the TOP Sounds into SuperModulation
+    h.run(0.5);
+    h.shot(out + L"\\12_browser_followed.png");
+  }
   check(!h.badSample, "no NaN or infinite sample");
   check(h.handler.badNesting == 0, "every performEdit inside beginEdit/endEdit", std::to_string(h.handler.edits) + " edits");
 

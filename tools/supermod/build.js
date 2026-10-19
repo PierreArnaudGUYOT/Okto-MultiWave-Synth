@@ -132,6 +132,9 @@ function select(selectOnly) {
   const bad = (why) => { reasons[why] = (reasons[why] || 0) + 1; return false; };
   const A = require('./audit.js');
   const ok = cands.filter((c) => {
+    // an LFO that jumps (saw, square, sample & hold) makes the timbre click at the jump: only sine and triangle move the sounds of beta 0.2
+    const act1 = ['lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew', 'lfo_pitch'].some(k => c.v[k] > 0), act2 = c.v.lfo2_amt !== undefined && c.v.lfo2_amt !== 0;
+    if ((act1 && (c.v.lfo_shape || 0) > 1) || (act2 && (c.v.lfo2_shape || 0) > 1)) return bad('an LFO that jumps (saw, square, sample & hold)');
     // a third or a fourth stacked on every chord note makes clusters on the chord keyboard: only octaves, fifths and detunings
     if (Object.keys(c.v).some(k => /_semi$/.test(k) && [3, 4, 5].includes(c.v[k]))) return bad('a third or a fourth above every note');
     const a = c.audit, why = A.judgeSound(a, c.meta.kind) || (a.stopped ? 'stopped' : A.judgeMotion(a, c.cat) || A.judgeContrast(a));
