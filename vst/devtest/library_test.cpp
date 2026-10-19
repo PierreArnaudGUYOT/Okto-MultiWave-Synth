@@ -140,6 +140,41 @@ int wmain(int argc, wchar_t** argv) {
     lib.restore(kA);
   }
 
+  std::printf("8. a presets file of beta 0.1 (no SuperModulation list, none of the 300 new presets in it) is read with them in their default places\n");
+  {
+    // the file the library writes now, with the beta 0.2 presets (numbers 201-500) and the SuperModulation list taken out of the LIST ORDER
+    e = lib.adjust(kA, "Old file adjusted", v);
+    std::string t = readAll(file), o;
+    const size_t lo = t.find("######## LIST ORDER");
+    const size_t ub = t.find("######## USER BANK", lo);
+    std::string lists = t.substr(lo, ub == std::string::npos ? std::string::npos : ub - lo), kept;
+    bool skipSection = false; size_t pos = 0;
+    while (pos < lists.size()) {
+      size_t nl = lists.find("\r\n", pos); if (nl == std::string::npos) nl = lists.size();
+      const std::string line = lists.substr(pos, nl - pos); pos = nl + 2;
+      if (line.rfind("== ", 0) == 0) skipSection = line.find("SuperModulation") != std::string::npos;
+      const size_t dot = line.find(". ");
+      const bool entry = dot != std::string::npos && dot < 4 && std::isdigit((unsigned char)line[0]);
+      const bool isNew = entry && line.size() > dot + 5 && std::isdigit((unsigned char)line[dot + 2]) && (line[dot + 2] == '2' || line[dot + 2] == '3' || line[dot + 2] == '4' || line[dot + 2] == '5') &&
+                         std::atoi(line.substr(dot + 2, 3).c_str()) >= 201;
+      if (skipSection || isNew) continue;
+      kept += line + "\r\n";
+    }
+    o = t.substr(0, lo) + kept + (ub == std::string::npos ? "" : "\r\n" + t.substr(ub));
+    writeTextFile(file, o);
+    sleepMs(30);
+    lib.refresh();
+    const auto ls = lib.lists();
+    size_t total = 0; std::vector<int> seen(kNumPresets, 0); bool dup = false;
+    for (size_t i = 1; i < ls.size(); i++) { total += ls[i].second.size(); for (int k : ls[i].second) { if (seen[k]++) dup = true; } }
+    int superIdx = -1; for (size_t i = 1; i < ls.size(); i++) if (ls[i].first == "SuperModulation") superIdx = (int)i;
+    int nSuper = 0; for (int k = 0; k < kNumPresets; k++) if (std::string(kPresets[k].cat) == "SuperModulation") nSuper++;
+    check(ls.size() == 1 + kNumCategories && (int)total == kNumPresets && !dup, "every preset is in exactly one category list", std::to_string(total) + " of " + std::to_string(kNumPresets));
+    check(superIdx > 0 && (int)ls[superIdx].second.size() == nSuper, "the SuperModulation list holds its presets", std::to_string(superIdx > 0 ? ls[superIdx].second.size() : 0) + " of " + std::to_string(nSuper));
+    check(lib.name(kA) == "Old file adjusted" && lib.adjusted(kA), "an adjusted preset of the old file stays adjusted");
+    lib.restore(kA);
+  }
+
   std::printf(gFails ? "\n%d FAILED\n" : "\nALL PASS\n", gFails);
   return gFails ? 1 : 0;
 }

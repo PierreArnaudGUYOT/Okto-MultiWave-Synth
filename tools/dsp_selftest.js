@@ -258,6 +258,7 @@ console.log('11. Okto MultiWave Synth: the chord layer (keyOn / keyOff over the 
   eng.keyOn(60, 0.9); eng.keyOff(60);
   check(take() === '+60 -60', 'CHORD off: a key is exactly a note on / off');
   eng.setParam(P.chord_mode, 1);
+  eng.setParam(P.chord_bass, 0);   // beta 0.2: BASS is on by default (two octaves down, louder); these checks start without it
   eng.keyOn(50, 1); eng.keyOff(50);
   check(take() === '' && eng.p[P.chord_type] === 2 && eng.chordTypeChanged, 'a selector key (D3) is silent and chooses its type (7)');
   eng.chordTypeChanged = false;
@@ -268,13 +269,13 @@ console.log('11. Okto MultiWave Synth: the chord layer (keyOn / keyOff over the 
   eng.keyOff(64);
   check(take() === '-64', 'the melody key released');
   eng.setParam(P.chord_voicing, 0); eng.setParam(P.chord_bass, 1); eng.keyOn(55, 1); eng.keyOn(69, 0.8);
-  check(take() === '+57 +69 +74 +76', 'A4 with Sus4 (selector G3), STACKED + BASS: A3 A4 D5 E5');
+  check(take() === '+45 +69 +74 +76', 'A4 with Sus4 (selector G3), STACKED + BASS: A2 (two octaves below) A4 D5 E5');
   eng.keyOn(76, 0.6); eng.keyOff(69);
-  check(take() === '+76 -57 -69 -74', 'a note shared by the chord and a held key keeps sounding when the root is released');
+  check(take() === '+76 -45 -69 -74', 'a note shared by the chord and a held key keeps sounding when the root is released');
   eng.keyOff(76);
   check(take() === '-76', '... until that key is released too');
   eng.setParam(P.v_voices, 2); eng.setParam(P.chord_type, 2); eng.keyOn(72, 0.8); eng.keyOff(72);
-  check(take() === '+60 +72 -60 -72', '2 voices with BASS: the chord is cut from the top, root and bass kept');
+  check(take() === '+48 +72 -48 -72', '2 voices with BASS: the chord is cut from the top, root and bass kept');
   eng.setParam(P.v_voices, 1); eng.keyOn(72, 0.8); eng.keyOff(72);
   check(take() === '+72 -72', 'one voice: the root only');
   eng.setParam(P.v_voices, 8); eng.setParam(P.chord_bass, 0); eng.setParam(P.chord_strum, 0.01); eng.keyOn(60, 0.8);
@@ -296,7 +297,8 @@ console.log('11. Okto MultiWave Synth: the chord layer (keyOn / keyOff over the 
   check(C.chordName(68, 3) === 'G#m7' && C.chordName(60, 0) === 'C' && C.plateNotes(67, 0).join(' ') === '74 79 83 86 91 95 98 103 107',
     'chord names (G#m7, C) and the strum plate of G major: three octaves of G B D above the root octave');
   check(S.CHORD_KEYS.length === 12 && new Set(S.CHORD_KEYS).size === 12 && S.CHORDS.length === 22 && S.PARAMS[P.chord_mode].def === 0 &&
-    S.PARAMS.filter(p => p.perf).length === 6, 'spec: 12 selector keys each with its own type, 22 chord types, CHORD off by default, 6 perf parameters');
+    S.PARAMS[P.chord_bass].def === 1 && S.PARAMS.filter(p => p.perf).length === 9,
+    'spec: 12 selector keys each with its own type, 22 chord types, CHORD off and BASS on by default, 9 perf parameters (6 chord + 3 oriental tuning)');
 }
 
 console.log('12. Okto MultiWave Synth: the four oscillators');

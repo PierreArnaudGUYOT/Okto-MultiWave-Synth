@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.1**, a test version (2026-10-18), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.2**, a test version (2026-10-19), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -10,9 +10,9 @@ transform** instead of Fourier filters: one cycle of each tone is split into 11 
 band by band. It comes as a **web application** and a **VST3 / VST2 instrument** for Windows x64 (Ableton Live and other
 hosts).
 
-This is a *test version*: its 200 new presets are waiting for your ears. **EVALUATE SOUNDS** plays a piece of music with
-each of them and asks for 1 to 10 stars; the ratings (and the changes you make to the sounds you like) are saved in a
-text file you can send back.
+This is a *test version*: its 300 new presets (beta 0.2) and the 200 of beta 0.1 are waiting for your ears. **EVALUATE
+SOUNDS** plays a piece of music with each of them and asks for 1 to 10 stars; the ratings (and the changes you make to the
+sounds you like) are saved in a text file you can send back.
 
 **Play online:** https://pierrearnaudguyot.github.io/Okto-MultiWave-Synth/ (Chrome or Edge; a MIDI keyboard plays it
 directly, no DAW needed).
@@ -20,6 +20,32 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What beta 0.2 adds
+
+- **SuperModulation**. What makes this synthesizer different is that every timbre control acts on the *scales* of one wave
+  cycle — and now both LFOs reach all of them. **LFO 1** gets three more amounts: **SPARSITY** (the atoms that are kept come
+  and go), **RESO** (the resonance of the scale filter pulses) and **ENV>WAV** (how far each note's envelope pushes the
+  wavelet morph, swinging with the LFO). **LFO 2** can move every control of the wavelet oscillators and of the scale filter: its
+  TARGET menu now also offers **SPARSITY, SRC WIDTH, TILT, ODD BARS, EVEN BARS, SCALE SUS and MORPH** after the cutoff, slope,
+  resonance, key tracking, envelope and velocity amounts, the position window and the source phase. (SPARSITY, SRC WIDTH and
+  PHASE build the oscillator's tables at several values — 9, 9 and 12 — and each voice crossfades between the two nearest.)
+- **300 new presets** (`201`–`500`), composed from oscillator layers that are *very different from each other* (a saw of
+  Haar atoms against a Daubechies 20 sine, a noise tick against a mirrored-atom choir, …) and a library of LFO recipes, then
+  measured one by one: no crackle (the chord with its bass stays under the limiter), a spectrum that really moves, loudness of
+  the TOP Sounds. The new **SuperModulation** category (120 presets, the first one in the lists) holds the sounds whose life is
+  the LFOs moving the wavelet controls. The 22 TOP Sounds and the 200 presets of beta 0.1 are unchanged (**Wobble Bass** is now
+  the first of the Bass list).
+- **Chord mode**: **BASS** (the button under CHORD MODE, on by default) plays the root two octaves below with the chord, a little
+  louder; a chord keeps the level of a triad whatever its size. **The chord follows your left hand**: change the chord on the
+  selector octave while the right-hand note is held and the held chord changes at once (only the notes of the current chord
+  sound); the left hand remembers its last chord.
+- **Oriental keyboard**: a three-position switch **TUNING** (Western · Arabic · Turkish) under CHORD MODE retunes the keys with
+  **quarter tones** (Arabic, 24 tones to the octave) or **commas** (Turkish makams, 53 to the octave), by scale (**Rast, Bayati,
+  Hijaz, Saba, Nahawand**) and tonic; the keys it moves are marked on the keyboard. The demo and EVALUATE SOUNDS stay in equal
+  temperament.
+- The **preset browser at the right follows the preset box**: step with ◀ ▶ or the menu and it shows the sound's category and the
+  sound itself.
 
 ## What is new compared with the Wavelet Synthesizer
 
@@ -31,16 +57,16 @@ The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; thi
   the original's.
 - **OSC MIX** (the card next to the scope): four level knobs, one per oscillator, replace the A/B MIX knob. A1 plays at 100 %
   on a new patch, the others at 0. The sub oscillator is in the same card.
-- **222 presets: the 22 TOP Sounds** (OktoPierre's favourites, unchanged: they sound exactly as in beta 0.7) **and 200
-  new ones** numbered `001`–`200`, in 11 categories (Bass, Lead, Keys, Organ, Pad, Strings, Brass & Wind, Pluck, Bells &
-  Mallets, FX, Drums & Perc). Every new preset uses at least two oscillators; the letters of its name say which
-  (`A1A2`, `B1B2`, `A1B1`); an oscillator is often the attack (a click, a breath, a pluck) of another.
+- **522 presets: the 22 TOP Sounds** (OktoPierre's favourites, unchanged: they sound exactly as in beta 0.7), **300 new ones**
+  of beta 0.2 (`201`–`500`) **and the 200 of beta 0.1** (`001`–`200`, unchanged), in 12 categories (SuperModulation, Bass, Lead,
+  Keys, Organ, Pad, Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc). Every new preset uses at least two
+  oscillators; the letters of its name say which (`A1A2`, `B1B2`, `A1B1`, `A1A2B1` …); an oscillator is often the attack (a click, a
+  breath, a pluck) of another.
 - **EVALUATE SOUNDS** (header, web app and plug-in): see below.
 - **CHORD MODE** (button next to the keyboard): the panel grows and a *chord harp* card appears (twelve chord pads, the chord
   name, KEYS OCT, STACKED / FOLDED voicing, BASS, STRUM and a strum plate): one octave of the keyboard chooses the chord type, one
   finger plays the whole chord. With CHORD MODE off the panel is the plain synthesizer and none of it is shown.
-- **LFO 2** moves the scale filter, the position window or the source phase of **every** oscillator at once (and the
-  wavelet morph and the phase LFO act on each oscillator).
+- **LFO 2** moves its target in **every** oscillator at once (and the wavelet morph and the phase LFO act on each oscillator).
 - **Lighter on the CPU**: playing the same 22 TOP Sounds with twelve held notes takes about **20 % less time** than in the Wavelet
   Synthesizer beta 0.7 (JavaScript engine, measured: 2.65 s → 2.15 s for 3 s of audio each). The review of its load (`Revue.md` of the CPU study) is applied: `exp`
   instead of `pow(10, ·)`, a two-sine chorus, no `%` in the wavelet transform, idle instances skip their silent blocks, the
@@ -50,12 +76,13 @@ The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; thi
 ## EVALUATE SOUNDS
 
 Click **EVALUATE SOUNDS** in the header.
-- The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) with preset **001**, then asks for
+- The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) with the first preset (**201**; the list is the
+  factory order: the 300 new presets first, then the 200 of beta 0.1), then asks for
   **1 to 10 stars** (a click; in the web app also the keys 1–9 and 0 = 10). It goes on with the next preset; **Skip**,
   **Previous**, **Replay** and **Stop** are always there.
 - **Stop half way whenever you like** — nothing is lost (every answer is saved) — and keep this state under a name of your own with
   **Save as…** (on the start, rating and end windows): it saves a copy of the ratings so far, e.g.
-  `okto-multiwave-ratings-45of200-2026-10-18.txt`, and the session goes on with its own file.
+  `okto-multiwave-ratings-45of500-2026-10-19.txt`, and the session goes on with its own file.
 - **More than 5 stars** offers to *modify* the preset: it loads exactly as designed, you change the panel with the mouse and
   play it on your keyboard, then **Keep initial settings** or **Record preset change**. The parameters that differ from the
   preset are written in the file.
@@ -78,7 +105,7 @@ the demo**, **Play the synth** or **Download the VST**. **MANUAL** (header) open
 - **MIDI**: notes, pitch bend, mod wheel, sustain; Program Change selects a preset; **MIDI learn** by a right-click on a control.
 - Presets: the **preset browser** at the right of the panel (TOP Sounds and the categories, ↑ ↓ ← → keys), ◀ ▶ and the
   preset name's menu. **Save preset / Export / Import** are in the status bar.
-- **▶ DEMO** plays Beethoven's *Appassionata* (III) while touring 29 presets (the TOP Sounds mixed with new ones that show
+- **▶ DEMO** plays Beethoven's *Appassionata* (III), in equal temperament, while touring 29 presets (the TOP Sounds mixed with new ones that show
   the oscillators at work); **▾** opens other pieces or *Load a MIDI file…*.
 
 ### VST3 / VST2 in Ableton Live (Windows)
@@ -115,9 +142,10 @@ uses `-ffp-contract=off`, so that the C++ and JavaScript engines do the same flo
 ```
 tools/spec.js          single source of truth: parameters, the four oscillators, panel layout, presets
 tools/gen_spec.js      generates web/js/spec.js, vst/src/generated/spec.h and vote_data.h (the listening passage)
-tools/presets_top.js   the 22 TOP Sounds;  tools/presets_new.js  the 200 new presets (generated)
-tools/make_presets.js  builds the new presets from tools/recipes_*.js (tools/preset_dsl.js, preset_lab.js: loudness
+tools/presets_top.js   the 22 TOP Sounds;  tools/presets_new.js  the 200 presets of beta 0.1;  tools/presets_super.js  the 300 of beta 0.2
+tools/make_presets.js  builds the presets of beta 0.1 from tools/recipes_*.js (tools/preset_dsl.js, preset_lab.js: loudness
                        matching, distinctness check, contact sheets)
+tools/supermod/        composes the presets of beta 0.2 from oscillator layers and LFO recipes, measures and selects them
 tools/dsp_selftest.js  engine self-test;  tools/dsp_compare.js  C++ engine against the JavaScript reference
 tools/manual/          generator of the user manuals
 web/                   web application (vanilla JS, Web Audio AudioWorklet, no libraries)
@@ -147,12 +175,13 @@ tests/                 test tools (VST3 host, browser driver, regression against
 ```bash
 node tools/gen_spec.js            # after editing tools/spec.js or the presets
 node tests/quick.js               # 20 s: syntax, engine, VST3 host sections, web smoke test
+node tests/supermod.js            # beta 0.2: the SuperModulation destinations, the chord layer, the oriental tunings
 node tests/regress_v07.js         # the 22 TOP Sounds against the published beta 0.7 engine (within 1.5e-7)
 node tests/idle_skip.js           # the idle rule does not cut a delay echo or a reverb tail
 node tests/web/smoke.js           # the four oscillator views and CHORD MODE in headless Edge
 ```
 To cross-check the C++ engine, compile `vst/devtest/dsp_render.cpp` (with `-ffp-contract=off`) and run
-`node tools/dsp_compare.js <dir>`: all cases agree within 2e-6 of full scale (worst: 1.8e-7). `vst/devtest/vote_session.cpp`
+`node tools/dsp_compare.js <dir>`: all 577 cases (the 522 presets and 55 variants of every feature) agree within 2e-6 of full scale (worst: 1.8e-7). `vst/devtest/vote_session.cpp`
 drives the plug-in's EVALUATE SOUNDS window like a player (and CHORD MODE) in an off-screen window.
 
 ## Licence

@@ -3,6 +3,54 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth beta 0.2 — 2026-10-19 (SuperModulation, 300 new presets, oriental keyboard, a chord that follows the left hand)
+
+A **test version**, asked for one night by OktoPierre: the LFOs reach the wavelet itself, the chord keyboard gets a bass and follows the left
+hand, a three-position switch adds an oriental keyboard with quarter tones, and 300 new presets are waiting for his ears. The 22 TOP Sounds and the
+200 presets of beta 0.1 are **unchanged** (they are still bit-identical with beta 0.7 / beta 0.1).
+
+**In short**
+- **SuperModulation.** LFO 1 has three new amounts, **SPARSITY** (the subtractive oscillators' sparsity swings by ± the amount: the tables are built at
+  nine sparsities and each voice crossfades between the two nearest), **RESO** (± dB on the resonance of every scale filter, kept in 0–24 dB) and
+  **ENV>WAV** (the mod envelope's reach on the wavelet morph swings with the LFO). **LFO 2** now reaches every control of the wavelet oscillators and
+  of the scale filter: seven more targets after the ten of beta 0.3/0.4 — **SPARSITY, SOURCE WIDTH** (nine widths), **TILT, ODD BARS, EVEN BARS, SCALE
+  SUSTAIN** (the additive oscillators) and the **WAVELET MORPH** position. The beta 0.4 phase sets became a general "variant" mechanism (12 phases, 9
+  sparsities, 9 widths; one kind per oscillator, SPARSITY before PHASE before WIDTH). Every new amount is 0 by default and the old code paths are
+  untouched then (the 22 TOP Sounds still match beta 0.7 within 1.5e-7; the cross-check is bit-compatible). The LFO 1 / LFO 2 / VOICE cards were
+  re-laid out (LFO 1 440 px wide with seven amounts).
+- **300 new presets**, `201`–`500`, made by a composer (`tools/supermod/`) from 24 subtractive and 13 additive oscillator *layers* and 22 LFO
+  recipes, then measured one by one (about 2,000 candidates for 300 presets): the two oscillators of one kind are **very different** (family,
+  role, wavelet class, wave, brightness, tuning, filter, own envelope: a "contrast" score and the difference of their solo spectra and envelopes),
+  the sound keeps a pitch, there is no burst of high frequencies, no drop-out, and the chord with its bass stays under the limiter's knee (the
+  cause of the crackle some presets had when chords were played); the new **SuperModulation** category (120 sounds, first in the lists) keeps only
+  sounds whose four most moving spectral bands move by more than 3 dB (standard deviation) more than they do with the LFOs at 0, and the other
+  categories (Bass 22, Lead 22, Keys 20, Organ 8, Pad 26, Strings 12, Brass & Wind 14, Pluck 20, Bells & Mallets 20, FX 16) at least a little;
+  a decaying sound (pluck, bell) is judged by how much its notes differ with the LFO phase. Their loudness is the TOP Sounds' median minus 1 dB.
+  They were chosen farthest-first, also against the 222 older presets, so the set is as varied as the engine allows. Of the 222 older presets only
+  about 30 moved their timbre at all. **Nobody has heard the 300 yet** — that is what EVALUATE SOUNDS is for (the list is now 201–500 first, then
+  the 200 of beta 0.1; the ratings file is keyed by the number, so ratings of 001–200 stay valid). "Wobble Bass" is the first of the Bass list.
+- **Chord keyboard.** **BASS** is a button under CHORD MODE and is **on by default**: the root two octaves below (never under C1), 3 dB louder
+  (`BASS_GAIN` 1.4). A chord keeps the level of a triad whatever its size (`chordTrim`). **The chord follows the left hand**: pressing another
+  chord on the selector octave (or a pad, VOICING or BASS) while a root is held changes the held chord at once; only the notes of the chord now
+  played sound (the dropped notes fade out in 60 ms at most, the shared notes are not played again); the last chord chosen stays chosen
+  (the left hand's memory).
+- **Oriental keyboard.** The three-position switch **TUNING** (Western / Arabic / Turkish) under CHORD MODE, **MAQAM** (Rast, Bayati / Uşşak,
+  Hijaz / Hicaz, Saba, Nahawand / Buselik) and **TONIC** under the scalogram: Arabic = 24-tone equal temperament (quarter tones of 50 cents),
+  Turkish = the 53 commas of the Arel-Ezgi-Uzdilek system; the keys the tuning moves carry an amber arrow; every note follows (keys, chord notes,
+  sub oscillator, MIDI), except the demo and EVALUATE SOUNDS. Three new playing parameters (never in a preset).
+- The **preset browser follows the preset box** (web and plug-in): choosing a sound with the arrows, the menu, a program change or the demo shows
+  its category and its row at the right.
+- EVALUATE SOUNDS says "Start at 201" (the first preset's own number) and rates 500 presets in factory order.
+- A **sine source** is now computed with the same additions and multiplications in both engines (`sinTurn`, a Taylor series: 7e-16 from `Math.sin`). `Math.sin` and `std::sin` differ
+  in the last bit, and SPARSITY chooses between atoms of equal size (a sine analysed with Daubechies 20 has many): the web app and the plug-in kept other atoms, and six of the new presets
+  sounded different in the two. The old presets that use a sine source differ from beta 0.1 by that 7e-16 only.
+
+**Checked**: the 22 TOP Sounds against the published beta 0.7 engine; the C++ engine against the JavaScript reference on **577** cases (all 522 presets and 55 variants: the new LFO
+destinations, the live chord scenarios, the tunings with a glide and a chord keyboard: worst 1.8e-7); `tests/supermod.js`; the idle rule; the engine
+self-test; the VST3 test host; the VST2 entry point; the plug-in's EVALUATE SOUNDS window and CHORD MODE driven like a player; the web app in headless Edge.
+
+---
+
 ## Okto MultiWave Synth beta 0.1 — 2026-10-18 (four oscillators, 200 new presets, EVALUATE SOUNDS)
 
 A **test version**: the sound engine, the panel and the presets are new, and the 200 new presets still have to be heard.

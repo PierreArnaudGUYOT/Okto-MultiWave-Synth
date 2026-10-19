@@ -1791,10 +1791,18 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (next >= 0) host->loadPreset(next);
   }
   // the next (dir 1) or previous (dir -1) factory preset that is not deleted
+  // The arrows step through the presets in the order of the lists (TOP Sounds, then each category's presets, every preset once; beta 0.2: the
+  // numbering is not the order of the lists any more: the 300 new presets come before the 200 of beta 0.1 in the factory order, but each
+  // category lists its presets together), skipping the deleted ones.
   int stepPreset(int from, int dir) {
     Library& lib = Library::get();
-    for (int i = 1; i <= kNumPresets; i++) {
-      const int k = ((from < 0 ? 0 : from) + dir * i + kNumPresets * 2) % kNumPresets;
+    std::vector<int> order; std::vector<char> seen(kNumPresets, 0);
+    for (const auto& l : lib.lists()) for (int k : l.second) if (k >= 0 && k < kNumPresets && !seen[k]) { seen[k] = 1; order.push_back(k); }
+    const int n = (int)order.size();
+    if (!n) return -1;
+    int at = 0; for (int i = 0; i < n; i++) if (order[i] == from) at = i;
+    for (int i = 1; i <= n; i++) {
+      const int k = order[((at + dir * i) % n + n) % n];
       if (!lib.deleted(k)) return k;
     }
     return -1;

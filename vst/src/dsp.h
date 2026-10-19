@@ -198,6 +198,17 @@ inline const FFT& fft() { static FFT f; return f; }
 // ------------------------------------------------------------------ tables
 // SOURCE PHASE (beta 0.4): the wave is read at frac(i/N + phase), exactly (no interpolation); the noise cycle is shifted
 // by round(phase·N) whole samples. phase 0 gives the source of beta 0.3 bit for bit.
+// sin(2·pi·t) from additions and multiplications only, the very same operations as core.js sinTurn (see there: sparsity and equal atoms)
+inline double sinTurn(double t) {
+  bool neg = false;
+  if (t >= 0.5) { t -= 0.5; neg = true; }
+  if (t > 0.25) t = 0.5 - t;
+  const double x = 2 * PI * t, y = x * x;
+  const double s = x * (1 + y * (-1.6666666666666666e-1 + y * (8.333333333333333e-3 + y * (-1.984126984126984e-4 + y * (2.7557319223985893e-6 +
+    y * (-2.505210838544172e-8 + y * (1.6059043836821613e-10 + y * (-7.647163731819816e-13 + y * (2.8114572543455206e-15 +
+    y * (-8.22063524662433e-18 + y * (1.957294106339126e-20 + y * -3.868170170630684e-23)))))))))));
+  return neg ? -s : s;
+}
 inline void sourceCycle(int wave, double width, double* x, double phase = 0) {
   Rng r(12345);
   for (int i = 0; i < N; i++) {
@@ -207,7 +218,7 @@ inline void sourceCycle(int wave, double width, double* x, double phase = 0) {
       case 1: x[i] = ph < 0.5 ? 1 : -1; break;
       case 2: x[i] = ph < width ? 1 : -1; break;
       case 3: x[i] = ph < width ? -1 + 2 * ph / width : 1 - 2 * (ph - width) / (1 - width); break;
-      case 4: x[i] = std::sin(2 * PI * ph); break;
+      case 4: x[i] = sinTurn(ph); break;
       default: x[i] = r.next() * 2 - 1; break;
     }
   }

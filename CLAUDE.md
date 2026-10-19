@@ -492,7 +492,7 @@ runs from `file://`); GitHub Actions pinned by tag.
 
 ## 8. Tests
 Beta 0.2 adds `tests/supermod.js` (the variants' tables, the destinations moving the sound, BASS and the chord that follows the left hand, the oriental tunings measured by
-the frequency they play) and 26 cross-check cases (277 in all: LFO 1 / LFO 2 on every new destination, the live chord scenarios, the tunings with a glide and a chord).
+the frequency they play) and 26 cross-check cases (577 in all, with the 522 presets: LFO 1 / LFO 2 on every new destination, the live chord scenarios, the tunings with a glide and a chord).
 Okto MultiWave Synth beta 0.1 status. **Maintained and passing**: `tests/quick.js` (20 s: syntax, generated files up to date, JS engine
 on the 222 presets + chord layer + hostile MIDI, the VST3 host's `params,audio,offline,attrlist` sections, the web app's first
 checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (four oscillator views, CHORD MODE, no console error), `tests/web/test_evaluate.js` (a web EVALUATE SOUNDS session end to end),

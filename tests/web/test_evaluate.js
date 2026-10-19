@@ -60,15 +60,18 @@ const n1 = first.name.slice(0, 3), n2 = second.name.slice(0, 3);   // beta 0.2: 
     check(await clickButton('Yes, modify it'), "'Yes, modify it' clicked");
     await sleep(500);
     check((await phase()) === 'edit', 'edit mode (the window is a bar)', String(await phase()));
-    check((await ev(`WS_TEST.getParam('v_voices')`)) === first.v.v_voices && Math.abs((await ev(`WS_TEST.getParam('f_cutoff')`)) - first.v.f_cutoff) < 1e-9, 'the preset is loaded as designed (its own voices and cutoff)',
-      `voices ${await ev(`WS_TEST.getParam('v_voices')`)} (preset ${first.v.v_voices})`);
-    await ev(`WS_TEST.setParam('f_cutoff', ${first.v.f_cutoff + 2.5}); true`);
+    // (a preset's `v` holds only the values that differ from the defaults: beta 0.2's presets are written that way)
+    const val = (p, k) => (p.v[k] !== undefined ? p.v[k] : SPEC.PARAMS.find(q => q.key === k).def);
+    const cut0 = val(first, 'f_cutoff'), cut1 = cut0 + 2.5 <= 12 ? cut0 + 2.5 : cut0 - 2.5;
+    check((await ev(`WS_TEST.getParam('v_voices')`)) === val(first, 'v_voices') && Math.abs((await ev(`WS_TEST.getParam('f_cutoff')`)) - cut0) < 1e-9, 'the preset is loaded as designed (its own voices and cutoff)',
+      `voices ${await ev(`WS_TEST.getParam('v_voices')`)} (preset ${val(first, 'v_voices')})`);
+    await ev(`WS_TEST.setParam('f_cutoff', ${cut1}); true`);
     await sleep(200);
     check(await clickButton('Record preset change'), "'Record preset change' clicked");
     await sleep(600);
     check((await phase()) === 'play', 'the next preset (002) plays', String(await phase()));
     const txt = await ev('WS_TEST.evaluate.text()');
-    check(new RegExp(`f_cutoff: ${first.v.f_cutoff} -> ${first.v.f_cutoff + 2.5}`).test(txt) && /yes {4}/.test(txt), 'the ratings text records the change', (txt.match(/PRESET CHANGES[\s\S]{0,200}/) || [''])[0].replace(/\r?\n/g, ' | '));
+    check(new RegExp(`f_cutoff: ${cut0} -> ${cut1}`).test(txt) && /yes {4}/.test(txt), 'the ratings text records the change', (txt.match(/PRESET CHANGES[\s\S]{0,200}/) || [''])[0].replace(/\r?\n/g, ' | '));
     const label2 = await ev(`(document.querySelector('.presets .pname span') || {}).textContent`);
     check(label2 === second.name, `the preset box shows '${second.name}'`, label2);
 

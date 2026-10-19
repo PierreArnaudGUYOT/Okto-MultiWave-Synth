@@ -37,11 +37,13 @@ if (process.argv[2] === '--worker') {
   const mp = SPEC.PARAMS[P.master];
   const rows = [];
   const stats = { composed: 0, nulls: 0, errors: 0 };
+  const onlyCats = arg('cats', '') ? arg('cats', '').split(',') : null, forcedKind = arg('kind', ''), nOver = +arg('n', 0);
   for (const [cat, quota] of QUOTA) {
-    const want = Math.ceil(quota * per / procs);
+    if (onlyCats && !onlyCats.includes(cat)) continue;
+    const want = nOver || Math.ceil(quota * per / procs);
     for (let n = 0, tries = 0; n < want && tries < want * 12; tries++) {
       let pr = null;
-      try { pr = compose(r, cat, { taken }); } catch (e) { stats.errors++; if (stats.errors < 4) console.error('compose error:', e.message); continue; }
+      try { pr = compose(r, cat, { taken, kind: forcedKind && cat === 'SuperModulation' ? forcedKind : undefined }); } catch (e) { stats.errors++; if (stats.errors < 4) console.error('compose error:', e.message); continue; }
       if (!pr) { stats.nulls++; continue; }
       stats.composed++;
       // the loudness: the master (and the levels when the sound is too quiet for +3 dB)
@@ -106,7 +108,7 @@ fs.mkdirSync(OUT, { recursive: true });
 let done = 0;
 const t0 = Date.now();
 if (process.argv.includes('--select-only')) select(true);
-else for (let k = 0; k < procs; k++) fork(__filename, ['--worker', String(k), '--per', String(per), '--seed', String(seed), '--procs', String(procs)]).on('exit', () => { if (++done === procs) select(false); });
+else for (let k = 0; k < procs; k++) fork(__filename, ['--worker', String(k), '--per', String(per), '--seed', String(seed), '--procs', String(procs), '--cats', arg('cats', ''), '--kind', arg('kind', ''), '--n', arg('n', '0')]).on('exit', () => { if (++done === procs) select(false); });
 
 function select(selectOnly) {
   const lab = require('../preset_lab.js'), SPEC = lab.SPEC;
@@ -117,7 +119,10 @@ function select(selectOnly) {
     cands = cands.concat(j.rows); for (const s of Object.keys(stats)) stats[s] += j.stats[s];
   }
   if ((process.argv.includes('--pool') || selectOnly) && fs.existsSync(poolFile)) {
-    const old = JSON.parse(fs.readFileSync(poolFile, 'utf8')), have = new Set(cands.map(c => c.title.toLowerCase()));
+    let old = JSON.parse(fs.readFileSync(poolFile, 'utf8'));
+    const purge = arg('purge-kind', '');   // candidates of a kind of sound that are made again (the composer changed for it)
+    if (purge) old = old.filter(c => c.meta.kind !== purge);
+    const have = new Set(cands.map(c => c.title.toLowerCase()));
     for (const c of old) if (!have.has(c.title.toLowerCase())) { cands.push(c); have.add(c.title.toLowerCase()); }
   }
   if (process.argv.includes('--pool') || selectOnly) fs.writeFileSync(poolFile, JSON.stringify(cands));
@@ -159,7 +164,9 @@ function select(selectOnly) {
     "'use strict';\nmodule.exports = [\n";
   chosen.forEach((c, i) => {
     const name = `${String(firstNo + i).padStart(3, '0')} ${c.used} · ${c.title}`;
-    js += `  { name: ${JSON.stringify(name)}, cat: ${JSON.stringify(c.cat)}, desc: ${JSON.stringify(c.desc)},\n    v: ${JSON.stringify(c.v)} },\n`;
+    // four decimals: a preset reads like a hand-made one (the demo and the state files keep six digits), and the sound is the one measured
+    const v = Object.fromEntries(Object.entries(c.v).map(([k, x]) => [k, Number.isInteger(x) ? x : Math.round(x * 1e4) / 1e4]));
+    js += `  { name: ${JSON.stringify(name)}, cat: ${JSON.stringify(c.cat)}, desc: ${JSON.stringify(c.desc)},\n    v: ${JSON.stringify(v)} },\n`;
   });
   js += '];\n';
   fs.writeFileSync(path.join(__dirname, '..', 'presets_super.js'), js);

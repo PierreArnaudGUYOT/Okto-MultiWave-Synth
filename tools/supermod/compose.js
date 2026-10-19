@@ -8,7 +8,7 @@
 'use strict';
 const { P } = require('../preset_dsl.js');
 const LAY = require('./layers.js');
-const { MODS, aOsc, bOsc, allOsc } = require('./mods.js');
+const { MODS, CLAUSE, aOsc, bOsc, allOsc } = require('./mods.js');
 const { wclass } = LAY;
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -79,7 +79,7 @@ function globals(r, kind) {
   g.voices = mono ? 1 : r.pick([6, 8, 10, 12]);
   if (mono) { g.porta = 'legato'; g.glide = +r.f(0.02, 0.12).toFixed(3); }
   switch (kind) {
-    case 'bass': g.amp = [r.f(0.002, 0.01), r.f(0.3, 0.9), r.f(0.5, 0.9), r.f(0.08, 0.25), r.f(0.4, 0.8)]; g.uni = [1, 0]; g.width = 0.3;
+    case 'bass': g.oct = -1; g.amp = [r.f(0.002, 0.01), r.f(0.3, 0.9), r.f(0.5, 0.9), r.f(0.08, 0.25), r.f(0.4, 0.8)]; g.uni = [1, 0]; g.width = 0.3;
       g.reverb = [r.f(0.15, 0.3), r.f(0.04, 0.12)]; if (r.p(0.3)) g.drive = +r.f(0.05, 0.25).toFixed(2); if (r.p(0.25)) g.chorus = [r.f(0.15, 0.35), 0.5, 0.5]; break;
     case 'lead': g.amp = [r.f(0.004, 0.03), r.f(0.3, 0.8), r.f(0.6, 0.9), r.f(0.15, 0.4), 0.5]; g.uni = [r.pick([1, 1, 2]), r.f(6, 14)]; g.width = 0.7;
       if (r.p(0.65)) g.delay = [r.pick([0.25, 0.33, 0.375, 0.5]), r.f(0.25, 0.4), r.f(0.1, 0.25)]; g.reverb = [r.f(0.4, 0.7), r.f(0.1, 0.3)]; break;
@@ -117,7 +117,7 @@ const CONFIGS = [['A1A2', 24], ['B1B2', 15], ['A1B1', 24], ['A1A2B1', 13], ['A1B
 
 function compose(r, cat, opts = {}) {
   const spec = CATS[cat];
-  const kind = spec.kind || r.wpick(SUPER_KINDS);
+  const kind = opts.kind || spec.kind || r.wpick(SUPER_KINDS);
   const super_ = cat === 'SuperModulation';
   const cfg = r.wpick(CONFIGS), slots = cfg.match(/[AB]\d/g);
   const want = (mode) => slots.filter(s => s[0] === mode);
@@ -195,20 +195,28 @@ function compose(r, cat, opts = {}) {
   let title = null;
   for (let t = 0; t < 40 && !title; t++) { const c = r.pick(patterns)(); if (!/^(\w+) & \1$/.test(c) && !opts.taken.has(c.toLowerCase())) title = c; }
   if (!title) return null;
-  const rel = (o) => {
-    const st = (o.oct || 0) * 12 + (o.semi || 0);
-    const t = st === 12 ? 'an octave above' : st === 24 ? 'two octaves above' : st === -12 ? 'an octave below' : st === -24 ? 'two octaves below' : st === 7 ? 'a fifth above' : st === 5 ? 'a fourth above' : st === 3 ? 'a minor third above' : st === 4 ? 'a major third above' : '';
-    return t ? ' ' + t : o.fine ? ', slightly detuned' : '';
-  };
-  const parts = slots.map(s => picked[s].l.desc + (s === bodySlot ? '' : rel(picked[s].o)));
-  let desc = cap(parts[0]) + (parts.length > 1 ? ' against ' + parts.slice(1).join(', and ') : '');
-  desc += '; ' + used.map(u => u.res.desc).join(', and ') + '.';
+  const order2 = [bodySlot, ...slots.filter(s => s !== bodySlot)];
+  const desc = describe(order2.map(s => picked[s].l), order2.map(s => picked[s].o), used.map(u => u.m.id), P(cat, title, '', Object.assign({ g: ctx.g }, Object.fromEntries(slots.map(s => [s, ctx.osc[s]])))).v);
   // the oscillators and globals into a preset
   const specObj = { g: ctx.g };
   for (const s of slots) specObj[s] = ctx.osc[s];
   const pr = P(cat, title, desc, specObj);
-  pr.meta = { cfg, kind, layers: slots.map(s => picked[s].l.id), roles: slots.map(s => picked[s].role), mods: used.map(u => u.m.id), dests: [...new Set(used.map(u => u.m.dest))] };
+  pr.desc = desc;
+  pr.meta = { cfg, bodySlot, order: order2, kind, layers: slots.map(s => picked[s].l.id), roles: slots.map(s => picked[s].role), mods: used.map(u => u.m.id), dests: [...new Set(used.map(u => u.m.dest))] };
   return pr;
 }
 
-module.exports = { compose, CATS, contrast };
+// the description of a preset: its layers (the body first, then the others with their relation to the body) and what the LFOs do
+const rel = (o) => {
+  const st = (o.oct || 0) * 12 + (o.semi || 0);
+  const t = st === 12 ? 'an octave above' : st === 24 ? 'two octaves above' : st === -12 ? 'an octave below' : st === -24 ? 'two octaves below' : st === 7 ? 'a fifth above' : '';
+  return t ? ' ' + t : o.fine ? ', slightly detuned' : '';
+};
+function describe(layers, oscs, modIds, v) {
+  const parts = layers.map((l, i) => l.desc + (i === 0 ? '' : rel(oscs[i])));
+  let d = cap(parts[0]) + (parts.length > 1 ? ' against ' + parts.slice(1).join(', and ') : '');
+  const cl = modIds.map(id => CLAUSE[id](v));
+  d += '; ' + (cl.length > 1 ? cl.slice(0, -1).join(', ') + ', and ' + cl[cl.length - 1] : cl[0]) + '.';
+  return d;
+}
+module.exports = { compose, describe, CATS, contrast };

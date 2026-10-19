@@ -658,7 +658,8 @@ async function stepPanel() {
   await ev(`WS_TEST.setParam('osc_view', ${eng0}); true`);
   // tempo SYNC is the plug-in's: neither its buttons nor its note-value knobs here; the hertz / seconds knobs at their place
   const vstOnly = all.filter((w) => w.only === 'vst' && w.param).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
-  const shown = all.filter((w) => w.vis && w.only !== 'vst').map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
+  // (the widgets of beta 0.2 that show with a playing setting — BASS with CHORD MODE, MAQAM and TONIC with TUNING — are not sync twins)
+  const shown = all.filter((w) => w.vis && w.only !== 'vst' && w.param && !SPEC_BY_KEY[w.vis].perf).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   const probe = (list) => ev(`(() => { const d = document.getElementById('device').getBoundingClientRect();
     return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / 860);
       const k = e && e.closest('.w'); return { want: w.name, at: k ? (k.title || '').split(' — ')[0] || k.className : (e ? e.tagName : null), text: k ? k.textContent.trim() : '' }; }); })()`);

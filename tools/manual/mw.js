@@ -100,8 +100,8 @@ const pins = E => {
     { x: 16, y: 626, title: 'LFO 1', desc: 'pitch, cutoff, position, wavelet morph, sparsity, resonance and envelope-to-wavelet.', href: 'lfo' },
     { x: 468, y: 626, title: 'LFO 2', desc: 'one control chosen by TARGET: any scale-filter or wavelet control, in every oscillator.', href: 'lfo' },
     { x: 722, y: 626, title: 'VOICE', desc: 'portamento, octave, tuning, polyphony, glide, unison.', href: 'voice' },
-    { x: 16, y: 756, title: 'CHORD MODE · BASS', desc: 'shows the chord-harp card and turns the keyboard into chords; BASS adds the low note.', href: 'chord' },
-    { x: 16, y: 818, title: 'TUNING', desc: 'the three-position switch of the oriental keyboard: Western, Arabic, Turkish.', href: 'oriental' },
+    { x: 0, y: 752, title: 'CHORD MODE · BASS', desc: 'shows the chord-harp card and turns the keyboard into chords; BASS adds the low note.', href: 'chord' },
+    { x: 0, y: 812, title: 'TUNING', desc: 'the three-position switch of the oriental keyboard: Western, Arabic, Turkish.', href: 'oriental' },
     { x: 126, y: 750, title: 'Wheels · keyboard', desc: 'pitch bend, modulation; five octaves.', href: 'panel' },
   ];
 };

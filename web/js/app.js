@@ -145,12 +145,18 @@
 
   // ---------------------------------------------------------------- presets
   function presetList() {
-    const list = [];
-    // ★ TOP SOUNDS (OktoPierre's selection, first in the factory order; beta 0.5), then one group per category.
-    SPEC.PRESETS.forEach((pr, k) => list.push({
-      id: 'f:' + k, name: pr.name, group: k < SPEC.TOP ? '★ TOP SOUNDS' : pr.cat.toUpperCase(),
-      current: presetId === 'f:' + k, deletable: false,
-    }));
+    const list = [], P = SPEC.PRESETS;
+    // ★ TOP SOUNDS (OktoPierre's selection, first in the factory order; beta 0.5), then one group per category, in the order of the
+    // categories and of the presets' ranks (beta 0.2: the numbering is not the order of the lists any more: the 300 new presets 201-500
+    // come before the 200 of beta 0.1 in the array, but each category lists its presets together). The arrows step through this list.
+    const add = (k, group) => list.push({ id: 'f:' + k, name: P[k].name, group, current: presetId === 'f:' + k, deletable: false });
+    for (let k = 0; k < Math.min(SPEC.TOP, P.length); k++) add(k, '★ TOP SOUNDS');
+    for (const c of SPEC.CATEGORIES) {
+      const ks = [];
+      for (let k = SPEC.TOP; k < P.length; k++) if (P[k].cat === c) ks.push(k);
+      ks.sort((a, b) => P[a].rank - P[b].rank);
+      for (const k of ks) add(k, c.toUpperCase());
+    }
     userPresets.forEach((pr, k) => list.push({ id: 'u:' + k, name: pr.name, group: 'USER PRESETS', current: presetId === 'u:' + k, deletable: true }));
     return list;
   }

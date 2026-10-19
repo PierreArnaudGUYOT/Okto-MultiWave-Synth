@@ -276,6 +276,9 @@ int wmain(int argc, wchar_t** argv) {
 
   const int P1 = kFirstNew, P2 = kFirstNew + 1, P3 = kFirstNew + 2;   // the first three presets to rate (beta 0.2: 201 202 203)
   const std::string N1(kPresets[P1].name, 3), N2(kPresets[P2].name, 3), N3(kPresets[P3].name, 3);
+  // the scale filter's cutoff of the oscillator a preset shows (beta 0.2: the first presets are additive: B1's cutoff, not A1's f_cutoff)
+  auto cutOf = [](int k) { return kSlots[(int)kPresets[k].v[P_OSC_VIEW]].fcut; };
+  const int C1 = cutOf(P1), C2 = cutOf(P2), C3 = cutOf(P3);
   const std::wstring startLbl = L"Start at " + std::wstring(N1.begin(), N1.end()), contLbl = L"Continue at " + std::wstring(N3.begin(), N3.end()),
                      restartLbl = L"Restart at " + std::wstring(N1.begin(), N1.end());
   const std::string ofAll = " / " + std::to_string(kNumNew);
@@ -306,7 +309,7 @@ int wmain(int argc, wchar_t** argv) {
   h.run(0.12);
   check(h.plain(P_V_VOICES) == 16 && h.plain(P_V_OCT) == 0 && h.plain(P_V_GLIDE) == 0, "listening rules (16 voices, octave 0, no glide)",
         fmt("voices %.0f oct %.0f glide %.3f", h.plain(P_V_VOICES), h.plain(P_V_OCT), h.plain(P_V_GLIDE)));
-  check(std::fabs(h.plain(P_F_CUTOFF) - kPresets[P1].v[P_F_CUTOFF]) < 1e-6, "preset 001 loaded", fmt("cutoff %.3f", h.plain(P_F_CUTOFF)));
+  check(std::fabs(h.plain(C1) - kPresets[P1].v[C1]) < 1e-6, "the first preset is loaded", fmt("cutoff %.3f", h.plain(C1)));
   h.run(0.3); h.resetPeak(); h.run(2.0);
   check(h.peak > 0.02, "the passage of Beethoven sounds", fmt("peak %.3f", h.peak));
   h.shot(out + L"\\2_playing.png");
@@ -321,7 +324,7 @@ int wmain(int argc, wchar_t** argv) {
     return 1;
   }
   const std::string name1 = std::string(kPresets[P1].name);
-  check(has(txt, N1 + " |  7 |         | " + name1.substr(4)), "ratings file written after the rating (" + N1 + " = 7)");
+  check(has(txt, N1 + " |  7 |         | " + name1.substr(4)), ("ratings file written after the rating (" + N1 + " = 7)").c_str());
   check(has(txt, "Rated: 1" + ofAll), "ratings file header");
   h.shot(out + L"\\4_ask.png");
   std::printf("4. Yes, modify it: the preset exactly as designed\n");
@@ -332,10 +335,10 @@ int wmain(int argc, wchar_t** argv) {
         fmt("voices %.0f oct %.0f glide %.3f", h.plain(P_V_VOICES), h.plain(P_V_OCT), h.plain(P_V_GLIDE)));
   h.shot(out + L"\\5_edit.png");
   std::printf("5. drag the CUTOFF knob up, play the passage, record\n");
-  h.drag(cutX, cutY, -45);
+  h.drag(cutX, cutY, kPresets[P1].v[C1] > 6 ? 45 : -45);   // up raises it; down when the preset already has it wide open (beta 0.2: 12)
   h.run(0.2);
-  const double cut = h.plain(P_F_CUTOFF);
-  check(cut > kPresets[P1].v[P_F_CUTOFF] + 0.5, "cutoff changed with the mouse", fmt("%.3f -> %.3f", kPresets[P1].v[P_F_CUTOFF], cut));
+  const double cut = h.plain(C1);
+  check(std::fabs(cut - kPresets[P1].v[C1]) > 0.5, "cutoff changed with the mouse", fmt("%.3f -> %.3f", kPresets[P1].v[C1], cut));
   const std::vector<std::pair<const wchar_t*, bool>> bar = {{L"▶ Play the passage", false}, {L"Keep initial settings", false}, {L"Record preset change", true}, {L"Stop", false}};
   h.click(buttonCenter(bar, 0, BAR_X), BAR_Y);
   h.run(0.4); h.resetPeak(); h.run(1.5);
@@ -345,7 +348,7 @@ int wmain(int argc, wchar_t** argv) {
   h.run(0.3);
   txt = readFile(votes);
   auto js = [](double v) { char b[64]; std::snprintf(b, sizeof b, "%.6f", v); std::string s = b; while (s.back() == '0') s.pop_back(); if (s.back() == '.') s.pop_back(); return s; };
-  const std::string chLine = "  f_cutoff: " + js(kPresets[P1].v[P_F_CUTOFF]) + " -> " + js(cut);
+  const std::string chLine = std::string("  ") + kParams[C1].key + ": " + js(kPresets[P1].v[C1]) + " -> " + js(cut);
   check(has(txt, N1 + " |  7 | yes     | ") && has(txt, name1 + "   (7 stars)") && has(txt, chLine), "change recorded in the ratings file", chLine);
   {
     // only the cutoff: nothing else differs from the preset
@@ -353,14 +356,14 @@ int wmain(int argc, wchar_t** argv) {
     int n = 0; for (size_t p = txt.find("\r\n  ", a); p != std::string::npos && p < b; p = txt.find("\r\n  ", p + 2)) n++;
     check(n == 1, "the change holds only the parameter moved", std::to_string(n) + " line(s)");
   }
-  check(h.plain(P_V_VOICES) == 16 && std::fabs(h.plain(P_F_CUTOFF) - kPresets[P2].v[P_F_CUTOFF]) < 1e-6, "after recording, preset 002 plays");
+  check(h.plain(P_V_VOICES) == 16 && std::fabs(h.plain(C2) - kPresets[P2].v[C2]) < 1e-6, "after recording, the second preset plays");
   std::printf("6. 002: 3 stars (no question), 003 plays, Stop\n");
   h.run(5.4);
   h.click(starX(3), STAR_Y);
   h.run(0.4);
   txt = readFile(votes);
-  check(has(txt, N2 + " |  3 |"), N2 + " = 3 saved");
-  check(std::fabs(h.plain(P_F_CUTOFF) - kPresets[P3].v[P_F_CUTOFF]) < 1e-6 && h.plain(P_V_VOICES) == 16, "3 stars: no question, 003 plays");
+  check(has(txt, N2 + " |  3 |"), (N2 + " = 3 saved").c_str());
+  check(std::fabs(h.plain(C3) - kPresets[P3].v[C3]) < 1e-6 && h.plain(P_V_VOICES) == 16, "3 stars: no question, the third plays");
   h.run(1.0);
   h.click(buttonCenter({{L"Stop", false}}, 0, CARD_X), CARD_Y);
   h.run(0.25); h.resetPeak(); h.run(0.5);

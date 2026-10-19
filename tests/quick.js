@@ -116,7 +116,9 @@ async function web() {
     await B.navigate('file:///' + R('web', 'index.html').replace(/\\/g, '/').replace(/ /g, '%20'));
     if (!await B.waitFor('!!window.WS_TEST', 5000)) throw new Error('the app did not start (no WS_TEST)');
     const names = await B.evaluate('WS_TEST.presets()');
-    const want = SPEC.PRESETS.map(p => p.name);
+    // the menu: the TOP Sounds, then each category's presets by rank (beta 0.2: not the array order, which has the 300 new presets before the 200 of beta 0.1)
+    const want = SPEC.PRESETS.slice(0, SPEC.TOP).map(p => p.name);
+    for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.slice(SPEC.TOP).filter(q => q.cat === c).sort((a, b) => a.rank - b.rank)) want.push(p.name);
     if (JSON.stringify(names.slice(0, want.length)) !== JSON.stringify(want)) bad.push('preset menu order differs from the spec');
     const label = await B.evaluate("(document.querySelector('.presets .pname span') || {}).textContent || ''");
     if (label !== SPEC.PRESETS[SPEC.DEFAULT_PRESET].name) bad.push(`opens on '${label}' instead of '${SPEC.PRESETS[SPEC.DEFAULT_PRESET].name}'`);

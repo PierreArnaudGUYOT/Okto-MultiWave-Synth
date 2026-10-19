@@ -186,4 +186,19 @@ const MODS = [
     } },
 ];
 const BY_ID = Object.fromEntries(MODS.map(m => [m.id, m]));
-module.exports = { MODS, BY_ID, aOsc, bOsc, allOsc };
+// the clause of a recipe in a description, from the values of the preset (v: sparse parameter values)
+const WN = ['Haar', 'Daubechies 2', 'Daubechies 4', 'Daubechies 8', 'Symlet 8', 'Coiflet 3', 'Daubechies 20'];
+const CLAUSE = {
+  cutBreath: () => 'the scale cutoff breathes', sparseBreath: () => 'the sparsity swings between a rich tone and a few wavelet atoms',
+  resoWah: () => 'the resonance of the scale filter pulses', windowSweep: () => 'the filtered part of the cycle is swept along it',
+  morphLfo: (v) => `the wavelet morphs towards ${WN[v.wav2]}`, ewSwing: (v) => `each note's envelope pushes the wavelet towards ${WN[v.wav2]}, by an amount the LFO swings`,
+  pitchVib: () => 'a light vibrato', envSweep: () => 'each note opens its filter on its own envelope',
+  l2Sparse: () => 'LFO 2 thins and thickens the atoms (sparsity)', l2Phase: () => 'LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase)',
+  l2Width: () => 'LFO 2 pulls the source wave between narrow and wide', l2Cut: () => 'LFO 2 sweeps the scale filter', l2Reso: () => 'LFO 2 swells the resonance',
+  l2Pos: () => 'LFO 2 carries the window of the filter round the cycle', l2WinW: () => 'LFO 2 widens and narrows the filtered window',
+  l2Morph: (v) => `LFO 2 drifts the wavelet towards ${WN[v.wav2]}`, l2Tilt: () => 'LFO 2 tilts the scales from dark to bright',
+  l2Odd: () => 'LFO 2 swells and drops the odd scales: hollow, then full', l2Even: () => 'LFO 2 pulls the even scales in and out',
+  l2Sus: () => 'LFO 2 changes how much of the upper scales survives the decay', l2EnvAmt: () => 'LFO 2 changes how far each note\'s envelope opens the filter',
+  l2Slope: () => 'LFO 2 sharpens and relaxes the edge of the scale filter',
+};
+module.exports = { MODS, BY_ID, CLAUSE, aOsc, bOsc, allOsc };

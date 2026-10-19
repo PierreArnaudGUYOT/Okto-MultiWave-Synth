@@ -76,9 +76,9 @@ const A = [
   { id: 'pluckcoif', role: 'attack', fam: 'pluckA', bright: 4, words: ['Pluck', 'Harp', 'Lute', 'Thorn'], desc: 'a quick filtered pluck',
     make: (r) => ({ wave: 'saw', wavelet: r.pick(['coif3', 'db4']), fcut: r.f(3, 5), fenv: r.f(3.5, 6.5), fres: r.f(1, 4), env: [0.001, r.f(0.18, 0.5), r.f(0, 0.1), r.f(0.1, 0.3)] }) },
   // ---- the low support
-  { id: 'subsine', role: 'sub', fam: 'sub', bright: 1, words: ['Deep', 'Basalt', 'Abyss', 'Root'], desc: 'a sine an octave or two below',
+  { id: 'subsine', role: 'sub', fam: 'sub', bright: 1, words: ['Deep', 'Basalt', 'Abyss', 'Root'], desc: 'a sine sub',
     make: (r) => ({ wave: 'sine', wavelet: 'db20', fcut: 12 }) },
-  { id: 'subtri', role: 'sub', fam: 'sub', bright: 1, words: ['Deep', 'Cellar', 'Keel', 'Lowland'], desc: 'a round triangle underneath',
+  { id: 'subtri', role: 'sub', fam: 'sub', bright: 1, words: ['Deep', 'Cellar', 'Keel', 'Lowland'], desc: 'a round triangle sub',
     make: (r) => ({ wave: 'tri', width: 0.5, wavelet: 'db20', fcut: r.f(5, 8) }) },
   { id: 'subsq', role: 'sub', fam: 'sub', bright: 2, words: ['Round', 'Cellar', 'Stone', 'Anvil'], desc: 'a rounded square sub',
     make: (r) => ({ wave: 'square', wavelet: 'db20', fcut: r.f(3.2, 4.4), fres: r.f(0, 2) }) },

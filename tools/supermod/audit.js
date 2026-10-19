@@ -135,6 +135,37 @@ function layerDistance(values, s1, s2) {
   return { spec: c ? d / c : 0, env: de / m, gDiff: Math.abs(ga - gb) };
 }
 
+// A sound that decays (no sustain) lives too briefly for its LFOs to be judged inside one note: what the LFO does is that every note starts
+// at another point of its cycle, so the notes differ. The same chord played at two moments half an LFO cycle apart (the LFOs run freely):
+// how much does the spectrum shape of the first 0.4 s differ (the four bands that differ most, dB)?
+function onsetDiff(values) {
+  const rate = Math.max(0.3, Math.min(values[P.lfo_rate], 6)), rate2 = Math.max(0.3, Math.min(values[P.lfo2_rate], 6));
+  const delays = [0.5 / rate, 0.5 / rate2, 0.25 / rate, 0.25 / rate2].map(d => Math.min(1.6, Math.max(0.12, d)));
+  const shape = (r, t0) => {
+    const m = meanSpectrum(r, t0 + 0.02, t0 + 0.42);
+    let t = 0; for (const v of m) t += Math.pow(10, v / 10);
+    const db = 10 * Math.log10(t + 1e-20); return m.map(v => v - db);
+  };
+  const play = (delay) => {
+    const params = Float64Array.from(values);
+    params[P.chord_mode] = 1; params[P.chord_bass] = 1; params[P.chord_voicing] = 1; params[P.chord_type] = 4;
+    const eng = new C.Engine(sr); params.forEach((v, i) => eng.setParam(i, v));
+    eng.vol = Math.exp(params[P.master] * (Math.LN10 / 20));
+    eng.setTables(C.buildTables(params, true));
+    const n = Math.round((delay + 1) * sr), L = new Float32Array(n), R = new Float32Array(n), blk = 128, at = Math.round(delay * sr / blk) * blk;
+    for (let s = 0; s < n; s += blk) { if (s === at) eng.keyOn(60, 0.9); eng.process(L.subarray(s, s + blk), R.subarray(s, s + blk), Math.min(blk, n - s)); }
+    return { L, R, n, sr, offAt: n, t0: at / sr };
+  };
+  const base = play(0.05), a = shape(base, 0.05);
+  let best = 0;
+  for (const d of delays) {
+    const r = play(0.05 + d), b = shape(r, 0.05 + d);
+    const diffs = a.map((v, i) => Math.abs(v - b[i])).sort((x, y) => y - x).slice(0, 4);
+    best = Math.max(best, diffs.reduce((s, x) => s + x, 0) / 4);
+  }
+  return best;
+}
+
 // ---- the whole audit of one preset (values = the full parameter array). o.contrast: [[slotA, slotB], ...] the pairs to compare
 function audit(values, o = {}) {
   const out = {};
@@ -149,6 +180,7 @@ function audit(values, o = {}) {
   // noise-likeness of a single note after 400 ms (0 = tonal, 1 = noise): the sound has to keep a pitch
   const r1 = lab.render(values, { note: 60, vel: 0.8, hold: 1.2, tail: 0.2 });
   out.flat = lab.flatness(r1, Math.round(0.4 * sr));
+  out.decaying = values[P.amp_s] < 0.15;
   if (o.stage1 && o.stage1(out)) { out.stopped = 1; return out; }   // refused already: the rest costs more than it is worth
   // the motion is judged with the LFOs not slower than 0.45 Hz (a pad's 0.06 Hz needs a quarter of a minute to show what it does, the
   // depth is the same): the same sound with its LFOs sped up, against the same with every amount at 0
@@ -167,6 +199,7 @@ function audit(values, o = {}) {
   const ms = meanSpectrum(r60, 0.45, hold), mt = meanSpectrum(rs, 0.45, hold);
   let dm = 0, dc = 0; for (let b = 0; b < BANDS.length; b++) { if (Math.max(ms[b], mt[b]) < Math.max(...ms) - 40) continue; dm += Math.abs(ms[b] - mt[b]); dc++; }
   out.modShift = dc ? dm / dc : 0;
+  if (out.decaying && !o.noOnset) out.onsetDiff = onsetDiff(values);
   if (o.stage2 && o.stage2(out)) { out.stopped = 2; return out; }
   out.contrast = (o.pairs || []).map(([a, b]) => layerDistance(values, a, b));
   out.frames = frames;
@@ -197,11 +230,13 @@ function judgeSound(a, kind) {
 // the four bands that move most move by more than 3 dB (standard deviation) more than they do without the modulation: SuperModulation
 // is bold, the other categories only need to be alive
 function judgeMotion(a, cat) {
-  if (cat === 'SuperModulation') return a.moveDelta < 3 || a.motion < 4.5 ? 'SuperModulation does not move enough' : null;
-  return a.moveDelta < 1 ? 'modulation inaudible' : null;
+  // a decaying sound (plucks, bells, mallets) is judged by how much its notes differ with the LFO phase (onsetDiff) as well
+  const delta = a.decaying && a.onsetDiff !== undefined ? Math.max(a.moveDelta, a.onsetDiff) : a.moveDelta;
+  if (cat === 'SuperModulation') return delta < 3 || (a.motion < 4.5 && !(a.decaying && a.onsetDiff >= 4)) ? 'SuperModulation does not move enough' : null;
+  return delta < 1 ? 'modulation inaudible' : null;
 }
 function judgeContrast(a) {
   for (const c of a.contrast) if (c.spec < 4.5 && c.env < 4.5) return 'two oscillators of a kind too alike';
   return null;
 }
-module.exports = { judgeSound, judgeMotion, judgeContrast, audit, chord, fullValues, hfMeasure, limiterShare, motionOf, bandFrames, meanSpectrum, staticValues, SLOT_IDS, BANDS, peakOf };
+module.exports = { onsetDiff, judgeSound, judgeMotion, judgeContrast, audit, chord, fullValues, hfMeasure, limiterShare, motionOf, bandFrames, meanSpectrum, staticValues, SLOT_IDS, BANDS, peakOf };
