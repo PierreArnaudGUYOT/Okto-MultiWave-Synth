@@ -47,7 +47,12 @@ hand, a three-position switch adds an oriental keyboard with quarter tones, and 
 
 **Checked**: the 22 TOP Sounds against the published beta 0.7 engine; the C++ engine against the JavaScript reference on **577** cases (all 522 presets and 55 variants: the new LFO
 destinations, the live chord scenarios, the tunings with a glide and a chord keyboard: worst 1.8e-7); `tests/supermod.js`; the idle rule; the engine
-self-test; the VST3 test host; the VST2 entry point; the plug-in's EVALUATE SOUNDS window and CHORD MODE driven like a player; the web app in headless Edge.
+self-test; the VST3 test host (188 checks of its non-editor sections; its controller-state section is the Wavelet Synthesizer's and still fails on its first check); the VST2 entry point (41 checks); the plug-in's EVALUATE SOUNDS window, CHORD MODE and the preset browser following the preset box, driven like a player; the presets file of beta 0.1 read with the new presets in their default places; the web app in headless Edge (the whole run plays all 522 presets).
+
+**Known limits**
+- The 300 new presets were **measured, not listened to** (nobody can listen to a thousand candidates overnight): a preset can be thin or odd in a way the measures do not see; that is what the ratings are for.
+- A loud chord played with many fingers still distorts on a few older presets, which are not changed (131 Oboe, 121 String Machine II, 067 Pipe Organ Duo, 073 Fair Organ, 130 Clarinet, 064 Jazz Organ, 071 Theatre Organ II, 187 Spaceship: lower VOLUME or the number of notes). The chord keyboard turns its chords down so that it does not.
+- The oriental tunings are the usual keyboard approximations (a half-flat degree = -50 cents; the Turkish values are the commas of the Arel-Ezgi-Uzdilek system): in the Arabic tuning Rast retunes the third and the seventh and Bayati and Saba the second degree, while Hijaz and Nahawand use the piano's semitones (nothing is retuned); the Turkish tuning gives all five their commas.
 
 ---
 
