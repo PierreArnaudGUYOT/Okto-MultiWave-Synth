@@ -154,6 +154,22 @@ struct Host {
     SendMessageW(ed, WM_LBUTTONUP, 0, MAKELPARAM((int)x, (int)std::lround(y + dy)));
     pump();
   }
+  // beta 0.3.4: the colours (0xRRGGBB) of some pixels of the editor window, as the screenshot shows them
+  std::vector<uint32_t> pixels(const std::vector<POINT>& pts) {
+    RECT rc; GetClientRect(top, &rc);
+    HDC sdc = GetDC(nullptr); HDC mdc = CreateCompatibleDC(sdc);
+    HBITMAP bmp = CreateCompatibleBitmap(sdc, rc.right, rc.bottom); HGDIOBJ old = SelectObject(mdc, bmp);
+    SetWindowPos(top, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    RedrawWindow(top, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+    pump(); Sleep(60);
+    PrintWindow(top, mdc, 2 /* PW_RENDERFULLCONTENT */);
+    std::vector<uint32_t> out;
+    for (const POINT& p : pts) { const COLORREF c = GetPixel(mdc, p.x, p.y); out.push_back(((uint32_t)GetRValue(c) << 16) | ((uint32_t)GetGValue(c) << 8) | GetBValue(c)); }
+    SelectObject(mdc, old);
+    SetWindowPos(top, HWND_NOTOPMOST, -4000, 0, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+    DeleteObject(bmp); DeleteDC(mdc); ReleaseDC(nullptr, sdc);
+    return out;
+  }
   void shot(const std::wstring& file) {
     RECT rc; GetClientRect(top, &rc);
     HDC sdc = GetDC(nullptr); HDC mdc = CreateCompatibleDC(sdc);
@@ -321,7 +337,78 @@ int wmain(int argc, wchar_t** argv) {
       check(v3.getHeight() == kDeviceH && v3.getWidth() == 1100 + 420, "fit: a large screen keeps the panel at 100 % (with the browser: 1520 wide)", fmt("%.0f x %.0f", (double)v3.getWidth(), (double)v3.getHeight()));
     }
   }
-  std::printf("2. beta 0.2: the preset browser follows the preset box (the screenshot shows the browser on SuperModulation, the sound selected)\n");
+  std::printf("2. beta 0.3.4: the LFO 2 | LFO 3 tabs, the stepped SHAPE knob, TUNING ARAB / TURK (oriental colour code and pattern)\n");
+  {
+    const uint32_t kAccentColA = 0xffcf3d;   // the yellow of the subtractive oscillators
+    auto setP = [&](int id, double plain) { h.ctrl->setParamNormalized(id, h.ctrl->plainParamToNormalized(id, plain)); h.run(0.3); };
+    float lt[4], ob[4], shx = 0, shy = 0, vx = 0, vy = 0, tgx = 0, tgy = 0;
+    check(widgetBox(W_LFOTABS, lt) && widgetBox(W_OSCTABS, ob), "the LFO tabs and the folder tabs are in the layout", fmt("lfotabs (%.0f, %.0f), osctabs at y %.0f", lt[0], lt[1], ob[1]));
+    check(widgetCenter(W_KNOBM, P_LFO3_SHAPE, 0, shx, shy) && widgetCenter(W_KNOBM, P_V_OCT, 0, vx, vy) && widgetCenter(W_MENU, P_LFO3_TARGET, 0, tgx, tgy), "the SHAPE knob of LFO 3, the VOICE knobs and TARGET are in the layout",
+          fmt("SHAPE (%.0f, %.0f), OCTAVE x %.0f", shx, shy, vx));
+    check(std::fabs(shy - vy) < 0.5f, "the knobs of the LFO 2/3 and VOICE cards are on the same line", fmt("%.1f / %.1f", shy, vy));
+    check(h.plain(P_LFO_VIEW) == 0, "LFO 2 is shown first", fmt("lfo_view %.0f", h.plain(P_LFO_VIEW)));
+    setP(P_LFO2_AMT, 0.45); setP(P_LFO3_AMT, -0.3); setP(P_LFO2_SHAPE, 2); setP(P_LFO3_SHAPE, 3); setP(P_LFO_SHAPE, 1);
+    h.shot(out + L"\\14_lfo2_tab.png");
+    {   // the plug-in's SYNC buttons (the tab bar of LFO 2/3, the title line of LFO 1): lit, RATE becomes a note value; the screenshot shows both cards synced
+      float sx2 = 0, sy2 = 0;
+      check(widgetCenter(W_TOGGLE, P_LFO2_SYNC, 0, sx2, sy2) && sy2 < lt[1] + 25, "the SYNC button of LFO 2 is in the tab bar", fmt("(%.0f, %.0f)", sx2, sy2));
+      h.click(sx2, sy2); h.run(0.2);
+      check(h.plain(P_LFO2_SYNC) == 1, "a click on the SYNC button of the tab bar switches the tempo sync of LFO 2 on", fmt("lfo2_sync %.0f", h.plain(P_LFO2_SYNC)));
+      setP(P_LFO_SYNC, 1);
+      h.shot(out + L"\\14_lfo_sync.png");
+      setP(P_LFO_SYNC, 0); setP(P_LFO2_SYNC, 0);
+    }
+    const float tabX = lt[0] + 6 + 60 + 29, tabY = lt[1] + 14;   // the LFO 3 tab: 58 x 22 at x 66
+    h.click(tabX, tabY); h.run(0.2);
+    check(h.plain(P_LFO_VIEW) == 1, "the LFO 3 tab shows LFO 3 (the parameter lfo_view)", fmt("lfo_view %.0f", h.plain(P_LFO_VIEW)));
+    h.shot(out + L"\\14_lfo3_tab.png");
+    const double s0 = h.plain(P_LFO3_SHAPE);
+    h.click(shx, shy); h.run(0.2);   // a click without moving: the next shape
+    check(h.plain(P_LFO3_SHAPE) == std::fmod(s0 + 1, 5), "a click on the SHAPE knob steps to the next of the five shapes", fmt("%.0f -> %.0f", s0, h.plain(P_LFO3_SHAPE)));
+    h.drag(shx, shy, 50); h.run(0.2);   // dragged down by 50 px (24 px a step): two steps down
+    check(h.plain(P_LFO3_SHAPE) == 2, "dragged down, the SHAPE knob steps down through the shapes", fmt("shape %.0f", h.plain(P_LFO3_SHAPE)));
+    h.drag(shx, shy, -50); h.run(0.2);
+    check(h.plain(P_LFO3_SHAPE) == 4, "dragged up, it goes to its last position (S&H)", fmt("shape %.0f", h.plain(P_LFO3_SHAPE)));
+    h.click(lt[0] + 6 + 29, tabY); h.run(0.2);
+    check(h.plain(P_LFO_VIEW) == 0, "the LFO 2 tab shows LFO 2 again", fmt("lfo_view %.0f", h.plain(P_LFO_VIEW)));
+    // the colour code: the tab of the oscillator shown and the tab of the LFO shown are filled with the accent colour
+    const POINT pA{(LONG)(ob[0] + 160), (LONG)(ob[1] + 20)}, pB{(LONG)(ob[0] + 2 * 182 + 160), (LONG)(ob[1] + 20)}, pL{(LONG)(lt[0] + 6 + 54), (LONG)(lt[1] + 12)};
+    auto closeTo = [](uint32_t a, uint32_t b) { for (int s = 0; s < 24; s += 8) if (std::abs((int)((a >> s) & 255) - (int)((b >> s) & 255)) > 3) return false; return true; };
+    auto hex = [](uint32_t c) { char s[16]; std::snprintf(s, sizeof s, "%06X", c); return std::string(s); };
+    std::vector<uint32_t> px = h.pixels({pA, pL});
+    check(closeTo(px[0], kAccentColA) && closeTo(px[1], kAccentColA), "TUNING WEST: yellow accent (oscillator tab A1, LFO 2 tab)", hex(px[0]) + " " + hex(px[1]));
+    float tx = 0, ty = 0;
+    check(widgetCenter(W_SEG, P_MT_MODE, 0, tx, ty), "the TUNING switch is in the layout", fmt("(%.0f, %.0f)", tx, ty));
+    h.click(tx, ty); h.run(0.3);   // the middle segment: ARAB
+    check(h.plain(P_MT_MODE) == 1, "a click on ARAB sets the Arabic tuning", fmt("mt_mode %.0f", h.plain(P_MT_MODE)));
+    px = h.pixels({pA, pL});
+    check(closeTo(px[0], kOrientA) && closeTo(px[1], kOrientA), "TUNING ARAB: terracotta accent (oscillator tab A1, LFO 2 tab)", hex(px[0]) + " " + hex(px[1]));
+    h.shot(out + L"\\15_arab.png");
+    {   // the pattern and its clip in a scaled window (the zoom "fit" of a small screen)
+      SetEnvironmentVariableW(L"MW_WORKAREA", L"1366x728");
+      setP(P_CHORD_MODE, 1); setP(P_CHORD_MODE, 0);
+      ViewRect vf; h.view->getSize(&vf);
+      check(vf.getHeight() < kDeviceH, "TUNING ARAB on a 1366 x 728 screen: the window is scaled", fmt("%.0f x %.0f", (double)vf.getWidth(), (double)vf.getHeight()));
+      h.shot(out + L"\\15_arab_fit.png");
+      SetEnvironmentVariableW(L"MW_WORKAREA", L"3840x2160");
+      setP(P_CHORD_MODE, 1); setP(P_CHORD_MODE, 0);
+    }
+    h.click(lt[0] + 6 + 60 + 29, tabY); h.run(0.2);
+    h.shot(out + L"\\15_arab_lfo3.png");
+    h.click(lt[0] + 6 + 29, tabY); h.run(0.2);   // back to LFO 2
+    setP(P_OSC_VIEW, 2);   // B1: turquoise
+    px = h.pixels({pB});
+    check(closeTo(px[0], kOrientB), "TUNING ARAB, additive oscillator B1 shown: turquoise accent", hex(px[0]));
+    setP(P_MT_MODE, 2);
+    h.shot(out + L"\\16_turk_b1.png");
+    setP(P_OSC_VIEW, 0);
+    h.shot(out + L"\\16_turk.png");
+    setP(P_MT_MODE, 0);
+    px = h.pixels({pA, pL});
+    check(closeTo(px[0], kAccentColA) && closeTo(px[1], kAccentColA), "TUNING WEST again: the yellow accent is back", hex(px[0]) + " " + hex(px[1]));
+    h.run(0.2);
+  }
+  std::printf("3. beta 0.2: the preset browser follows the preset box (the screenshot shows the browser on SuperModulation, the sound selected)\n");
   {
     float pr[4];
     check(widgetBox(W_PRESETS, pr), "the preset box in the layout");

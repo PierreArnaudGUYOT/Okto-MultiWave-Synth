@@ -47,6 +47,40 @@ const check = (ok, name, detail = '') => { if (!ok) fails++; console.log(`${ok ?
       const t = await shown();
       check(t.filter(x => x === 'LFO 2/3').length === 1, `LFO card ${lv === 0 ? 'LFO 2' : 'LFO 3'}: one LFO 2/3 card is shown`, JSON.stringify(t.filter(x => /LFO/.test(x))));
     }
+    // beta 0.3.4: the LFO 2 | LFO 3 tabs, the stepped SHAPE knob, the knobs of LFO 1 / LFO 2/3 / VOICE on one line, LFO 1's underlined selector
+    {
+      const q = (js) => B.evaluate(js);
+      const tabsOn = () => q(`[...document.querySelectorAll('#device .section:not(.hidden) .ltab')].map(b => b.textContent.trim() + (b.classList.contains('on') ? '*' : '') + (b.classList.contains('heard') ? '+' : ''))`);
+      await q(`WS_TEST.setParam('osc_view', 0); WS_TEST.setParam('lfo2_amt', 0.45); WS_TEST.setParam('lfo3_amt', 0); WS_TEST.setParam('lfo_view', 0); WS_TEST.setParam('lfo2_shape', 3); WS_TEST.setParam('lfo3_shape', 2); true`);
+      await sleep(200);
+      check(JSON.stringify(await tabsOn()) === JSON.stringify(['LFO 2*+', 'LFO 3']), 'LFO 2/3 card: two tabs, LFO 2 shown and lit (its amount is not 0), LFO 3 off', JSON.stringify(await tabsOn()));
+      const c = await q(`(() => { const t = [...document.querySelectorAll('#device .section:not(.hidden) .ltab')][1].getBoundingClientRect(); return [t.left + t.width / 2, t.top + t.height / 2]; })()`);
+      await B.click(c[0], c[1]);
+      await sleep(250);
+      check((await q(`WS_TEST.getParam('lfo_view')`)) === 1 && JSON.stringify(await tabsOn()) === JSON.stringify(['LFO 2+', 'LFO 3*']), 'a click on the LFO 3 tab shows LFO 3', JSON.stringify(await tabsOn()));
+      const shape = () => q(`(() => { const k = [...document.querySelectorAll('#device .section:not(.hidden) .knob')].filter(e => /LFO 3 Shape/.test(e.title)); return k.length + ':' + (k[0] ? k[0].querySelector('.label').textContent : ''); })()`);
+      check((await shape()) === '1:SAW', 'the SHAPE of LFO 3 is a knob with its shape written under it (SAW)', await shape());
+      await q(`WS_TEST.setParam('lfo3_shape', 4); true`); await sleep(150);
+      check((await shape()) === '1:S&H', 'the knob follows the parameter (S&H)', await shape());
+      const rows = await q(`(() => { const y = (sid, sel) => { const e = document.querySelector('#device .section[data-sid="' + sid + '"]:not(.hidden) ' + sel); return Math.round(e.getBoundingClientRect().top * 10) / 10; };
+        return [y('lfo', '.knob'), y('lfo3', '.knob'), y('voice', '.knob')]; })()`);
+      check(rows[0] === rows[1] && rows[1] === rows[2], 'the knobs of LFO 1, LFO 2/3 and VOICE are on one line', JSON.stringify(rows));
+      check(await q(`document.querySelector('#device .section[data-sid="lfo"] .seg.uline button.on') !== null`), 'the wave selector of LFO 1 is the underlined one');
+      await q(`WS_TEST.setParam('lfo_view', 0); true`);
+      // the oriental colour code: ARAB / TURK on the PLAY card's TUNING switch
+      const accent = () => q(`getComputedStyle(document.getElementById('device')).getPropertyValue('--accent').trim()`);
+      check((await accent()) === '#ffcf3d' && !(await q(`document.getElementById('device').classList.contains('orient')`)), 'TUNING WEST: the yellow accent, no oriental class');
+      await q(`WS_TEST.setParam('mt_mode', 1); true`); await sleep(250);
+      check((await accent()) === '#ff7b4a' && (await q(`document.getElementById('device').classList.contains('orient')`)), 'TUNING ARAB: the terracotta accent', await accent());
+      check(await q(`getComputedStyle(document.querySelector('#device .orientbg')).display === 'block'`), 'TUNING ARAB: the PLAY card shows its pattern');
+      await B.screenshot(path.join(out, 'tuning-arab.png'), { width: 1500, height: 1160 });
+      await q(`WS_TEST.setParam('osc_view', 2); true`); await sleep(250);
+      check((await accent()) === '#33d3c6', 'TUNING ARAB, additive oscillator B1: the turquoise accent', await accent());
+      await q(`WS_TEST.setParam('mt_mode', 2); true`); await sleep(250);
+      await B.screenshot(path.join(out, 'tuning-turk-b1.png'), { width: 1500, height: 1160 });
+      await q(`WS_TEST.setParam('osc_view', 0); WS_TEST.setParam('mt_mode', 0); true`); await sleep(250);
+      check((await accent()) === '#ffcf3d' && await q(`getComputedStyle(document.querySelector('#device .orientbg')).display === 'none'`), 'TUNING WEST again: the yellow accent, no pattern');
+    }
     check(!(await shown()).some(x => x.includes('CHORD KEYBOARD')), 'the chord card is hidden while CHORD MODE is off');
     const h0 = await B.evaluate(`document.getElementById('device').style.height`);
     await B.evaluate(`WS_TEST.setParam('chord_mode', 1)`);

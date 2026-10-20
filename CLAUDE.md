@@ -14,7 +14,7 @@ the preset browser that follows the preset box (§4, §5) and 300 more presets, 
 Everything else in this guide is the synthesizer's and still applies; "beta 0.x" below are the Wavelet Synthesizer's versions
 unless it says Okto MultiWave Synth. Identity: bundle `OktoMultiWaveSynth.vst3`, VST3 class IDs, VST2 ID 'OkMW', window / view
 class names, presets file `OKTOMULTIWAVE presets.txt`, web storage keys `mw.*` / `ws.*`, so it installs next to the
-Wavelet Synthesizer. The panel is 1100 × **1050** (+ 120 while CHORD MODE is on, `CHORD_H`); `APP.version` restarts at beta 0.1
+Wavelet Synthesizer. The panel is 1100 × **944** since beta 0.3.4 (§3.3m; 1050 in beta 0.3, 966 in 0.3.3) (+ 120 while CHORD MODE is on, `CHORD_H`); `APP.version` restarts at beta 0.1
 (`APP.base` names the synthesizer). Platforms: web and Windows (VST3 / VST2); the macOS files of the Wavelet Synthesizer are
 still in the tree (the shared code stays portable) but no Mac build is made or tested: `mac.yml` only runs by hand.
 
@@ -59,7 +59,7 @@ products identical. Read it before changing the DSP, the parameters or the prese
 - **Curves** `lin | exp | pow2 | int | choice` map normalized 0..1 ↔ plain values (`toPlain` / `toNorm`, identical in
   JS and C++). **Formats** (`fmt`) give the display text; adding a format means updating `FMTS` in `gen_spec.js`,
   `format`/`parse` in `core.js` and `formatValue`/`parseValue` in `dsp.h`.
-- **Layout**: sections (cards) with widgets in panel coordinates (1100 × 1050). Both GUIs (`web/js/ui.js` and
+- **Layout**: sections (cards) with widgets in panel coordinates (1100 × 944). Both GUIs (`web/js/ui.js` and
   `vst/src/editor.cpp`) are generated from it. `section(id, title, x, y, w, h, view, widgets, opts)`: `view` 0..2 = the card is
   shown only while that oscillator's tab is (A1 A2 B1), −1 = always; `opts.vis` (+ `visOn`) = shown only while that parameter is on
   / off (the chord card: `chord_mode`). Widget fields (generated into `WidgetDef` too): `only: 'web' | 'vst'` (C++ `only` 1 / 2: the
@@ -360,6 +360,20 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
   `kChordSideH + 6` shorter); `vote_session` section 1 and the screenshot 13_chord_in_browser.png.
 - **Presets**: `NEW_TRIM_DB = 2` in `tools/spec.js` (every preset numbered 501 and up, until the owner has chosen the good ones; 0 = off).
 - **Tests of a pre-release** are the light ones (the owner's rule): `tests/quick.js`, `vote_session`, `library_test`, `vst2_smoke`; the cross-check, `test_web` and the sweeps are for an official release.
+
+### 3.3m BETA 0.3.4: THE PANEL OF THE MOCK-UPS P6 / Q1 / R6 (944 px), THE ORIENTAL COLOUR CODE
+- The owner's chosen mock-ups (Maquettes_Okto v3 P6, v4 Q1 and R6; pictures made with the web app, so their geometry is the specification). `DEVICE` is 1100 x **944** (the row LFO 1 | LFO 2/3 | VOICE is 98 tall, 22 less; EFFECTS and PLAY 726, keys 830;
+  PLAY ends at x 1088 like the cards above). `compactPanel()` in `tools/spec.js` places everything (`K0 = 32`: the knob row of the three cards of the row, one line).
+- **LFO 1**: the wave selector (`seg` with `style: 'uline'` = 3) sits on the title line, underlined (the wave shown in the accent colour with a 2 px line under it). **LFO 2/3**: the card has no title (`tabbed: true` on both sections): the `lfotabs`
+  widget (`lfo_view`, 246 x 25 at the top: a darker bar, two folder tabs 58 x 22 at x 6 and 66, a lit dot when the LFO's amount is not 0, the tab of the LFO shown filled with the accent colour; web `.ltab`, `ui.js lfoTabs`; plug-in `drawLfoTabs`,
+  click in `mouseDown`), the plug-in's SYNC at (200, 4) in the bar, RATE (4) AMOUNT (54) and **SHAPE** (104) as knobs, TARGET 80 px wide at (160, 52) with the name cut by `…`. SHAPE is the choice parameter `lfo2_shape` / `lfo3_shape` on a knob
+  (`style: 'choice'` = 4: five positions, 24 px a step, a click steps to the next one, the wheel steps, the name `choiceShort` under it in the accent colour). No parameter changed: `lfo_view` is still the parameter the tabs set.
+- **WAVELET card** (subtractive): `knobL` (only SOURCE WIDTH and SPARSITY use it) is a 42 px disc in a 64 x 62 box (disc centre 32 / 22, label 9.5 px at 48), centres (326, 184) and (410, 184); the SOURCE CYCLE picture is 82 tall (R6).
+- **Oriental colour code** (`ORIENT` in `tools/spec.js` -> web `SPEC.ORIENT`, C++ `kOrient*`): while `mt_mode` (TUNING) is ARAB or TURK the accent is terracotta `#ff7b4a` (oscillators A) / turquoise `#33d3c6` (B1) instead of yellow / blue
+  (web: class `orient` on `#device` and `#browser` + the CSS variables `--or-*`; plug-in: `orient` and `accentOf(mode)`), the cards stay grey, and the PLAY card is dressed (turquoise border, strip, captions MAQAM / TONIC on a dark plate) with a
+  **pattern of octagons and squares (4.8.8, an eight-pointed star in each octagon, tile 34 px, opacity 0.7)**: web, an SVG `<pattern>` (`orientPattern`, shown by CSS); plug-in, polygons drawn by `drawOrientCard` (only the tiles that meet the dirty
+  rectangle, clipped by `Canvas::pushClipRR` / `popClip`, GDI+ and Core Graphics; each colour is mixed with the card's gradient once instead of a group opacity).
+- **Tests**: `vote_session.cpp` section 8b (tabs, SHAPE knob, SYNC, ARAB / TURK by pixel colour, screenshots 14_* 15_* 16_*), `tests/web/smoke.js` (tabs, knob, knob line, colours, `tuning-arab.png`). The manuals still show the old panel: rebuild them (`node tools/manual/shots.js`, `build.js a b`) at the next release.
 ### 3.4 Table rebuilds
 - Structural changes rebuild tables **off the audio thread** and switch with a 512-sample crossfade (`setTables`).
 - Web: `app.js` builds the tables in a **Worker** (`startWorker` / `scheduleBuild` / `deliver`; a `data:` URL made of

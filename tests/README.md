@@ -20,7 +20,7 @@ tests/
 **Status for Okto MultiWave Synth beta 0.2.** Maintained and passing: `quick.js`, `supermod.js` (the SuperModulation destinations, BASS and the chord that follows the left hand, the oriental tunings), `regress_v07.js`, `idle_skip.js`, `web/smoke.js`
 (the four oscillator views and CHORD MODE), `web/test_web.js` (about 10 minutes: it plays all 522 presets) and `web/test_demo.js`,
 `tools/dsp_selftest.js` (12 sections), the C++ cross-check (`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp`, 577 cases) and the
-developer checks `vst/devtest/vote_session.cpp` (the plug-in's window: folder tabs, CHORD MODE, fit to the screen, preset browser and its stars; it was the EVALUATE SOUNDS test, a feature removed in the final version), `library_test.cpp` (the
+developer checks `vst/devtest/vote_session.cpp` (the plug-in's window: folder tabs, CHORD MODE, the LFO 2/3 tabs and the oriental colours, fit to the screen, preset browser and its stars), `library_test.cpp` (the
 presets file) and `vst2_smoke.cpp`. The VST3 host below is the Wavelet Synthesizer's: with `--skip-editor` its sections params, audio, state, offline, presets, sub,
 porta, stress, instances and sync pass (190 checks); its controller-state section (beta 0.1 WSC1 projects, presets left out in beta 0.5, `A · Reese Sub`…)
 is the Wavelet Synthesizer's and fails on its first check. **Not ported** (they drive the Wavelet Synthesizer's browser, screenshots and presets, or the macOS build, which
