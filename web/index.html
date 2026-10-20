@@ -24,7 +24,6 @@
   <button id="btn-export" class="st-btn" title="Download the current sound as a .json file">Export</button>
   <button id="btn-import" class="st-btn" title="Load a preset from a .json file">Import</button>
   <input id="file-import" type="file" accept=".json,application/json" hidden>
-  <input id="file-midi" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden>
 </div>
 
 <!-- beta 0.6: the welcome window. Browsers allow sound only after a click: each choice is that click. It comes back with a
@@ -32,7 +31,7 @@
 <div id="start-overlay">
   <div class="welcome" role="dialog" aria-modal="true" aria-labelledby="w-title" aria-describedby="w-sub">
     <h1 id="w-title"><span>OKTOMULTIWAVE</span> · Wavelet Synthesizer</h1>
-    <p id="w-sub" class="sub">A wavelet synthesizer with three oscillators (A1 A2 subtractive, B1 additive), LFOs that move the wavelet itself (SuperModulation), a chord mode with bass, an oriental tuning switch and 308 presets to rate — by OktoPierre, built on his Wavelet Synthesizer.</p>
+    <p id="w-sub" class="sub">A wavelet synthesizer with three oscillators (A1 A2 subtractive, B1 additive), LFOs that move the wavelet itself (SuperModulation), a chord mode with bass, an oriental tuning switch and over a thousand presets — by OktoPierre, built on his Wavelet Synthesizer.</p>
     <div class="choices">
       <button id="w-demo" class="choice">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
@@ -65,7 +64,6 @@
 <script src="js/core.js"></script>
 <script src="js/worklet.js"></script>
 <script src="js/ui.js"></script>
-<script src="js/midi.js"></script>
 <script src="js/demo_data.js"></script>
 <script src="js/demo.js"></script>
 <script src="js/evaluate.js"></script>

@@ -75,8 +75,8 @@ async function jsEngine() {
   const hi = SPEC.PRESETS[SPEC.DEFAULT_PRESET].values.slice(); hi[P.v_oct] = 3; hi[P.sub_level] = 0.8;
   const x = run(hi, (e, b) => { if (b === 0) e.noteOn(127, 1); if (b === 40) { e.noteOff(127); e.noteOn(60, 0.9); } }, 120);
   if (x.nan || x.pk < 1e-4) bad.push(`note 127 at Octave +3 then C4: ${x.nan} non-finite, peak ${x.pk.toFixed(3)}`);
-  // MIDI reader: a hostile 31-byte file (huge text length) must be rejected at once
-  const midi = require(R('web', 'js', 'midi.js'));
+  // MIDI reader (tools/midi.js, used by the demo converter): a hostile 31-byte file (huge text length) must be rejected at once
+  const midi = require(R('tools', 'midi.js')).readSMF;
   const bomb = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, 0, 1, 1, 0xe0, 0x4d, 0x54, 0x72, 0x6b, 0, 0, 0, 9, 0, 0xff, 1, 0x8f, 0xff, 0xff, 0xff, 0x7f, 0x41];
   const tm = Date.now(); try { midi(new Uint8Array(bomb)); } catch (_) { /* rejecting it is fine */ }
   if (Date.now() - tm > 200) bad.push(`hostile MIDI file took ${Date.now() - tm} ms`);
@@ -107,7 +107,7 @@ function vst3() {
 }
 
 // ---------------------------------------------------------------- 4. web app smoke test (muted headless Edge)
-const DEMO_FIRST = 'A · Noise Wash Pad';   // the agreed opening sound of the default demo (tests/web/test_demo.js has the whole sequence)
+const DEMO_FIRST = 'A · Noise Wash Pad';   // the agreed opening sound of the demo (tests/web/test_demo.js has the whole sequence)
 async function web() {
   const t = Date.now(), bad = [];
   const { Browser, sleep } = require(R('tests', 'web', 'cdp.js'));
@@ -141,11 +141,11 @@ async function web() {
       await B.evaluate('WS_TEST.allNotesOff()');
       if (!(peak > 1e-3)) bad.push(`${SPEC.PRESETS[k].name}: no sound`);
     }
-    await B.evaluate('WS_TEST.demoStart(0)');
+    await B.evaluate('WS_TEST.demoStart()');
     await sleep(1200);
     const st = await B.evaluate('WS_TEST.demoState()');
     await B.evaluate('WS_TEST.demoStop()');
-    if (!st.running) bad.push('the default demo did not start');
+    if (!st.running) bad.push('the demo did not start');
     else if (st.preset !== undefined && st.preset !== DEMO_FIRST) bad.push(`demo tour starts on '${st.preset}' instead of '${DEMO_FIRST}'`);
     const errs = B.errors();
     if (errs.length) bad.push('page errors: ' + errs.slice(0, 2).join(' | '));

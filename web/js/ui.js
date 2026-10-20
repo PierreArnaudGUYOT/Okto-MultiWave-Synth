@@ -724,42 +724,16 @@ class SynthUI {
     this.hotEls = [];
     for (const id of ids) for (const w of this.byParam.get(id) || []) if (w.el) { w.el.classList.add('hot'); this.hotEls.push(w.el); }
   }
-  // DEMO split button: ▶ DEMO plays the default demo (first song), ▾ opens the list of songs.
-  // d = { running, stop, songs, play(i), loadFile }
+  // The DEMO button: ▶ DEMO plays the demo (Beethoven's Appassionata, a tour of the presets), ■ STOP while it runs.
+  // d = { running, stop, play }
   makeDemoButton(d) {
     const b = el('button', 'hbtn demo-btn', this.dev);
     b.innerHTML = '&#9654; DEMO';
-    b.title = 'Play the default demo: Beethoven, Appassionata (III), with a tour of all the presets (a new preset about every 4 s, on a change of chord)';
-    const arrow = el('button', 'hbtn demo-arrow', this.dev);
-    arrow.innerHTML = '&#9662;';
-    arrow.title = 'Choose another demo song or load your own MIDI file';
-    const close = () => { if (this.dmenu) { this.dmenu.remove(); this.dmenu = null; } };
+    b.title = 'Play the demo: Beethoven, Appassionata (III), with a tour of all the presets (a new preset about every 4 s, on a change of chord)';
     b.onclick = (e) => {
       e.stopPropagation();
-      close();
-      if (d.running()) d.stop(); else d.play(0);
+      if (d.running()) d.stop(); else d.play();
     };
-    arrow.onclick = (e) => {
-      e.stopPropagation();
-      if (this.dmenu) { close(); return; }
-      const m = el('div', 'pmenu demo-menu', this.dev);
-      el('div', 'grp', m).textContent = 'DEMO SONGS · FREE MIDI (MUTOPIA PROJECT)';
-      const mmss = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-      d.songs().forEach((s, i) => {
-        const it = el('div', 'it', m);
-        it.innerHTML = `<span>${s.composer} — <b>${(s.short || s.title).replace(/</g, '&lt;')}</b>${s.tour ? ' <i class="tag">DEFAULT</i>' : ''}</span><span class="dur">${mmss(s.duration)}</span>`;
-        it.title = s.title + (s.license && s.license !== 'Public Domain' ? ` (MIDI licence: ${s.license})` : ' (public domain)') +
-          (s.tour ? ' — default demo (▶ DEMO): a tour of the factory presets, a new one every 4 s' : '');
-        it.onclick = () => { close(); d.play(i); };
-      });
-      el('div', 'sep', m);
-      const ld = el('div', 'it', m);
-      ld.innerHTML = '<span>Load a MIDI file…</span><span class="dur">.mid</span>';
-      ld.title = 'Play your own MIDI file with the same parameter animations (drums on channel 10 are ignored)';
-      ld.onclick = () => { close(); d.loadFile(); };
-      this.dmenu = m;
-    };
-    document.addEventListener('pointerdown', (e) => { if (this.dmenu && !this.dmenu.contains(e.target) && e.target !== arrow) close(); });
     this.demoBtn = b;
   }
   setEvaluating(on) { if (this.evalBtn) this.evalBtn.classList.toggle('running', on); }

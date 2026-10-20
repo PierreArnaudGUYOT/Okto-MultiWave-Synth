@@ -496,7 +496,7 @@
     sel.onchange = () => { midiCh = +sel.value; store.set('mw.midiCh', midiCh); allOff(); sel.blur(); };
   }
 
-  // ---------------------------------------------------------------- demo (Bach, Toccata in D minor)
+  // ---------------------------------------------------------------- demo (Beethoven, Appassionata: a tour of the presets)
   demo = WSDemo({
     C, P, PARAMS, ui, post,
     startAudio: () => startAudio(),
@@ -513,13 +513,11 @@
     restore: (s) => { applyKeyed(s.values); presetId = s.presetId; presetName = s.presetName; dirty = s.dirty; ui.setPresetName(presetName, dirty); },
     setPresetLabel: (txt, modified) => ui.setPresetName(txt, !!modified),
   });
-  const playDemo = (i) => { if (evaluator && evaluator.running()) evaluator.stop(); return demo.start(i).catch(() => {}); };
+  const playDemo = () => { if (evaluator && evaluator.running()) evaluator.stop(); return demo.start().catch(() => {}); };
   ui.makeDemoButton({
     running: () => demo.running(),
     stop: () => demo.stop(),
-    songs: () => demo.songs(),
     play: playDemo,
-    loadFile: () => $('file-midi').click(),
   });
   // Okto MultiWave Synth: EVALUATE SOUNDS, the listening test of the new presets (evaluate.js)
   evaluator = WSEvaluate({
@@ -539,12 +537,6 @@
     setPresetLabel: (txt, modified) => { evalLabel = txt; ui.setPresetName(txt, !!modified); },
   });
   host.evaluate = () => { if (evaluator.running()) evaluator.stop(); else evaluator.start(); };
-  $('file-midi').onchange = (e) => {
-    const f = e.target.files[0];
-    e.target.value = '';
-    if (!f) return;
-    f.arrayBuffer().then(buf => demo.startFile(buf, f.name)).catch(err => alert('Could not play this MIDI file: ' + err.message));
-  };
 
   // The app always opens on the default preset (A · Wavelet Lead); user presets stay in the preset list.
   loadPreset('f:' + SPEC.DEFAULT_PRESET);
@@ -558,7 +550,7 @@
   // The welcome window's choices. resumeAudio, not startAudio: after a pause the context exists but is suspended.
   // "Run the demo" then plays the default demo as the header's ▶ DEMO does; "Download the VST" is a plain link (new tab).
   $('start-btn').onclick = () => resumeAudio();
-  $('w-demo').onclick = () => resumeAudio().then(() => { if (actx) playDemo(0); });
+  $('w-demo').onclick = () => resumeAudio().then(() => { if (actx) playDemo(); });
   for (const w of ['a', 'b']) {   // the manual viewer, over the window (Ctrl / Shift / Cmd + click: the browser's new tab or window)
     $('w-man-' + w).onclick = (e) => { if (e.ctrlKey || e.shiftKey || e.metaKey) return; e.preventDefault(); openManual(w); };
   }
@@ -584,9 +576,9 @@
     loadPreset: idx => { const l = presetList(); if (l[idx]) loadPreset(l[idx].id); },
     openManual, closeManual,
     allNotesOff: allOff,
-    demoStart: (i) => demo.start(i || 0),
-    demoSongs: () => demo.songs(),
-    demoTour: (i) => demo.tourPlan(i || 0),
+    demoStart: () => demo.start(),
+    demoSong: () => demo.song(),
+    demoTour: () => demo.tourPlan(),
     demoStop: () => demo.stop(),
     demoState: () => demo.state(),
     evaluate: evaluator ? { start: () => evaluator.start(), stop: () => evaluator.stop(), phase: () => evaluator.phase(), votes: () => evaluator.votes(), text: () => evaluator.fileText() } : null,

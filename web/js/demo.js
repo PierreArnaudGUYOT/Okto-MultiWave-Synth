@@ -1,14 +1,13 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Okto MultiWave Synth — created by Pierre Arnaud GUYOT (OktoPierre); based on his Wavelet Synthesizer (beta 0.7). Release beta 0.2.
-// Demo player: plays public-domain pieces (MIDI from the Mutopia Project) or your own MIDI file as a tour of the presets (a new
-// preset about every 4 s, on a change of chord). A small window says which preset plays and what it is made of.
+// Demo player: plays Beethoven's Appassionata (III) (public-domain MIDI from the Mutopia Project, web/js/demo_data.js) as a tour of the
+// presets (a new preset about every 4 s, on a change of chord). A small window says which preset plays and what it is made of.
 function WSDemo(api) {
   'use strict';
-  const SONGS = WS_DEMO_SONGS;
+  const SONG = WS_DEMO_SONGS[0];
   const C = api.C, P = api.P, PARAMS = api.PARAMS, SPEC_SLOTS = WS_SPEC.SLOTS;
   const LEAD_IN = 0.25;   // seconds between the click and the first note
-  const MAX_FILE_SECONDS = 360;
 
   // The preset sequence of the tour (tools/spec.js TOUR: the TOP Sounds and the new presets): written out so that a new menu
   // order does not change the demo. The demo starts at song.origin (7.8 s: its opening chords are cut).
@@ -24,7 +23,7 @@ function WSDemo(api) {
     'Pads, plucks, organs, basses: each one is a preset you can play. Enjoy the tour!',
   ];
 
-  // Preset tour: about every `step` seconds the next preset of `style.order` (default: the factory order; wraps around).
+  // Preset tour: about every `step` seconds the next preset of the spec's TOUR (wraps around).
   // Each change is moved to a change of chord of the piece: near every `step`-second mark (within TOUR_SNAP), the onset
   // where the most notes start together. The preset is loaded TOUR_LEAD before it, so the new sound starts with the chord.
   // `origin` = where the demo starts in the piece (song.origin, when its opening bars are cut): the grid and the sequence
@@ -43,7 +42,7 @@ function WSDemo(api) {
     }
     return ev;
   }
-  function tourScenes(notes, duration, step, style, origin) {
+  function tourScenes(notes, duration, step, origin) {
     const names = WS_SPEC.TOUR, ev = chordOnsets(notes);
     let out = [], prev = -origin;
     for (let k = 0; k * step < origin + duration; k++) {
@@ -181,40 +180,23 @@ function WSDemo(api) {
     st.raf = requestAnimationFrame(tick);
   }
 
-  async function play(song, style) {
+  // Plays Beethoven's Appassionata (III) as a tour of the presets.
+  async function start() {
     if (st) stop();
     await api.startAudio();
     if (!win) buildWindow();
-    const scenes = tourScenes(song.notes, song.duration, TOUR_STEP, style, song.origin || 0);
+    const song = SONG;
+    const scenes = tourScenes(song.notes, song.duration, TOUR_STEP, song.origin || 0);
     st = { song, scenes, saved: api.snapshot(), scene: -1, t0: api.ctxTime() + LEAD_IN, raf: 0, sync: null };
     api.post({ t: 'alloff' });
     api.post({ t: 'seq', notes: song.notes, delay: LEAD_IN });
-    win.title.textContent = 'DEMO · ' + (song.composer ? song.composer + ' — ' : '') + (song.short || song.title);
+    win.title.textContent = 'DEMO · ' + song.composer + ' — ' + (song.short || song.title);
     win.title.title = song.title;
-    win.src.textContent = 'MIDI: ' + (song.license ? song.source.replace(/ \(mutopiaproject\.org\)/, '') + ' · ' + (song.license === 'Public Domain' ? 'public domain' : song.license) : song.source);
+    win.src.textContent = 'MIDI: ' + song.source.replace(/ \(mutopiaproject\.org\)/, '') + ' · public domain';
     win.el.style.display = 'block';
     api.ui.setDemoRunning(true);
     enterScene(0);
     st.raf = requestAnimationFrame(tick);
-  }
-
-  // Plays factory song number i (default: the first, Beethoven's Appassionata) as a tour of the presets.
-  function start(i) {
-    const song = SONGS[Math.max(0, Math.min(SONGS.length - 1, i | 0))];
-    return play(song, {});
-  }
-
-  // Plays a MIDI file chosen by the user (ArrayBuffer or Uint8Array).
-  function startFile(bytes, fileName) {
-    const m = WSReadMIDI(new Uint8Array(bytes));
-    const notes = m.notes.filter(n => n.ch !== 9 && n.t < MAX_FILE_SECONDS);   // channel 10 = drums
-    if (!notes.length) throw new Error('this MIDI file contains no playable notes');
-    const t0 = notes[0].t, flat = [];
-    for (const n of notes) flat.push(n.t - t0, Math.max(0.03, n.d), n.note, n.vel / 127);
-    let duration = 0;
-    for (const n of notes) duration = Math.max(duration, n.t - t0 + n.d);
-    const name = String(fileName || 'MIDI file').replace(/\.(mid|midi)$/i, '');
-    return play({ title: m.title || name, composer: '', source: 'your file ' + (fileName || ''), license: '', duration, notes: flat }, {});
   }
 
   function stop() {
@@ -238,14 +220,11 @@ function WSDemo(api) {
   }
 
   return {
-    start, startFile, stop, onSeqTime,
+    start, stop, onSeqTime,
     running: () => !!st,
-    // the preset tour of factory song i ([{ t, preset }], null for a song without tour): for the tests and the manual
-    tourPlan: (i) => {
-      const s = SONGS[i];
-      return s ? tourScenes(s.notes, s.duration, TOUR_STEP, {}, s.origin || 0).map(x => ({ t: x.t, preset: x.preset })) : null;
-    },
-    songs: () => SONGS.map((s, i) => ({ title: s.title, short: s.short || s.title, composer: s.composer, duration: s.duration, license: s.license, tour: i === 0 })),
+    // the preset tour ([{ t, preset }]): for the tests and the manual
+    tourPlan: () => tourScenes(SONG.notes, SONG.duration, TOUR_STEP, SONG.origin || 0).map(x => ({ t: x.t, preset: x.preset })),
+    song: () => ({ title: SONG.title, short: SONG.short || SONG.title, composer: SONG.composer, duration: SONG.duration, license: SONG.license }),
     state: () => (st ? { running: true, song: st.song.title, scene: st.scene, preset: st.scenes[Math.max(0, st.scene)].preset,
       scenes: st.scenes.length, time: now() } : { running: false }),
   };
