@@ -63,6 +63,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       }
     }
     for (size_t k = 0; k < items.size(); k++) if (items[k].w->type == W_EVALUATE) evalIdx = (int)k;
+    for (int s = 0; s < kNumSections; s++) if (std::strcmp(kSections[s].id, "chord") == 0) chordSec = s;
+    for (size_t k = 0; k < items.size(); k++) if (items[k].section == chordSec) chordItems.push_back((int)k);
     for (int i = 0; i < kNumParams; i++) lastPlain[i] = host->getPlain(i);
     buildCategories();
   }
@@ -87,6 +89,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     win = createEditorWindow(this, parent, W, H);
     if (!win) return kResultFalse;
     rebuildDisplay(true);
+    layoutChordItems();
     bReveal();
     if (frame && (W != reportedW || H != reportedH)) requestResize();
     return kResultOk;
@@ -153,7 +156,9 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   double lastPlain[kNumParams];
   uint32_t lastVersion = 0;
   int view = 0, mode = 0;   // the oscillator shown (A1 A2 B1) and its engine
-  bool chordOn = false;     // CHORD MODE: the chord card is shown and the panel is taller
+  bool chordOn = false;     // CHORD MODE: the chord card is shown (under the keyboard and the panel taller, or under the list of the browser)
+  int chordSec = -1; std::vector<int> chordItems;   // beta 0.3.3: the chord card's section and its items (moved into the browser while it is open)
+  bool chordInBrowser() const { return chordOn && host->browserOpen(); }
   Tables disp; uint64_t dispSig = ~0ull;
   ScopeSets scopeSets;   // beta 0.3: the raw layers of every oscillator that plays (the scope and the scalogram show the whole sound)
   ScopeLive scopeLive;   // beta 0.3.1: the live gains and window of the oscillators that play in the last voice (the displays move with the sound)
@@ -187,12 +192,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     autoZ = std::max(0.5, std::floor(z * 100) / 100);
   }
   int pxW() const { return (int)std::lround((kDeviceW + (host->browserOpen() ? kBrowserW : 0)) * scale()); }   // + the browser
-  float devH() const { return kDeviceH + (chordOn ? kChordH : 0); }   // the panel's logical height: CHORD MODE adds the chord card
+  float devH() const { return kDeviceH + (chordOn && !host->browserOpen() ? kChordH : 0); }   // the panel's logical height: CHORD MODE adds the chord card under the keyboard, unless the browser shows it (beta 0.3.3)
   int pxH() const { return (int)std::lround(devH() * scale()); }
   uint32_t accent() const { return mode == 0 ? kAccentA : kAccentB; }
 
   void requestResize() {
     updateAuto();
+    layoutChordItems();
     ViewRect r(0, 0, pxW(), pxH());
     reportedW = r.getWidth(); reportedH = r.getHeight();
     if (frame) frame->resizeView(this, &r);
@@ -349,11 +355,17 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     for (int si = 0; si < kNumSections; si++) {
       const SectionDef& sd = kSections[si];
       if (!sectionShown(sd)) continue;
+      if (si == chordSec && chordInBrowser()) continue;   // drawn with the browser (drawChordInBrowser)
       R r{sd.x, sd.y, sd.w, sd.h};
       if (!r.hits(dirty)) continue;
       if (sd.title[0] == 0) { if (std::strcmp(sd.id, "oscframe") == 0) drawOscFrame(g, r); continue; }   // beta 0.3: the frame round the oscillator cards
       fillRR(g, r, 10, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, rgb(0x1f242c), rgb(0x1a1e25)));
       strokeRR(g, R{r.x + 0.5f, r.y + 0.5f, r.w - 1, r.h - 1}, 10, rgb(0x2b313b));
+      if (sd.vtitle) {   // beta 0.3.3: the title is a vertical strip at the left of the card
+        g.line(Pt{r.x + 23.5f, r.y + 6}, Pt{r.x + 23.5f, r.y + r.h - 6}, Pen(rgb(0x2b313b), 1));
+        g.textVertical(toW(sd.title), R{r.x + 1, r.y + 1, 22, r.h - 2}, 9.5f, true, std::strcmp(sd.id, "play") == 0 ? rgb(accent()) : rgb(kDim));
+        continue;
+      }
       std::string t = sd.title; size_t dot = t.find(" \xC2\xB7 ");
       if (dot != std::string::npos) {
         std::wstring a = toW(t.substr(0, dot)), b = toW(t.substr(dot));
@@ -362,8 +374,10 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         text(g, b, R{r.x + 12 + aw - 3, r.y + 4, 400, 16}, 10.5f, true, rgb(kDim), 0);
       } else text(g, toW(t), R{r.x + 12, r.y + 4, 300, 16}, 10.5f, true, rgb(kDim), 0);
     }
+    const bool chordSide = chordInBrowser();
     for (size_t k = 0; k < items.size(); k++) {
       const Item& it = items[k];
+      if (chordSide && it.section == chordSec) continue;   // drawn with the browser
       if (!visible(it) || !it.r.hits(dirty)) continue;
       drawItem(g, (int)k);
     }
@@ -372,7 +386,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (b >= 0 && visible(items[b]) && (items[b].w->type == W_KNOBS || items[b].w->type == W_DRAWBAR)) drawBubble(g, items[b]);
     drawSaveBtn(g);
     drawVote(g);
-    if (host->browserOpen() && bCard().hits(dirty)) drawBrowser(g);   // the browser (a copy of the library, hundreds of reads) only when its part is drawn again
+    if (host->browserOpen() && bCard().hits(dirty)) { drawBrowser(g); if (chordSide) drawChordInBrowser(g, dirty); }   // the browser (a copy of the library, hundreds of reads) only when its part is drawn again
   }
 
   void drawBubble(Canvas& g, const Item& it) {
@@ -2054,7 +2068,30 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   R bHide() const { const R c = bCard(); return R{c.x + c.w - 70, c.y + 6, 58, 20}; }
   R bTabR(int t) const { const R c = bCard(); const float w = (c.w - 24) / 2; return R{c.x + 12 + t * w, c.y + 34, w, 26}; }
   R bCatR(int i) const { const R c = bCard(); return R{c.x + 12, c.y + 72 + i * 26.0f, 118, 24}; }
-  R bList() const { const R c = bCard(); return R{c.x + 136, c.y + 98, c.w - 162, c.h - 156}; }
+  // beta 0.3.3: while CHORD MODE is on the chord card is under the list (the list is that much shorter)
+  static constexpr float kChordSideH = 248;
+  R bList() const { const R c = bCard(); return R{c.x + 136, c.y + 98, c.w - 162, c.h - 156 - (chordInBrowser() ? kChordSideH + 6 : 0)}; }
+  R bChordCard() const { const R c = bCard(), l = bList(); return R{c.x + 8, l.y + l.h + 10, c.w - 16, kChordSideH}; }
+  // the chord items in the browser: pads, name, KEYS OCT, the octave stepper, the voicing, STRUM and the strum plate, re-laid out for the width of the browser (the card's own order)
+  void layoutChordItems() {
+    if (chordSec < 0) return;
+    static const float side[7][4] = {{12, 26, 364, 70}, {12, 104, 170, 70}, {196, 104, 110, 14}, {196, 120, 110, 26}, {196, 150, 110, 24}, {324, 108, 52, 60}, {12, 182, 368, 56}};
+    const bool inB = chordInBrowser();
+    const R cc = bChordCard();
+    const SectionDef& sd = kSections[chordSec];
+    for (size_t j = 0; j < chordItems.size() && j < 7; j++) {
+      Item& it = items[chordItems[j]];
+      it.r = inB ? R{cc.x + side[j][0], cc.y + side[j][1], side[j][2], side[j][3]} : R{sd.x + it.w->x, sd.y + it.w->y, it.w->w, it.w->h};
+    }
+  }
+  void drawChordInBrowser(Canvas& g, R dirty) {
+    const R r = bChordCard();
+    if (!r.hits(dirty)) return;
+    fillRR(g, r, 10, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, rgb(0x1f242c), rgb(0x1a1e25)));
+    strokeRR(g, R{r.x + 0.5f, r.y + 0.5f, r.w - 1, r.h - 1}, 10, rgb(0x2b313b));
+    text(g, toW(kSections[chordSec].title), R{r.x + 12, r.y + 4, 300, 16}, 10.5f, true, rgb(kDim), 0);
+    for (int k : chordItems) if (visible(items[k]) && items[k].r.hits(dirty)) drawItem(g, k);
+  }
   R bScrollR() const { const R l = bList(); return R{l.x + l.w + 2, l.y, 12, l.h}; }   // the list's scroll bar (beta 0.4)
   // its thumb for n rows, at least 28 px high so that it is easy to grab
   R bThumb(int n) const {
@@ -2342,7 +2379,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       }
     }
     // categories
-    inset(g, R{c.x + 8, c.y + 68, 126, 582}, 7);
+    inset(g, R{c.x + 8, c.y + 68, 126, bList().h + 34}, 7);
     for (int i = 0; i < bNumCats(); i++) {
       const R r = bCatR(i);
       const bool sel = i == bCat, hot = bHover == 100 + i;

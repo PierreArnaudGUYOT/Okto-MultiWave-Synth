@@ -75,7 +75,8 @@ h += `struct ParamDef {
 // text: a toggle's or label's text, a menu's caption (beta 0.6)
 struct WidgetDef { int type; int param; float x, y, w, h; int style; int env; int vis; bool visOn; int only; const char* text; };
 // view: the oscillator (0..2) whose panel shows it, -1 always; vis / visOn: shown only while that parameter is on / off (-1: always)
-struct SectionDef { const char* id; const char* title; float x, y, w, h; int view; int vis; bool visOn; int firstWidget, numWidgets; };
+// vtitle (beta 0.3.3): the title is a vertical strip at the left of the card
+struct SectionDef { const char* id; const char* title; float x, y, w, h; int view; int vis; bool visOn; int firstWidget, numWidgets; bool vtitle; };
 struct PresetDef { const char* name; const char* cat; double v[kNumParams]; };
 
 `;
@@ -96,7 +97,7 @@ const sections = [];
 for (const s of SECTIONS) {
   const first = widgets.length;
   for (const w of s.widgets) widgets.push(w);
-  sections.push(`  { ${q(s.id)}, ${q(s.title)}, ${num(s.x)}f, ${num(s.y)}f, ${num(s.w)}f, ${num(s.h)}f, ${s.view}, ${s.vis ? INDEX[s.vis] : -1}, ${!!s.visOn}, ${first}, ${s.widgets.length} },`);
+  sections.push(`  { ${q(s.id)}, ${q(s.title)}, ${num(s.x)}f, ${num(s.y)}f, ${num(s.w)}f, ${num(s.h)}f, ${s.view}, ${s.vis ? INDEX[s.vis] : -1}, ${!!s.visOn}, ${first}, ${s.widgets.length}, ${!!s.vtitle} },`);
 }
 h += 'inline constexpr WidgetDef kWidgets[] = {\n';
 for (const w of widgets) {

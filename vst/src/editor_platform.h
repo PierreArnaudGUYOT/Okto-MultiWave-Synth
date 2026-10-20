@@ -46,6 +46,8 @@ struct Canvas {
   virtual void fillPolygon(const Pt* p, int n, const Brush& b) = 0;
   // one line of text in r: align 0 left, 1 centre, 2 right; vcenter or top; never wrapped
   virtual void text(const std::wstring& s, R r, float px, bool bold, Col c, int align, bool vcenter) = 0;
+  // beta 0.3.3: the text turned a quarter turn anticlockwise (it reads from the bottom to the top), centred in r (the vertical title of a card)
+  virtual void textVertical(const std::wstring& s, R r, float px, bool bold, Col c) = 0;
   // left-aligned, cut with "…" when longer than r
   virtual void textEllipsis(const std::wstring& s, R r, float px, bool bold, Col c, bool vcenter) = 0;
   virtual float textWidth(const std::wstring& s, float px, bool bold) = 0;   // as the text is laid out (with its margins)

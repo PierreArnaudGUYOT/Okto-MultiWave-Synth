@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3.2**, a test version (2026-10-20), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3.3**, a test version (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -20,6 +20,13 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What beta 0.3.3 changes
+
+- **A lower panel** (the owner's choice "V1" among five mock-ups on a 1920 x 1080 screen with the taskbar). The panel is **966 px tall** (1050 before; the bottom of the keyboard was out of sight on a 1080-pixel screen): the oscillator block, the three
+  rows of cards and the keyboard are a little shorter (the knobs keep their size), the **titles of EFFECTS and PLAY are vertical, in a strip at the left of the card** (those two cards are 98 px tall), and, while CHORD MODE is on, the **CHORD KEYBOARD card is in the preset
+  browser, under the list of presets** (the list is that much shorter and the panel keeps its height). With the browser hidden the card is under the keyboard as before (the panel is 120 px taller). The web app has the same panel, with the chord card under the keyboard.
+- **The new presets are 2 dB lower** (every preset numbered 501 and up; `NEW_TRIM_DB` in `tools/spec.js`, on top of the loud-chord calibration of beta 0.3.2) while the good ones have not been chosen yet; the 22 TOP Sounds and the older presets are unchanged. Set the constant to 0 to take it off.
 
 ## What beta 0.3.2 changes
 

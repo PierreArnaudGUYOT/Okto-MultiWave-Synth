@@ -441,9 +441,9 @@ int wmain(int argc, wchar_t** argv) {
     h.click(cm[0], cm[1]);
     h.run(0.3);
     h.view->getSize(&vr);
-    check(h.plain(P_CHORD_MODE) == 1 && vr.getHeight() == kDeviceH + kChordH, "CHORD MODE on: the panel grows by the chord card", fmt("%.0f", vr.getHeight()));
+    check(h.plain(P_CHORD_MODE) == 1 && vr.getHeight() == kDeviceH, "CHORD MODE on: the chord card is under the list of the browser, the panel keeps its height (beta 0.3.3)", fmt("%.0f", vr.getHeight()));
     h.shot(out + L"\\9_chord_on.png");
-    h.click(pads[0] + 40, pads[1] + 22);   // a pad of the chord card
+    h.click(1104 + 8 + 12 + 40, 8 + 98 + (kDeviceH - 16 - 156 - 254) + 10 + 26 + 22);   // a pad of the chord card, in the browser (beta 0.3.3: x = browser + 8 + 12, y = under the list + 26)
     h.run(0.2);
     const double type1 = h.plain(P_CHORD_TYPE);
     {   // a key held with the mouse: a chord sounds
@@ -486,6 +486,9 @@ int wmain(int argc, wchar_t** argv) {
     h.run(0.3);
     for (int i = 0; i < 40; i++) { h.click(pr[0] + pr[2] - 12, pr[1] + pr[3] / 2); h.run(0.05); }   // the right arrow: out of the TOP Sounds into SuperModulation
     h.run(0.5);
+    h.ctrl->setParamNormalized(P_CHORD_MODE, 1.0); h.run(0.5);   // beta 0.3.3: the chord card under the list of the browser (screenshot)
+    h.shot(out + L"\\13_chord_in_browser.png");
+    h.ctrl->setParamNormalized(P_CHORD_MODE, 0.0); h.run(0.4);
     {   // beta 0.3.1: the stars at the right of a row of the browser: a click on the left half of the second star rates the first row 3 / 10 (the presets file holds it)
       const float sx = 1100 + 4 + 136 + (420 - 12 - 162) - 6 - 60;   // the stars' left edge: the card x + the list x + its width - the margin - 5 stars of 12
       const std::string before = readFile(presetsFile);

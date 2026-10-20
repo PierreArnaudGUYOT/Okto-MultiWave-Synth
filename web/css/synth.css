@@ -84,6 +84,9 @@ button { font-family: inherit; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
 .section .title { position: absolute; left: 12px; top: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; color: var(--dim); white-space: nowrap; }
 .section .title b { color: var(--accent); font-weight: 700; }
+/* beta 0.3.3: a card whose title is a vertical strip at the left (EFFECTS, PLAY) */
+.section.vt .title { left: 0; top: 0; width: 22px; height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+  writing-mode: vertical-rl; transform: rotate(180deg); font-size: 9.5px; letter-spacing: 0.12em; border-right: 1px solid var(--card-edge); }
 .section.hidden { display: none; }
 .w { position: absolute; }
 

@@ -81,6 +81,7 @@ class MacCanvas : public Canvas {
     drawLine(ln, r, px, align, vcenter);
     CFRelease(ln);
   }
+  void textVertical(const std::wstring& s, R r, float px, bool bold, Col c) override { text(s, r, px, bold, c, 1, true); }   // beta 0.3.3: not turned here (macOS is not built in this version)
   void textEllipsis(const std::wstring& s, R r, float px, bool bold, Col c, bool vcenter) override {
     if (s.empty()) return;
     CTLineRef ln = makeLine(s, px, bold, c);

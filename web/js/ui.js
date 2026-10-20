@@ -87,11 +87,11 @@ class SynthUI {
   build() {
     for (const s of this.SPEC.SECTIONS) {
       const card = s.title !== '';
-      const se = el('div', 'section' + (card ? ' card' : ''), this.dev, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' });
+      const se = el('div', 'section' + (card ? ' card' : '') + (s.vtitle ? ' vt' : ''), this.dev, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' });
       if (card) {
         const t = el('div', 'title', se);
         const parts = s.title.split(' · ');
-        t.innerHTML = parts.length > 1 ? `<b>${parts[0]}</b> · ${parts.slice(1).join(' · ')}` : s.title;
+        t.innerHTML = parts.length > 1 ? `<b>${parts[0]}</b> · ${parts.slice(1).join(' · ')}` : s.accentTitle ? `<b>${s.title}</b>` : s.title;   // beta 0.3.3: vtitle = a vertical strip at the left
       }
       se.dataset.sid = s.id;   // beta 0.3: addressable by the layout mock-ups (tools of the owner's review)
       this.sections.push({ spec: s, el: se });

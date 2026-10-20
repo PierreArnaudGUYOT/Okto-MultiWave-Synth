@@ -3,6 +3,24 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth beta 0.3.3 — 2026-10-20 (the compact panel V1, the new presets 2 dB lower)
+
+A **test version**: the panel layout the owner chose among five mock-ups, and a simple volume trim of the new presets while he has not chosen the good ones.
+
+**In short**
+- **A lower panel** (the owner's choice "V1" among five mock-ups on a 1920 x 1080 screen with the taskbar). The panel is **966 px tall** (1050 before; the bottom of the keyboard was out of sight on a 1080-pixel screen): the oscillator block, the three
+  rows of cards and the keyboard are a little shorter (the knobs keep their size), the **titles of EFFECTS and PLAY are vertical, in a strip at the left of the card** (those two cards are 98 px tall), and, while CHORD MODE is on, the **CHORD KEYBOARD card is in the preset
+  browser, under the list of presets** (the list is that much shorter and the panel keeps its height). With the browser hidden the card is under the keyboard as before (the panel is 120 px taller). The web app has the same panel, with the chord card under the keyboard.
+- **The new presets are 2 dB lower** (every preset numbered 501 and up; `NEW_TRIM_DB` in `tools/spec.js`, on top of the loud-chord calibration of beta 0.3.2) while the good ones have not been chosen yet; the 22 TOP Sounds and the older presets are unchanged. Set the constant to 0 to take it off.
+- Engine and presets file unchanged from beta 0.3.2 (the crackle guard and the chord compensation stay).
+
+**Checked (light, for a pre-release)**: `tests/quick.js` (generated files, every preset plays, the VST3 host, the web app), the plug-in's window in a host (`vote_session`: EVALUATE SOUNDS, the stars, CHORD MODE with the card in the browser, the fit to the screen), the presets file (`library_test`) and the VST2 entry point.
+Not run: the C++ / JavaScript cross-check (the engine did not change), the full web run, the loud-chord measure (kept for the official release).
+
+**Known limits**
+- The vertical titles are small (9.5 px); the B1 (additive) tab was not drawn in the mock-up, it uses the same geometry.
+- The manual's screenshots show the previous panel.
+
 ## Okto MultiWave Synth beta 0.3.2 — 2026-10-20 (no more crackle on a loud chord, the window fits the screen)
 
 A **test version** after two remarks of OktoPierre on beta 0.3.1: "many presets crackle, turning the master volume down cures it (a C major chord at C5 at the maximum velocity)" and "the panel is too tall, I do not see the bottom of the keyboard".

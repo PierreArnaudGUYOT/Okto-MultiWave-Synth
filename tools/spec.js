@@ -11,7 +11,7 @@
 // Parameter order defines the VST3 ParamIDs: append only, never reorder.
 'use strict';
 
-const DEVICE = { w: 1100, h: 1050 };   // the panel; CHORD MODE adds CHORD_H below the keyboard row (the chord card)
+const DEVICE = { w: 1100, h: 966 };   // the panel; CHORD MODE adds CHORD_H below the keyboard row (the chord card)
 const APP = {
   name: 'Okto MultiWave Synth',
   author: 'Pierre Arnaud GUYOT',
@@ -19,8 +19,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: 'beta 0.3.2',
-  versionNum: '0.3.2',
+  version: 'beta 0.3.3',
+  versionNum: '0.3.3',
   date: '2026-10-20',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -533,6 +533,46 @@ section('chord', 'CHORD KEYBOARD', 12, 1054, 1076, 104, -1, [
   { type: 'strumplate', x: 812, y: 26, w: 252, h: 70 },
 ], { vis: 'chord_mode', visOn: true });
 
+// ---------------------------------------------------------------- the compact panel (beta 0.3.3)
+// The owner chose proposition "V1" among five (mock-ups on a 1920 x 1080 screen with the taskbar): the panel of beta 0.3 is 1050 px tall, which hides the bottom of the keyboard on
+// a 1080-pixel screen. The sections above keep their widgets; this block moves and shortens them (a card's knob rows move up, the widgets keep their size): the wavelet card 10 px
+// shorter, the second row of the plate, OSC MIX and the SCOPE; the three rows of cards 8 px shorter; EFFECTS and PLAY, which lost their title bar to a vertical title in a strip at
+// the left of the card (vtitle), 98 px tall; the keyboard 82 px tall. The CHORD KEYBOARD card (CHORD MODE) is under the keyboard in the web app; the plug-in puts it under the list of
+// the preset browser while the browser is open (vst/src/editor.cpp).
+(function compactPanel() {
+  const find = (id) => S.find(s => s.id === id);
+  const shift = (s, from, dy) => { for (const w of s.widgets) if (w.y >= from) w.y += dy; };
+  const box = (s, x, y, w, h) => { s.x = x; s.y = y; s.w = w; s.h = h; };
+  const widget = (s, i, x, y, w, h) => { const o = s.widgets[i]; o.x = x; o.y = y; if (w !== undefined) { o.w = w; o.h = h; } };
+  for (const s of S) {
+    const base = s.id.replace(/_(a1|a2|b1)$/, '');
+    if (base === 'tone') {
+      s.h = 250;
+      for (const w of s.widgets) {
+        if (w.type === 'atom') w.h -= 8;
+        else if (w.y >= 140 && !(/^knob/.test(w.type) && w.x >= 460)) w.y -= 8;
+      }
+    } else if (base === 'filter' || base === 'position' || base === 'osc') { s.y = 356; s.h = 132; shift(s, 50, -8); }
+  }
+  const mix = find('mix'); mix.h = 290; shift(mix, 190, -8);
+  const dsp = find('display'); dsp.h = 290;
+  widget(dsp, 0, 12, 30, 360, 104); widget(dsp, 1, 12, 142, 360, 14); widget(dsp, 2, 12, 158, 360, 122);
+  find('oscframe').h = 444;
+  for (const [id, x, y, w, from] of [['flt', 12, 496, 504, 50], ['ampenv', 524, 496, 284, 50], ['modenv', 816, 496, 272, 50], ['lfo', 12, 622, 440, 50], ['lfo2', 460, 622, 246, 50],
+    ['lfo3', 460, 622, 246, 50], ['voice', 714, 622, 374, 30]]) { const s = find(id); box(s, x, y, w, 120); shift(s, from, -8); }
+  // EFFECTS and PLAY: the title is a vertical strip at the left (22 px): the content moves right by 12 and up into the title row
+  const fx = find('fx'); box(fx, 12, 748, 496, 98); fx.vtitle = true;
+  for (const w of fx.widgets) {
+    if (w.type === 'fxheads') { w.x = 12; w.y = 5; w.w = 484; } else if (w.type === 'toggle') { w.x += 12; w.y = 3; } else { w.x += 12; w.y = 32; }
+  }
+  const play = find('play'); box(play, 516, 748, 584, 98); play.vtitle = true; play.title = 'PLAY'; play.accentTitle = true;
+  widget(play, 0, 26, 8, 100, 34); widget(play, 1, 26, 48, 100, 26); widget(play, 2, 158, 8, 150, 24); widget(play, 3, 158, 62, 176, 24);
+  widget(play, 4, 360, 44, 100, 14); widget(play, 5, 360, 62, 110, 26);
+  const keys = find('keys'); box(keys, 0, 852, 1100, 98);
+  widget(keys, 0, 12, 0, 60, 82); widget(keys, 1, 82, 0, 1006, 82); widget(keys, 2, 14, 83, 170, 15);
+  find('chord').y = DEVICE.h + 4;
+})();
+
 // ---------------------------------------------------------------- presets
 // The 22 TOP Sounds of the Wavelet Synthesizer beta 0.7 (tools/presets_top.js, in that version's parameters) are converted to the
 // oscillators of this version without changing the sound: the balance ab_mix becomes the levels of A1 and B1 (1 - mix, mix) and
@@ -583,7 +623,11 @@ const TOP_RAW = require('./presets_top.js');
 const PRESETS = [];
 for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: convertLegacy(r.v) });
 const TOP_COUNT = PRESETS.length;
-for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: r.v, ...(RATED[numOfName(r)] ? { stars: RATED[numOfName(r)] } : {}) });
+// beta 0.3.3: while the owner has not chosen the good presets of beta 0.3 yet, every preset numbered 501 and up plays NEW_TRIM_DB lower (its master volume; the loud-chord
+// calibration of tools/supermod/loud.js is already in the file): a loud chord crackled in many of them. Set it to 0 to take it off.
+const NEW_TRIM_DB = 2;
+const trimmed = r => (numOfName(r) >= 501 ? { ...r.v, master: Math.max(-36, (r.v.master !== undefined ? r.v.master : -3) - NEW_TRIM_DB) } : r.v);
+for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: trimmed(r), ...(RATED[numOfName(r)] ? { stars: RATED[numOfName(r)] } : {}) });
 // the presets he rated above 7 and the favourites he named (RATED.FAV, 7 stars) go to TOP Sounds (after the 22 of beta 0.7), the best first
 const TOP_EXTRA = PRESETS.map((p, i) => i).filter(i => i >= TOP_COUNT && (PRESETS[i].stars > 7 || RATED.FAV.includes(parseInt(PRESETS[i].name, 10))))
   .sort((a, b) => PRESETS[b].stars - PRESETS[a].stars || a - b);

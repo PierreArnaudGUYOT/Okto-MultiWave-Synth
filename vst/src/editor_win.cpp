@@ -78,6 +78,7 @@ class GdiCanvas : public Canvas {
     auto br = brush(b); g.FillPolygon(br.get(), pts.data(), n);
   }
   void text(const std::wstring& s, R r, float px, bool bold, Col c, int align, bool vcenter) override;
+  void textVertical(const std::wstring& s, R r, float px, bool bold, Col c) override;
   void textEllipsis(const std::wstring& s, R r, float px, bool bold, Col c, bool vcenter) override;
   float textWidth(const std::wstring& s, float px, bool bold) override;
   void pixels(const uint32_t* argb, int w, int h, R dst) override {
@@ -352,6 +353,13 @@ void GdiCanvas::text(const std::wstring& s, R r, float px, bool bold, Col c, int
   f.SetTrimming(G::StringTrimmingNone);
   G::SolidBrush b(gc(c));
   g.DrawString(s.c_str(), -1, win.font(px, bold), G::RectF(r.x, r.y, r.w, r.h), &f, &b);
+}
+void GdiCanvas::textVertical(const std::wstring& s, R r, float px, bool bold, Col c) {
+  const G::GraphicsState st = g.Save();
+  g.TranslateTransform(r.x + r.w / 2, r.y + r.h / 2);
+  g.RotateTransform(-90);
+  text(s, R{-r.h / 2, -r.w / 2, r.h, r.w}, px, bold, c, 1, true);
+  g.Restore(st);
 }
 void GdiCanvas::textEllipsis(const std::wstring& s, R r, float px, bool bold, Col c, bool vcenter) {
   G::StringFormat ff; ff.SetFormatFlags(G::StringFormatFlagsNoWrap); ff.SetTrimming(G::StringTrimmingEllipsisCharacter);

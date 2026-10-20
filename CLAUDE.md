@@ -359,6 +359,14 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
   `--target 1.0 --apply` lowers the masters of presets numbered 501 and up by whole dB, run twice in beta 0.3.2: 1.15 then 1.0; 321 presets).
 - **Window fit**: `zoomFactor` 0 = FIT (`plugin.cpp`; state "WSC2" stores 0; an older state holding exactly 1 reads as FIT, a chosen 100 % is stored as 1.0001); `editor.cpp updateAuto()` (work area of the monitor of the host window through `workAreaOf`, 100 px kept,
   clamp 0.5..1, in whole percents; recomputed in `requestResize`, `attached`, `getSize`); menu "Fit the window to the screen" + 50..150 %. Developer tests: `MW_WORKAREA=WxH` (a screen of that size; `vote_session` sets 3840x2160 and tests 1366x728).
+
+### 3.3l BETA 0.3.3: THE COMPACT PANEL (V1)
+- `tools/spec.js` `compactPanel()` moves and shortens the sections defined above it (DEVICE 1100 x 966; the wavelet card 250, the plate's second row 356..488, OSC MIX / SCOPE 290, rows at 496 / 622 (120 tall), EFFECTS 12,748 496x98 and PLAY 516,748 584x98 with `vtitle`
+  (a 22 px strip, `SectionDef.vtitle`, the web `.section.vt`, `Canvas::textVertical`), keys 852 (98 tall), chord card at DEVICE.h + 4). The mock-up tools of the review are not in the repo (the owner's pictures: Maquettes_Okto).
+- **Plug-in**: `devH()` adds `kChordH` only while CHORD MODE is on and the browser is closed; with the browser open the chord items (`chordItems`, section "chord") are re-laid out under the list (`layoutChordItems`, `bChordCard`, `drawChordInBrowser`; `bList()` is
+  `kChordSideH + 6` shorter); `vote_session` section 8 and the screenshot 13_chord_in_browser.png.
+- **Presets**: `NEW_TRIM_DB = 2` in `tools/spec.js` (every preset numbered 501 and up, until the owner has chosen the good ones; 0 = off).
+- **Tests of a pre-release** are the light ones (the owner's rule): `tests/quick.js`, `vote_session`, `library_test`, `vst2_smoke`; the cross-check, `test_web` and the sweeps are for an official release.
 ### 3.4 Table rebuilds
 - Structural changes rebuild tables **off the audio thread** and switch with a 512-sample crossfade (`setTables`).
 - Web: `app.js` builds the tables in a **Worker** (`startWorker` / `scheduleBuild` / `deliver`; a `data:` URL made of
