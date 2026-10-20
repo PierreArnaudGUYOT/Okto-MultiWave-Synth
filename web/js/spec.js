@@ -4,7 +4,23 @@
 var WS_SPEC = {
  "DEVICE": {
   "w": 1100,
-  "h": 966
+  "h": 944
+ },
+ "ORIENT": {
+  "a": "#ff7b4a",
+  "b": "#33d3c6",
+  "c1": "#e0653a",
+  "c2": "#33d3c6",
+  "c3": "#f2e3c8",
+  "c4": "#3a1d14",
+  "c5": "#5e2c1c",
+  "pl": [
+   "#44251a",
+   "#321a11"
+  ],
+  "dim": "#c9b5a6",
+  "tile": 34,
+  "opacity": 0.7
  },
  "CHORD_H": 120,
  "APP": {
@@ -4177,7 +4193,7 @@ var WS_SPEC = {
      "x": 276,
      "y": 70,
      "w": 126,
-     "h": 64
+     "h": 82
     },
     {
      "type": "knobM",
@@ -4206,18 +4222,18 @@ var WS_SPEC = {
     {
      "type": "knobL",
      "param": "a_width",
-     "x": 280,
-     "y": 138,
-     "w": 80,
-     "h": 92
+     "x": 294,
+     "y": 162,
+     "w": 64,
+     "h": 62
     },
     {
      "type": "knobL",
      "param": "a_sparsity",
-     "x": 376,
-     "y": 138,
-     "w": 80,
-     "h": 92
+     "x": 378,
+     "y": 162,
+     "w": 64,
+     "h": 62
     },
     {
      "type": "knobM",
@@ -4500,7 +4516,7 @@ var WS_SPEC = {
      "x": 276,
      "y": 70,
      "w": 126,
-     "h": 64
+     "h": 82
     },
     {
      "type": "knobM",
@@ -4529,18 +4545,18 @@ var WS_SPEC = {
     {
      "type": "knobL",
      "param": "a2_width",
-     "x": 280,
-     "y": 138,
-     "w": 80,
-     "h": 92
+     "x": 294,
+     "y": 162,
+     "w": 64,
+     "h": 62
     },
     {
      "type": "knobL",
      "param": "a2_sparsity",
-     "x": 376,
-     "y": 138,
-     "w": 80,
-     "h": 92
+     "x": 378,
+     "y": 162,
+     "w": 64,
+     "h": 62
     },
     {
      "type": "knobM",
@@ -5506,16 +5522,17 @@ var WS_SPEC = {
    "x": 12,
    "y": 622,
    "w": 440,
-   "h": 120,
+   "h": 98,
    "view": -1,
    "widgets": [
     {
      "type": "seg",
      "param": "lfo_shape",
-     "x": 12,
-     "y": 28,
-     "w": 260,
-     "h": 24
+     "x": 66,
+     "y": 5,
+     "w": 250,
+     "h": 20,
+     "style": "uline"
     },
     {
      "type": "toggle",
@@ -5531,7 +5548,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_rate",
      "x": 12,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60,
      "vis": "lfo_sync",
@@ -5541,7 +5558,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_div",
      "x": 12,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60,
      "vis": "lfo_sync",
@@ -5553,7 +5570,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_pitch",
      "x": 64,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     },
@@ -5561,7 +5578,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_cut",
      "x": 116,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     },
@@ -5569,7 +5586,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_pos",
      "x": 168,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     },
@@ -5577,7 +5594,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_wav",
      "x": 220,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     },
@@ -5585,7 +5602,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_sp",
      "x": 272,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     },
@@ -5593,7 +5610,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_res",
      "x": 324,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     },
@@ -5601,7 +5618,7 @@ var WS_SPEC = {
      "type": "knobM",
      "param": "lfo_ew",
      "x": 376,
-     "y": 50,
+     "y": 32,
      "w": 52,
      "h": 60
     }
@@ -5613,40 +5630,32 @@ var WS_SPEC = {
    "x": 460,
    "y": 622,
    "w": 246,
-   "h": 120,
+   "h": 98,
    "view": -1,
    "widgets": [
     {
-     "type": "seg",
+     "type": "lfotabs",
      "param": "lfo_view",
-     "x": 78,
-     "y": 5,
-     "w": 54,
-     "h": 20
-    },
-    {
-     "type": "seg",
-     "param": "lfo2_shape",
-     "x": 12,
-     "y": 28,
-     "w": 222,
-     "h": 24
+     "x": 0,
+     "y": 0,
+     "w": 246,
+     "h": 25
     },
     {
      "type": "toggle",
      "param": "lfo2_sync",
      "text": "SYNC",
      "only": "vst",
-     "x": 192,
-     "y": 6,
+     "x": 200,
+     "y": 4,
      "w": 42,
      "h": 17
     },
     {
      "type": "knobM",
      "param": "lfo2_rate",
-     "x": 12,
-     "y": 50,
+     "x": 4,
+     "y": 32,
      "w": 52,
      "h": 60,
      "vis": "lfo2_sync",
@@ -5655,8 +5664,8 @@ var WS_SPEC = {
     {
      "type": "knobM",
      "param": "lfo2_div",
-     "x": 12,
-     "y": 50,
+     "x": 4,
+     "y": 32,
      "w": 52,
      "h": 60,
      "vis": "lfo2_sync",
@@ -5667,23 +5676,33 @@ var WS_SPEC = {
     {
      "type": "knobM",
      "param": "lfo2_amt",
-     "x": 64,
-     "y": 50,
+     "x": 54,
+     "y": 32,
      "w": 52,
      "h": 60
+    },
+    {
+     "type": "knobM",
+     "param": "lfo2_shape",
+     "x": 104,
+     "y": 32,
+     "w": 52,
+     "h": 60,
+     "style": "choice"
     },
     {
      "type": "menu",
      "param": "lfo2_target",
      "text": "TARGET",
-     "x": 120,
-     "y": 70,
-     "w": 116,
-     "h": 24
+     "x": 160,
+     "y": 52,
+     "w": 80,
+     "h": 22
     }
    ],
    "vis": "lfo_view",
-   "visOn": false
+   "visOn": false,
+   "tabbed": true
   },
   {
    "id": "lfo3",
@@ -5691,40 +5710,32 @@ var WS_SPEC = {
    "x": 460,
    "y": 622,
    "w": 246,
-   "h": 120,
+   "h": 98,
    "view": -1,
    "widgets": [
     {
-     "type": "seg",
+     "type": "lfotabs",
      "param": "lfo_view",
-     "x": 78,
-     "y": 5,
-     "w": 54,
-     "h": 20
-    },
-    {
-     "type": "seg",
-     "param": "lfo3_shape",
-     "x": 12,
-     "y": 28,
-     "w": 222,
-     "h": 24
+     "x": 0,
+     "y": 0,
+     "w": 246,
+     "h": 25
     },
     {
      "type": "toggle",
      "param": "lfo3_sync",
      "text": "SYNC",
      "only": "vst",
-     "x": 192,
-     "y": 6,
+     "x": 200,
+     "y": 4,
      "w": 42,
      "h": 17
     },
     {
      "type": "knobM",
      "param": "lfo3_rate",
-     "x": 12,
-     "y": 50,
+     "x": 4,
+     "y": 32,
      "w": 52,
      "h": 60,
      "vis": "lfo3_sync",
@@ -5733,8 +5744,8 @@ var WS_SPEC = {
     {
      "type": "knobM",
      "param": "lfo3_div",
-     "x": 12,
-     "y": 50,
+     "x": 4,
+     "y": 32,
      "w": 52,
      "h": 60,
      "vis": "lfo3_sync",
@@ -5745,23 +5756,33 @@ var WS_SPEC = {
     {
      "type": "knobM",
      "param": "lfo3_amt",
-     "x": 64,
-     "y": 50,
+     "x": 54,
+     "y": 32,
      "w": 52,
      "h": 60
+    },
+    {
+     "type": "knobM",
+     "param": "lfo3_shape",
+     "x": 104,
+     "y": 32,
+     "w": 52,
+     "h": 60,
+     "style": "choice"
     },
     {
      "type": "menu",
      "param": "lfo3_target",
      "text": "TARGET",
-     "x": 120,
-     "y": 70,
-     "w": 116,
-     "h": 24
+     "x": 160,
+     "y": 52,
+     "w": 80,
+     "h": 22
     }
    ],
    "vis": "lfo_view",
-   "visOn": true
+   "visOn": true,
+   "tabbed": true
   },
   {
    "id": "voice",
@@ -5769,16 +5790,16 @@ var WS_SPEC = {
    "x": 714,
    "y": 622,
    "w": 374,
-   "h": 120,
+   "h": 98,
    "view": -1,
    "widgets": [
     {
      "type": "seg",
      "param": "v_porta",
      "x": 76,
-     "y": 6,
+     "y": 5,
      "w": 150,
-     "h": 18
+     "h": 20
     },
     {
      "type": "leds",
@@ -5849,7 +5870,7 @@ var WS_SPEC = {
    "id": "fx",
    "title": "EFFECTS",
    "x": 12,
-   "y": 748,
+   "y": 726,
    "w": 496,
    "h": 98,
    "view": -1,
@@ -5964,8 +5985,8 @@ var WS_SPEC = {
    "id": "play",
    "title": "PLAY",
    "x": 516,
-   "y": 748,
-   "w": 584,
+   "y": 726,
+   "w": 572,
    "h": 98,
    "view": -1,
    "widgets": [
@@ -6036,7 +6057,7 @@ var WS_SPEC = {
    "id": "keys",
    "title": "",
    "x": 0,
-   "y": 852,
+   "y": 830,
    "w": 1100,
    "h": 98,
    "view": -1,
@@ -6068,7 +6089,7 @@ var WS_SPEC = {
    "id": "chord",
    "title": "CHORD KEYBOARD",
    "x": 12,
-   "y": 970,
+   "y": 948,
    "w": 1076,
    "h": 104,
    "view": -1,

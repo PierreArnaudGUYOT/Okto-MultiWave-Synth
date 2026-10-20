@@ -11,7 +11,13 @@
 // Parameter order defines the VST3 ParamIDs: append only, never reorder.
 'use strict';
 
-const DEVICE = { w: 1100, h: 966 };   // the panel; CHORD MODE adds CHORD_H below the keyboard row (the chord card)
+const DEVICE = { w: 1100, h: 944 };   // the panel (beta 0.3.4: 944, the owner's mock-up P6 / Q1 / R6); CHORD MODE adds CHORD_H below the keyboard row (the chord card)
+// beta 0.3.4: the ORIENTAL colour code, on while the TUNING switch of the PLAY card is ARAB or TURK (mt_mode is not 0): the accent becomes terracotta for the
+// subtractive oscillators (a) and turquoise for the additive one (b) (knob arcs, tabs, scope, toggles, ...), the cards stay grey, and the PLAY card gets a
+// pattern of octagons and squares (4.8.8, an eight-pointed star in each octagon; one tile = `tile` px) in c1 (terracotta) / c2 (turquoise) / c3 (sand) over
+// c4 / c5 (dark terracotta); pl = the card's gradient, dim = the captions on the pattern; `opacity`: the pattern over the card's gradient. Web: CSS
+// variables + an SVG pattern; plug-in: accent() and polygons (the owner's mock-up, tuning ARAB).
+const ORIENT = { a: '#ff7b4a', b: '#33d3c6', c1: '#e0653a', c2: '#33d3c6', c3: '#f2e3c8', c4: '#3a1d14', c5: '#5e2c1c', pl: ['#44251a', '#321a11'], dim: '#c9b5a6', tile: 34, opacity: 0.7 };
 const APP = {
   name: 'Okto MultiWave Synth',
   author: 'Pierre Arnaud GUYOT',
@@ -356,15 +362,19 @@ for (const s of SLOTS) if (s.mode === 1) for (let b = 0; b < 11; b++) if (idx[s.
 // widget types: knobL knobM knobS knobT seg step drawbar scope scalogram atom source
 //               window adsr leds fxheads keyboard wheels logo presets manual download meter zoom credit menu toggle label
 //               chordpads chordname strumplate evaluate (Okto MultiWave Synth) osctabs (beta 0.3: the folder tabs of the oscillators)
+//               lfotabs (beta 0.3.4: the LFO 2 | LFO 3 tabs along the top of the LFO 2/3 card, parameter lfo_view)
 // widget fields: only 'web' / 'vst' (shown in one of them), vis + visOn (shown while that parameter is on / off,
-// the plug-in's SYNC), style 'value' (a knob labelled with its value: note values), text (toggle, label, menu caption)
+// the plug-in's SYNC), style 'value' (a knob labelled with its value: note values), 'choice' (beta 0.3.4: a knob of a choice parameter, the current choice
+// written under it in the accent colour: the LFO SHAPE), 'uline' (a seg drawn underlined, no frame: the wave selector of LFO 1), text (toggle, label, menu caption)
+// section options: vis / visOn, tabbed (beta 0.3.4: no title, the card has a tab bar along its top: the LFO 2/3 card)
 const S = [];
 // beta 0.3: the panel was reorganised (the owner's choice among six proposals): all coordinates are absolute panel coordinates, in this order from the top:
 // the header; the folder tabs of the oscillators and the plate behind the cards of the one shown (section 'oscframe'); OSC MIX and the SCOPE at the top right,
 // outside the plate (common to every oscillator); the filter row of the oscillator; FILTER, AMP and MOD ENVELOPEs; LFO 1, LFO 2/3, VOICE; EFFECTS and PLAY;
 // the keyboard.
 function section(id, title, x, y, w, h, view, widgets, opts) { S.push(Object.assign({ id, title, x, y, w, h, view, widgets }, opts || {})); }
-const kn = (key, x, y, t) => ({ type: t || 'knobM', param: key, x, y, w: t === 'knobL' ? 80 : 52, h: t === 'knobL' ? 92 : 60 });
+// knobL (beta 0.3.4: only SOURCE WIDTH and SPARSITY of the subtractive oscillators): a 42 px disc (the other knobs 38), a box of 64 x 62: the disc's centre 32 px from the left and 22 from the top
+const kn = (key, x, y, t) => ({ type: t || 'knobM', param: key, x, y, w: t === 'knobL' ? 64 : 52, h: t === 'knobL' ? 62 : 60 });
 const row = (keys, x0, y) => keys.map((k, i) => kn(k, x0 + i * 52, y));
 const CHORD_H = 120;   // the chord card (shown by CHORD MODE) adds this much to the panel's height
 
@@ -399,8 +409,8 @@ SLOTS.forEach((s, v) => {
       { type: 'source', x: 276, y: 70, w: 126, h: 64 },
       kn(K.phase, 408, 70),
       kn('wmorph', 470, 64), kn('env_wav', 470, 122),
-      kn(K.width, 280, 146, 'knobL'),
-      kn(K.sparsity, 376, 146, 'knobL'),
+      kn(K.width, 294, 162, 'knobL'),      // (compactPanel() places them: 42 px discs centred at (326, 184) and (410, 184))
+      kn(K.sparsity, 378, 162, 'knobL'),
       kn(K.lvl, 470, 180),
     ]);
   } else {
@@ -467,32 +477,28 @@ section('modenv', 'MOD ENVELOPE', 816, 520, 272, 128, -1, [
 const synced = (key, div, sync, x, y) => [Object.assign(kn(key, x, y), { vis: sync, visOn: false }),
   Object.assign(kn(div, x, y), { vis: sync, visOn: true, only: 'vst', style: 'value' })];
 const syncBtn = (key, x, y) => ({ type: 'toggle', param: key, text: 'SYNC', only: 'vst', x, y, w: 42, h: 17 });
+// beta 0.3.4 (the owner's mock-ups P6 / Q1): the wave selector of LFO 1 is on the title line, to the right of the title, drawn underlined (style 'uline'); the knobs of
+// the three cards of the row (LFO 1, LFO 2/3, VOICE) are on the same line (compactPanel(): K0)
 section('lfo', 'LFO 1', 12, 656, 440, 128, -1, [
-  { type: 'seg', param: 'lfo_shape', x: 12, y: 28, w: 260, h: 24 },
+  { type: 'seg', param: 'lfo_shape', x: 66, y: 5, w: 250, h: 20, style: 'uline' },
   syncBtn('lfo_sync', 386, 6),
   ...synced('lfo_rate', 'lfo_div', 'lfo_sync', 12, 58),
   ...row(['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew'], 64, 58),
 ]);
-// beta 0.3: the LFO 2/3 card has two sub-tabs, LFO 2 and LFO 3 (the small 2 | 3 switch next to the title: the playing setting LFO CARD); each LFO has its own
-// section at the same place, shown while LFO CARD says so
-section('lfo2', 'LFO 2/3', 460, 656, 246, 128, -1, [
-  { type: 'seg', param: 'lfo_view', x: 78, y: 5, w: 54, h: 20 },
-  { type: 'seg', param: 'lfo2_shape', x: 12, y: 28, w: 222, h: 24 },
-  syncBtn('lfo2_sync', 192, 6),
-  ...synced('lfo2_rate', 'lfo2_div', 'lfo2_sync', 12, 58),
-  kn('lfo2_amt', 64, 58),
-  { type: 'menu', param: 'lfo2_target', text: 'TARGET', x: 120, y: 78, w: 116, h: 24 },
-], { vis: 'lfo_view', visOn: false });
-section('lfo3', 'LFO 2/3', 460, 656, 246, 128, -1, [
-  { type: 'seg', param: 'lfo_view', x: 78, y: 5, w: 54, h: 20 },
-  { type: 'seg', param: 'lfo3_shape', x: 12, y: 28, w: 222, h: 24 },
-  syncBtn('lfo3_sync', 192, 6),
-  ...synced('lfo3_rate', 'lfo3_div', 'lfo3_sync', 12, 58),
-  kn('lfo3_amt', 64, 58),
-  { type: 'menu', param: 'lfo3_target', text: 'TARGET', x: 120, y: 78, w: 116, h: 24 },
-], { vis: 'lfo_view', visOn: true });
+// beta 0.3: the LFO 2/3 card has two sub-tabs, LFO 2 and LFO 3 (the playing setting LFO CARD, lfo_view); each LFO has its own section at the same place, shown while
+// LFO CARD says so. Beta 0.3.4: the sub-tabs are real tabs along the top of the card (`lfotabs`, a lit dot: the LFO's amount is not 0, like the oscillators' tabs;
+// the tab bar also holds the plug-in's SYNC), the SHAPE is a stepped knob (five positions, the name of the shape under it) after RATE and AMOUNT, and TARGET is narrower
+const lfoCard = (n) => section('lfo' + n, 'LFO 2/3', 460, 656, 246, 128, -1, [
+  { type: 'lfotabs', param: 'lfo_view', x: 0, y: 0, w: 246, h: 25 },
+  syncBtn(`lfo${n}_sync`, 200, 4),
+  ...synced(`lfo${n}_rate`, `lfo${n}_div`, `lfo${n}_sync`, 4, 58),
+  kn(`lfo${n}_amt`, 54, 58),
+  Object.assign(kn(`lfo${n}_shape`, 104, 58), { style: 'choice' }),
+  { type: 'menu', param: `lfo${n}_target`, text: 'TARGET', x: 160, y: 78, w: 80, h: 22 },
+], { vis: 'lfo_view', visOn: n === 3, tabbed: true });
+lfoCard(2); lfoCard(3);
 section('voice', 'VOICE', 714, 656, 374, 128, -1, [
-  { type: 'seg', param: 'v_porta', x: 76, y: 6, w: 150, h: 18 },
+  { type: 'seg', param: 'v_porta', x: 76, y: 5, w: 150, h: 20 },
   { type: 'leds', x: 236, y: 6, w: 128, h: 18 },
   ...['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'].map((k, i) => kn(k, 10 + i * 51, 40)),
 ]);
@@ -548,8 +554,11 @@ section('chord', 'CHORD KEYBOARD', 12, 1054, 1076, 104, -1, [
     const base = s.id.replace(/_(a1|a2|b1)$/, '');
     if (base === 'tone') {
       s.h = 250;
+      let nBig = 0;
       for (const w of s.widgets) {
         if (w.type === 'atom') w.h -= 8;
+        else if (w.type === 'source') w.h = 82;   // beta 0.3.4 (mock-up R6): the SOURCE CYCLE picture takes the height the smaller knobs free (64 -> 82)
+        else if (w.type === 'knobL') { w.x = (nBig++ ? 410 : 326) - w.w / 2; w.y = 184 - 22; }   // R6: SOURCE WIDTH and SPARSITY, 42 px discs, centres (326, 184) and (410, 184)
         else if (w.y >= 140 && !(/^knob/.test(w.type) && w.x >= 460)) w.y -= 8;
       }
     } else if (base === 'filter' || base === 'position' || base === 'osc') { s.y = 356; s.h = 132; shift(s, 50, -8); }
@@ -558,17 +567,24 @@ section('chord', 'CHORD KEYBOARD', 12, 1054, 1076, 104, -1, [
   const dsp = find('display'); dsp.h = 290;
   widget(dsp, 0, 12, 30, 360, 104); widget(dsp, 1, 12, 142, 360, 14); widget(dsp, 2, 12, 158, 360, 122);
   find('oscframe').h = 444;
-  for (const [id, x, y, w, from] of [['flt', 12, 496, 504, 50], ['ampenv', 524, 496, 284, 50], ['modenv', 816, 496, 272, 50], ['lfo', 12, 622, 440, 50], ['lfo2', 460, 622, 246, 50],
-    ['lfo3', 460, 622, 246, 50], ['voice', 714, 622, 374, 30]]) { const s = find(id); box(s, x, y, w, 120); shift(s, from, -8); }
-  // EFFECTS and PLAY: the title is a vertical strip at the left (22 px): the content moves right by 12 and up into the title row
-  const fx = find('fx'); box(fx, 12, 748, 496, 98); fx.vtitle = true;
+  for (const [id, x, y, w, from] of [['flt', 12, 496, 504, 50], ['ampenv', 524, 496, 284, 50], ['modenv', 816, 496, 272, 50]]) { const s = find(id); box(s, x, y, w, 120); shift(s, from, -8); }
+  // beta 0.3.4 (the owner's mock-ups P6 / Q1): the row LFO 1 | LFO 2/3 | VOICE is 98 px tall (22 less); the knobs of the three cards are on ONE line (K0 = 32 px under the top of
+  // the card); the wave selector of LFO 1, the tab bar of LFO 2/3 (its tabs, its SYNC) and the header of VOICE are on the title line
+  const K0 = 32;
+  for (const [id, x, w] of [['lfo', 12, 440], ['lfo2', 460, 246], ['lfo3', 460, 246], ['voice', 714, 374]]) {
+    const s = find(id); box(s, x, 622, w, 98);
+    for (const wd of s.widgets) { if (/^knob/.test(wd.type)) wd.y = K0; else if (wd.type === 'menu') wd.y = K0 + 20; }
+  }
+  // EFFECTS and PLAY: the title is a vertical strip at the left (22 px): the content moves right by 12 and up into the title row (mock-up P6: the row under is at y 726,
+  // and PLAY ends at x 1088, like the cards above, not at the edge of the panel)
+  const fx = find('fx'); box(fx, 12, 726, 496, 98); fx.vtitle = true;
   for (const w of fx.widgets) {
     if (w.type === 'fxheads') { w.x = 12; w.y = 5; w.w = 484; } else if (w.type === 'toggle') { w.x += 12; w.y = 3; } else { w.x += 12; w.y = 32; }
   }
-  const play = find('play'); box(play, 516, 748, 584, 98); play.vtitle = true; play.title = 'PLAY'; play.accentTitle = true;
+  const play = find('play'); box(play, 516, 726, 572, 98); play.vtitle = true; play.title = 'PLAY'; play.accentTitle = true;
   widget(play, 0, 26, 8, 100, 34); widget(play, 1, 26, 48, 100, 26); widget(play, 2, 158, 8, 150, 24); widget(play, 3, 158, 62, 176, 24);
   widget(play, 4, 360, 44, 100, 14); widget(play, 5, 360, 62, 110, 26);
-  const keys = find('keys'); box(keys, 0, 852, 1100, 98);
+  const keys = find('keys'); box(keys, 0, 830, 1100, 98);
   widget(keys, 0, 12, 0, 60, 82); widget(keys, 1, 82, 0, 1006, 82); widget(keys, 2, 14, 83, 170, 15);
   find('chord').y = DEVICE.h + 4;
 })();
@@ -694,5 +710,5 @@ for (const s of S) {
   }
 }
 
-module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, CATEGORIES,
+module.exports = { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, CATEGORIES,
   LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };

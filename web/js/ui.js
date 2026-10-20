@@ -9,6 +9,7 @@ const noteName = n => NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
 const KB_LO = 36, KB_HI = 96;
 const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const hexRGB = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };   // '#ff7b4a' -> [255, 123, 74]
 // A preset name: an optional number (the new presets, "012 ", "1000 "), the letters of its engine(s) or oscillators ("A", "AB", "A1B1"), " · ", its title
 const splitName = (name) => { const m = /^(\d{3,4} )?((?:[AB][12]?)+) · (.*)$/.exec(name); return m ? { num: m[1] || '', eng: m[2], title: m[3] } : null; };
 // the letters in their colours: A teal, B orange (the digits stay dim)
@@ -64,6 +65,7 @@ class SynthUI {
     this.sections = [];
     this.scale = 1;
     this.mode = 0; this.view = 0;   // the oscillator shown (A1 A2 B1) and its engine
+    this.orient = false;            // beta 0.3.4: the oriental colour code (TUNING ARAB or TURK)
     this.chordOn = false;           // CHORD MODE: the chord card is shown and the panel is taller
     this.live = null;
     this.tip = el('div', 'tip', document.body, { display: 'none' });
@@ -85,15 +87,17 @@ class SynthUI {
 
   // ------------------------------------------------------------------ building
   build() {
+    this.orientVars(this.dev);
     for (const s of this.SPEC.SECTIONS) {
       const card = s.title !== '';
-      const se = el('div', 'section' + (card ? ' card' : '') + (s.vtitle ? ' vt' : ''), this.dev, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' });
+      const se = el('div', 'section' + (card ? ' card' : '') + (s.vtitle ? ' vt' : '') + (s.tabbed ? ' tabbed' : ''), this.dev, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' });
       if (card) {
         const t = el('div', 'title', se);
         const parts = s.title.split(' · ');
         t.innerHTML = parts.length > 1 ? `<b>${parts[0]}</b> · ${parts.slice(1).join(' · ')}` : s.accentTitle ? `<b>${s.title}</b>` : s.title;   // beta 0.3.3: vtitle = a vertical strip at the left
       }
       se.dataset.sid = s.id;   // beta 0.3: addressable by the layout mock-ups (tools of the owner's review)
+      if (s.id === 'play') this.orientPattern(se, s);   // beta 0.3.4: the PLAY card's oriental pattern (shown while TUNING is ARAB or TURK)
       this.sections.push({ spec: s, el: se });
       for (const w of s.widgets) this.makeWidget(w, se, s);
       this.sections[this.sections.length - 1].canvases = this.canvases.filter(c => c.sec === s);
@@ -134,6 +138,7 @@ class SynthUI {
       case 'knobL': case 'knobM': case 'knobS': case 'knobT': return this.knob(w, box);
       case 'seg': return this.seg(w, box);
       case 'osctabs': return this.oscTabs(w, box, parent);   // beta 0.3: the folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1 and the frame of the oscillator cards
+      case 'lfotabs': return this.lfoTabs(w, box);   // beta 0.3.4: the LFO 2 | LFO 3 tabs along the top of the LFO 2/3 card
       case 'step': return this.step(w, box);
       case 'menu': return this.menu(w, box);
       case 'drawbar': return this.drawbar(w, box);
@@ -161,7 +166,7 @@ class SynthUI {
         a.title = 'Download the free VST plug-in (Windows VST3 / VST2) from GitHub';
         return;
       }
-      case 'label': box.classList.add('wlabel'); box.textContent = w.text; return;
+      case 'label': box.classList.add('wlabel'); el('span', '', box).textContent = w.text; return;   // (a span: the oriental PLAY card puts the caption on a plate)
       case 'toggle': return this.toggle(w, box);   // Okto MultiWave Synth: the web app shows toggles too (CHORD ON, BASS)
       case 'zoom': return;
       case 'credit': {
@@ -180,7 +185,7 @@ class SynthUI {
   knob(w, box) {
     const i = this.P[w.param], p = this.params[i];
     const big = w.type === 'knobL', small = w.type === 'knobS', tiny = w.type === 'knobT';
-    const d = big ? 56 : small ? 30 : tiny ? 26 : 38, cx = w.w / 2, cy = big ? 32 : small ? 18 : tiny ? 15 : 20, r = d / 2;
+    const d = big ? 42 : small ? 30 : tiny ? 26 : 38, cx = w.w / 2, cy = big ? 22 : small ? 18 : tiny ? 15 : 20, r = d / 2;   // beta 0.3.4: the big knobs are 42 px discs (were 56)
     box.classList.add('knob');
     box.title = p.name;
     const s = svg('svg', { width: w.w, height: w.h }, box);
@@ -194,10 +199,10 @@ class SynthUI {
     const val = svg('path', { d: '', stroke: 'var(--accent)', 'stroke-width': thin ? 2.5 : 3, fill: 'none', 'stroke-linecap': 'round' }, s);
     svg('circle', { cx, cy, r: r - 1, fill: `url(#${id})`, stroke: '#0b0d10', 'stroke-width': 1.5 }, s);
     svg('circle', { cx, cy, r: r - 4, fill: 'none', stroke: 'rgba(255,255,255,0.05)', 'stroke-width': 1 }, s);
-    const ptr = svg('line', { x1: cx, y1: cy - r * 0.25, x2: cx, y2: cy - r + 4, stroke: '#eef2f7', 'stroke-width': big ? 3 : tiny ? 2 : 2.2, 'stroke-linecap': 'round' }, s);
+    const ptr = svg('line', { x1: cx, y1: cy - r * 0.25, x2: cx, y2: cy - r + 4, stroke: '#eef2f7', 'stroke-width': big ? 2.6 : tiny ? 2 : 2.2, 'stroke-linecap': 'round' }, s);
     let label = null;
     if (!small) {
-      label = el('div', 'label', box, { top: (big ? 70 : tiny ? 33 : 43) + 'px', fontSize: big ? '10.5px' : tiny ? '8.5px' : '' });
+      label = el('div', 'label', box, { top: (big ? 48 : tiny ? 33 : 43) + 'px', fontSize: tiny ? '8.5px' : '' });
       label.textContent = p.short;
     }
     const bip = p.min < 0 && p.max > 0;
@@ -212,8 +217,10 @@ class SynthUI {
         if (label) {
           const showVal = widget.hover || widget.drag;
           // style 'value' (beta 0.6): the value is the label (a note value says more than "TIME")
-          label.textContent = showVal || w.style === 'value' ? this.C.format(p, v) : p.short;
-          label.classList.toggle('value', !!showVal);
+          // style 'choice' (beta 0.3.4, the LFO SHAPE): a knob with a few positions, its choice (SINE TRI SAW SQR S&H) written under it in the accent colour
+          const named = w.style === 'choice';
+          label.textContent = named ? p.choiceShort[Math.round(v - p.min)] : showVal || w.style === 'value' ? this.C.format(p, v) : p.short;
+          label.classList.toggle('value', named || !!showVal);
         }
         if (small && (widget.hover || widget.drag)) this.showTip(box, `${p.name}: <b>${this.C.format(p, v)}</b>`);
       },
@@ -284,6 +291,7 @@ class SynthUI {
     const i = this.P[w.param], p = this.params[i];
     box.classList.add('seg');
     if (w.style === 'engine') box.classList.add('engine');
+    if (w.style === 'uline') box.classList.add('uline');   // beta 0.3.4: the LFO 1 wave selector, underlined
     const btns = p.choiceShort.map((label, k) => {
       const b = el('button', '', box);
       b.textContent = label;
@@ -341,6 +349,30 @@ class SynthUI {
     update();
   }
 
+  // beta 0.3.4: the LFO 2 | LFO 3 tabs along the top of the LFO 2/3 card (the parameter lfo_view; the card of the LFO shown is the one visible): the tab of the LFO shown is
+  // filled with the accent colour, a lit dot says the LFO is heard (its amount is not 0). The bar also holds the plug-in's SYNC button (not in the web app: no tempo here).
+  lfoTabs(w, box) {
+    const i = this.P[w.param], amts = [this.P.lfo2_amt, this.P.lfo3_amt];
+    box.classList.add('lfotabs');
+    el('div', 'tabbar', box);
+    const tabs = [0, 1].map(k => {
+      const b = el('button', 'otab ltab', box, { left: (6 + k * 60) + 'px' });
+      el('span', 'dot', b);
+      el('span', 'tx', b).innerHTML = '<span class="t1">LFO ' + (k + 2) + '</span>';
+      b.title = 'Show LFO ' + (k + 2) + ' (a lit dot: its amount is not 0)';
+      b.onclick = () => { this.host.begin(i); this.host.set(i, k); this.host.end(i); };
+      return b;
+    });
+    const update = () => {
+      const v = Math.round(this.host.get(i));
+      tabs.forEach((b, k) => { b.classList.toggle('on', k === v); b.classList.toggle('heard', Math.abs(this.host.get(amts[k])) > 0.001); });
+    };
+    const widget = { w, p: this.params[i], i, el: box, update };
+    this.reg(w.param, widget);
+    for (const a of amts) { if (!this.byParam.has(a)) this.byParam.set(a, []); this.byParam.get(a).push({ update }); }   // the dots follow the amounts
+    update();
+  }
+
   step(w, box) {
     const i = this.P[w.param], p = this.params[i];
     box.classList.add('step');
@@ -365,7 +397,7 @@ class SynthUI {
     const i = this.P[w.param], p = this.params[i];
     box.classList.add('menu');
     box.title = p.name;
-    if (w.text) el('div', 'mcap', box).textContent = w.text;   // beta 0.6: its caption above it
+    if (w.text) el('span', '', el('div', 'mcap', box)).textContent = w.text;   // beta 0.6: its caption above it (a span: the oriental PLAY card puts it on a plate)
     const btn = el('button', '', box);
     const set = (k) => { this.host.begin(i); this.host.set(i, k); this.host.end(i); };
     const close = () => { if (this.mpop) { this.mpop.remove(); this.mpop = null; } };
@@ -389,7 +421,8 @@ class SynthUI {
       e.preventDefault();
       set(clamp(Math.round(this.host.get(i)) + (e.deltaY < 0 ? -1 : 1), p.min, p.max));
     }, { passive: false });
-    const widget = { w, p, i, el: box, update: () => { btn.innerHTML = `${p.choiceShort[Math.round(this.host.get(i))]}<span>▾</span>`; } };
+    // (beta 0.3.4: the TARGET menu is only 80 px wide: a name that does not fit is cut with an ellipsis)
+    const widget = { w, p, i, el: box, update: () => { btn.innerHTML = `<i>${p.choiceShort[Math.round(this.host.get(i))]}</i><span>▾</span>`; } };
     this.reg(w.param, widget);
     widget.update();
   }
@@ -587,6 +620,7 @@ class SynthUI {
       '(a click on the preset name brings it back)">HIDE ▸</button></div><div class="btabs"><button data-t="0"></button><button data-t="1"></button></div>' +
       '<div class="bcols"><div class="bcats"></div><div class="bright"><div class="bhd"></div><div class="blist"></div></div></div><div class="bstatus"></div>';
     this.browser = b;
+    this.orientVars(b);   // beta 0.3.4: the oriental colour code reaches the browser too
     this.bTab = 0; this.bCat = 0;
     b.querySelector('.bhide').onclick = () => this.setBrowser(false);
     b.querySelectorAll('.btabs button').forEach(t => { t.onclick = () => { this.bTab = +t.dataset.t; this.bCat = 0; if (this.bTab === 0) this.bReveal(); this.renderBrowser(); }; });
@@ -667,6 +701,7 @@ class SynthUI {
     if (ws) for (const w of ws) w.update();
     if (i === this.P.osc_view) this.setView(Math.round(this.host.get(i)));
     if (i === this.P.lfo_view) for (const sc of this.sections) sc.el.classList.toggle('hidden', this.secHidden(sc.spec));   // beta 0.3: LFO 2 | LFO 3
+    if (i === this.P.mt_mode) this.updateOrient();   // beta 0.3.4: the oriental colour code
     if (i === this.P.chord_mode) { this.chordOn = this.host.get(i) >= 0.5; this.setView(this.view); this.fit(); }
     this.applyWidgetVis(i);
     this.updateEnables();
@@ -675,6 +710,7 @@ class SynthUI {
   refreshAll() {
     for (const [, ws] of this.byParam) for (const w of ws) w.update();
     this.chordOn = this.host.get(this.P.chord_mode) >= 0.5;
+    this.updateOrient();
     this.setView(Math.round(this.host.get(this.P.osc_view)));
     this.applyWidgetVis();
     this.fit();
@@ -791,8 +827,45 @@ class SynthUI {
     }
   }
 
-  accent() { return this.mode === 0 ? '#ffcf3d' : '#4aa8ff'; }   // beta 0.3: A1 A2 yellow, B1 blue
-  accentRGB() { return this.mode === 0 ? [255, 207, 61] : [74, 168, 255]; }
+  // beta 0.3: A1 A2 yellow, B1 blue. Beta 0.3.4: while the TUNING switch is ARAB or TURK, the oriental colour code (ORIENT in tools/spec.js): terracotta / turquoise
+  accent() { return this.orient ? (this.mode === 0 ? this.SPEC.ORIENT.a : this.SPEC.ORIENT.b) : this.mode === 0 ? '#ffcf3d' : '#4aa8ff'; }
+  accentRGB() { return this.orient ? hexRGB(this.mode === 0 ? this.SPEC.ORIENT.a : this.SPEC.ORIENT.b) : this.mode === 0 ? [255, 207, 61] : [74, 168, 255]; }
+
+  // ------------------------------------------------------------------ the oriental colour code (beta 0.3.4)
+  // the palette of ORIENT as CSS variables (the stylesheet's #device.orient rules use them) on the panel and on the preset browser
+  orientVars(e) {
+    const O = this.SPEC.ORIENT, set = (k, v) => e.style.setProperty(k, v);
+    set('--or-a', O.a); set('--or-b', O.b); set('--or-c1', O.c1); set('--or-c2', O.c2); set('--or-c3', O.c3); set('--or-c4', O.c4); set('--or-c5', O.c5);
+    set('--or-pl0', O.pl[0]); set('--or-pl1', O.pl[1]); set('--or-dim', O.dim);
+    for (const k of ['a', 'b']) { const c = hexRGB(O[k]); set('--or-' + k + '-soft', `rgba(${c},0.16)`); set('--or-' + k + '-tint', `rgba(${c},0.07)`); set('--or-' + k + '-line', `rgba(${c},0.26)`); }
+    set('--or-c2-line', `rgba(${hexRGB(O.c2)},0.25)`); set('--or-glow', `rgba(${hexRGB(O.a)},0.16)`); set('--or-c4-86', `rgba(${hexRGB(O.c4)},0.86)`);
+  }
+  updateOrient() {
+    const on = Math.round(this.host.get(this.P.mt_mode)) !== 0;
+    if (on === this.orient) return;
+    this.orient = on;
+    this.dev.classList.toggle('orient', on);
+    if (this.browser) this.browser.classList.toggle('orient', on);
+    for (const c of this.canvases) c.dirty = true;
+  }
+  // the PLAY card's pattern: octagons and squares (4.8.8), an eight-pointed star in each octagon, one SVG tile of ORIENT.tile px; the octagons are centred on the card's inner
+  // top-left corner and on every tile from it (the plug-in draws the same). It lies behind the controls and shows only in the oriental state (CSS)
+  orientPattern(se, s) {
+    const O = this.SPEC.ORIENT, T = O.tile, R = 0.5412 * T, dq = 0.2929 * T, W = s.w - 2, H = s.h - 2, c = T / 2, f = v => Math.round(v * 100) / 100;
+    const reg = (cx, cy, n, r, rot) => { const a = []; for (let k = 0; k < n; k++) { const g = rot + 2 * Math.PI * k / n; a.push(f(cx + r * Math.cos(g)) + ',' + f(cy + r * Math.sin(g))); } return a.join(' '); };
+    const star = (cx, cy, n, R1, r1, rot) => { const a = []; for (let k = 0; k < 2 * n; k++) { const g = rot + Math.PI * k / n, rr = k % 2 ? r1 : R1; a.push(f(cx + rr * Math.cos(g)) + ',' + f(cy + rr * Math.sin(g))); } return a.join(' '); };
+    const dia = (x, y, d) => `${f(x)},${f(y - d)} ${f(x + d)},${f(y)} ${f(x)},${f(y + d)} ${f(x - d)},${f(y)}`;
+    let tile = `<polygon points="${reg(c, c, 8, R, Math.PI / 8)}" fill="${O.c4}" stroke="${O.c1}" stroke-width="1.1" stroke-linejoin="round"/>` +
+      `<polygon points="${star(c, c, 8, R * 0.86, R * 0.58, Math.PI / 8)}" fill="${O.c1}"/><polygon points="${star(c, c, 8, R * 0.5, R * 0.27, 0)}" fill="${O.c2}"/>` +
+      `<circle cx="${c}" cy="${c}" r="${f(R * 0.12)}" fill="${O.c4}"/>`;
+    for (const [x, y] of [[0, 0], [T, 0], [0, T], [T, T]]) tile += `<polygon points="${dia(x, y, dq)}" fill="${O.c5}" stroke="${O.c1}" stroke-width="1" stroke-linejoin="round"/><polygon points="${dia(x, y, dq * 0.45)}" fill="${O.c3}"/>`;
+    const svgEl = document.createElementNS(SVGNS, 'svg');
+    svgEl.setAttribute('class', 'orientbg'); svgEl.setAttribute('width', W); svgEl.setAttribute('height', H); svgEl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svgEl.style.opacity = O.opacity;
+    svgEl.innerHTML = `<defs><pattern id="orientTile" x="${-c}" y="${-c}" width="${T}" height="${T}" patternUnits="userSpaceOnUse">${tile}</pattern></defs>` +
+      `<rect width="${W}" height="${H}" fill="${O.c4}"/><rect width="${W}" height="${H}" fill="url(#orientTile)"/>`;
+    se.insertBefore(svgEl, se.firstChild);
+  }
 
   currentGains() {
     const C = this.C, live = this.live;

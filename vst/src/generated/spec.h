@@ -5,7 +5,10 @@
 
 namespace ws {
 
-constexpr float kDeviceW = 1100.0f, kDeviceH = 966.0f, kChordH = 120.0f;
+constexpr float kDeviceW = 1100.0f, kDeviceH = 944.0f, kChordH = 120.0f;
+constexpr unsigned kOrientA = 0xff7b4a, kOrientB = 0x33d3c6, kOrientC1 = 0xe0653a, kOrientC2 = 0x33d3c6, kOrientC3 = 0xf2e3c8,
+  kOrientC4 = 0x3a1d14, kOrientC5 = 0x5e2c1c, kOrientPl0 = 0x44251a, kOrientPl1 = 0x321a11, kOrientDim = 0xc9b5a6;
+constexpr float kOrientTile = 34.0f, kOrientOpacity = 0.7f;
 inline constexpr const char* kAppName = "Okto MultiWave Synth";
 inline constexpr const char* kAppAuthor = "Pierre Arnaud GUYOT";
 inline constexpr const char* kAppCredit = "created by OktoPierre";
@@ -197,20 +200,21 @@ enum ParamId : int {
 
 enum Curve : int { CURVE_LIN, CURVE_EXP, CURVE_POW2, CURVE_INT, CURVE_CHOICE };
 enum Fmt : int { FMT_PCT, FMT_DB, FMT_SEC, FMT_HZ, FMT_CENTS, FMT_BAND, FMT_DBBAND, FMT_INT, FMT_CHOICE, FMT_DEG, FMT_CYC, FMT_SEMI, FMT_BIPCT, FMT_BANDAMT };
-enum WidgetType : int { W_KNOBL, W_KNOBM, W_KNOBS, W_KNOBT, W_SEG, W_STEP, W_DRAWBAR, W_SCOPE, W_SCALOGRAM, W_ATOM, W_SOURCE, W_WINDOW, W_ADSR, W_LEDS, W_FXHEADS, W_KEYBOARD, W_WHEELS, W_LOGO, W_PRESETS, W_MANUAL, W_DOWNLOAD, W_METER, W_ZOOM, W_CREDIT, W_MENU, W_TOGGLE, W_LABEL, W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_EVALUATE, W_OSCTABS };
+enum WidgetType : int { W_KNOBL, W_KNOBM, W_KNOBS, W_KNOBT, W_SEG, W_STEP, W_DRAWBAR, W_SCOPE, W_SCALOGRAM, W_ATOM, W_SOURCE, W_WINDOW, W_ADSR, W_LEDS, W_FXHEADS, W_KEYBOARD, W_WHEELS, W_LOGO, W_PRESETS, W_MANUAL, W_DOWNLOAD, W_METER, W_ZOOM, W_CREDIT, W_MENU, W_TOGGLE, W_LABEL, W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_EVALUATE, W_OSCTABS, W_LFOTABS };
 
 struct ParamDef {
   const char* key; const char* name; const char* shortName;
   int curve; int fmt; double min, max, def; bool hidden; bool structural; bool perf;
   int numChoices; const char* const* choices; const char* const* choiceShort;
 };
-// style: 1 the engine selector, 2 a knob labelled with its value (note values); vis: the parameter whose state shows it
+// style: 1 the engine selector, 2 a knob labelled with its value (note values), 3 a seg drawn underlined (the LFO 1 wave selector), 4 a knob of a choice parameter with the
+// current choice written under it in the accent colour (the LFO SHAPE); vis: the parameter whose state shows it
 // (visOn: shown while it is on, else while it is off; -1: always); only: 0 both, 1 web app only, 2 plug-in only;
 // text: a toggle's or label's text, a menu's caption (beta 0.6)
 struct WidgetDef { int type; int param; float x, y, w, h; int style; int env; int vis; bool visOn; int only; const char* text; };
 // view: the oscillator (0..2) whose panel shows it, -1 always; vis / visOn: shown only while that parameter is on / off (-1: always)
-// vtitle (beta 0.3.3): the title is a vertical strip at the left of the card
-struct SectionDef { const char* id; const char* title; float x, y, w, h; int view; int vis; bool visOn; int firstWidget, numWidgets; bool vtitle; };
+// vtitle (beta 0.3.3): the title is a vertical strip at the left of the card; tabbed (beta 0.3.4): no title, a tab bar along the top of the card (the LFO 2/3 card)
+struct SectionDef { const char* id; const char* title; float x, y, w, h; int view; int vis; bool visOn; int firstWidget, numWidgets; bool vtitle; bool tabbed; };
 struct PresetDef { const char* name; const char* cat; double v[kNumParams]; };
 
 inline constexpr const char* kCh_osc_view[] = { "A1 · Subtractive", "A2 · Subtractive", "B1 · Additive" };
@@ -486,12 +490,12 @@ inline constexpr WidgetDef kWidgets[] = {
   { W_ATOM, -1, 12.0f, 70.0f, 250.0f, 96.0f, 0, -1, -1, false, 0, nullptr },
   { W_STEP, 1, 12.0f, 172.0f, 250.0f, 28.0f, 0, -1, -1, false, 0, nullptr },
   { W_STEP, 72, 12.0f, 206.0f, 250.0f, 28.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SOURCE, -1, 276.0f, 70.0f, 126.0f, 64.0f, 0, -1, -1, false, 0, nullptr },
+  { W_SOURCE, -1, 276.0f, 70.0f, 126.0f, 82.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 80, 408.0f, 70.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 73, 470.0f, 64.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 75, 470.0f, 122.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBL, 3, 280.0f, 138.0f, 80.0f, 92.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBL, 4, 376.0f, 138.0f, 80.0f, 92.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBL, 3, 294.0f, 162.0f, 64.0f, 62.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBL, 4, 378.0f, 162.0f, 64.0f, 62.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 93, 470.0f, 180.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_SEG, 24, 12.0f, 30.0f, 312.0f, 24.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 25, 12.0f, 56.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
@@ -521,12 +525,12 @@ inline constexpr WidgetDef kWidgets[] = {
   { W_ATOM, -1, 12.0f, 70.0f, 250.0f, 96.0f, 0, -1, -1, false, 0, nullptr },
   { W_STEP, 104, 12.0f, 172.0f, 250.0f, 28.0f, 0, -1, -1, false, 0, nullptr },
   { W_STEP, 72, 12.0f, 206.0f, 250.0f, 28.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SOURCE, -1, 276.0f, 70.0f, 126.0f, 64.0f, 0, -1, -1, false, 0, nullptr },
+  { W_SOURCE, -1, 276.0f, 70.0f, 126.0f, 82.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 108, 408.0f, 70.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 73, 470.0f, 64.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 75, 470.0f, 122.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBL, 106, 280.0f, 138.0f, 80.0f, 92.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBL, 107, 376.0f, 138.0f, 80.0f, 92.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBL, 106, 294.0f, 162.0f, 64.0f, 62.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBL, 107, 378.0f, 162.0f, 64.0f, 62.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 119, 470.0f, 180.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_SEG, 109, 12.0f, 30.0f, 312.0f, 24.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 110, 12.0f, 56.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
@@ -630,32 +634,32 @@ inline constexpr WidgetDef kWidgets[] = {
   { W_KNOBM, 40, 84.0f, 54.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 41, 136.0f, 54.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 42, 188.0f, 54.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SEG, 43, 12.0f, 28.0f, 260.0f, 24.0f, 0, -1, -1, false, 0, nullptr },
+  { W_SEG, 43, 66.0f, 5.0f, 250.0f, 20.0f, 3, -1, -1, false, 0, nullptr },
   { W_TOGGLE, 83, 386.0f, 6.0f, 42.0f, 17.0f, 0, -1, -1, false, 2, "SYNC" },
-  { W_KNOBM, 44, 12.0f, 50.0f, 52.0f, 60.0f, 0, -1, 83, false, 0, nullptr },
-  { W_KNOBM, 84, 12.0f, 50.0f, 52.0f, 60.0f, 2, -1, 83, true, 2, nullptr },
-  { W_KNOBM, 45, 64.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBM, 46, 116.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBM, 47, 168.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBM, 74, 220.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBM, 152, 272.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBM, 153, 324.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_KNOBM, 154, 376.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SEG, 164, 78.0f, 5.0f, 54.0f, 20.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SEG, 76, 12.0f, 28.0f, 222.0f, 24.0f, 0, -1, -1, false, 0, nullptr },
-  { W_TOGGLE, 85, 192.0f, 6.0f, 42.0f, 17.0f, 0, -1, -1, false, 2, "SYNC" },
-  { W_KNOBM, 77, 12.0f, 50.0f, 52.0f, 60.0f, 0, -1, 85, false, 0, nullptr },
-  { W_KNOBM, 86, 12.0f, 50.0f, 52.0f, 60.0f, 2, -1, 85, true, 2, nullptr },
-  { W_KNOBM, 78, 64.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_MENU, 79, 120.0f, 70.0f, 116.0f, 24.0f, 0, -1, -1, false, 0, "TARGET" },
-  { W_SEG, 164, 78.0f, 5.0f, 54.0f, 20.0f, 0, -1, -1, false, 0, nullptr },
-  { W_SEG, 158, 12.0f, 28.0f, 222.0f, 24.0f, 0, -1, -1, false, 0, nullptr },
-  { W_TOGGLE, 162, 192.0f, 6.0f, 42.0f, 17.0f, 0, -1, -1, false, 2, "SYNC" },
-  { W_KNOBM, 159, 12.0f, 50.0f, 52.0f, 60.0f, 0, -1, 162, false, 0, nullptr },
-  { W_KNOBM, 163, 12.0f, 50.0f, 52.0f, 60.0f, 2, -1, 162, true, 2, nullptr },
-  { W_KNOBM, 160, 64.0f, 50.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
-  { W_MENU, 161, 120.0f, 70.0f, 116.0f, 24.0f, 0, -1, -1, false, 0, "TARGET" },
-  { W_SEG, 68, 76.0f, 6.0f, 150.0f, 18.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 44, 12.0f, 32.0f, 52.0f, 60.0f, 0, -1, 83, false, 0, nullptr },
+  { W_KNOBM, 84, 12.0f, 32.0f, 52.0f, 60.0f, 2, -1, 83, true, 2, nullptr },
+  { W_KNOBM, 45, 64.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 46, 116.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 47, 168.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 74, 220.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 152, 272.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 153, 324.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 154, 376.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_LFOTABS, 164, 0.0f, 0.0f, 246.0f, 25.0f, 0, -1, -1, false, 0, nullptr },
+  { W_TOGGLE, 85, 200.0f, 4.0f, 42.0f, 17.0f, 0, -1, -1, false, 2, "SYNC" },
+  { W_KNOBM, 77, 4.0f, 32.0f, 52.0f, 60.0f, 0, -1, 85, false, 0, nullptr },
+  { W_KNOBM, 86, 4.0f, 32.0f, 52.0f, 60.0f, 2, -1, 85, true, 2, nullptr },
+  { W_KNOBM, 78, 54.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 76, 104.0f, 32.0f, 52.0f, 60.0f, 4, -1, -1, false, 0, nullptr },
+  { W_MENU, 79, 160.0f, 52.0f, 80.0f, 22.0f, 0, -1, -1, false, 0, "TARGET" },
+  { W_LFOTABS, 164, 0.0f, 0.0f, 246.0f, 25.0f, 0, -1, -1, false, 0, nullptr },
+  { W_TOGGLE, 162, 200.0f, 4.0f, 42.0f, 17.0f, 0, -1, -1, false, 2, "SYNC" },
+  { W_KNOBM, 159, 4.0f, 32.0f, 52.0f, 60.0f, 0, -1, 162, false, 0, nullptr },
+  { W_KNOBM, 163, 4.0f, 32.0f, 52.0f, 60.0f, 2, -1, 162, true, 2, nullptr },
+  { W_KNOBM, 160, 54.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
+  { W_KNOBM, 158, 104.0f, 32.0f, 52.0f, 60.0f, 4, -1, -1, false, 0, nullptr },
+  { W_MENU, 161, 160.0f, 52.0f, 80.0f, 22.0f, 0, -1, -1, false, 0, "TARGET" },
+  { W_SEG, 68, 76.0f, 5.0f, 150.0f, 20.0f, 0, -1, -1, false, 0, nullptr },
   { W_LEDS, -1, 236.0f, 6.0f, 128.0f, 18.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 48, 10.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBM, 49, 61.0f, 32.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
@@ -696,33 +700,33 @@ inline constexpr WidgetDef kWidgets[] = {
 inline constexpr int kNumWidgets = 219;
 
 inline constexpr SectionDef kSections[] = {
-  { "header", "", 0.0f, 0.0f, 1100.0f, 48.0f, -1, -1, false, 0, 8, false },
-  { "oscframe", "", 6.0f, 50.0f, 1088.0f, 444.0f, -1, -1, false, 8, 1, false },
-  { "tone_a1", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 0, -1, false, 9, 11, false },
-  { "filter_a1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 0, -1, false, 20, 7, false },
-  { "position_a1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 0, -1, false, 27, 4, false },
-  { "osc_a1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 0, -1, false, 31, 13, false },
-  { "tone_a2", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 1, -1, false, 44, 11, false },
-  { "filter_a2", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 1, -1, false, 55, 7, false },
-  { "position_a2", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 1, -1, false, 62, 4, false },
-  { "osc_a2", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 1, -1, false, 66, 13, false },
-  { "tone_b1", "WAVELET · ADDITIVE", 12.0f, 98.0f, 544.0f, 250.0f, 2, -1, false, 79, 22, false },
-  { "filter_b1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 2, -1, false, 101, 7, false },
-  { "position_b1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 2, -1, false, 108, 4, false },
-  { "osc_b1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 2, -1, false, 112, 13, false },
-  { "mix", "OSC MIX", 572.0f, 56.0f, 124.0f, 290.0f, -1, -1, false, 125, 7, false },
-  { "display", "SCOPE · ALL OSCILLATORS", 704.0f, 56.0f, 384.0f, 290.0f, -1, -1, false, 132, 3, false },
-  { "flt", "FILTER", 12.0f, 496.0f, 504.0f, 120.0f, -1, -1, false, 135, 11, false },
-  { "ampenv", "AMP ENVELOPE", 524.0f, 496.0f, 284.0f, 120.0f, -1, -1, false, 146, 6, false },
-  { "modenv", "MOD ENVELOPE", 816.0f, 496.0f, 272.0f, 120.0f, -1, -1, false, 152, 5, false },
-  { "lfo", "LFO 1", 12.0f, 622.0f, 440.0f, 120.0f, -1, -1, false, 157, 11, false },
-  { "lfo2", "LFO 2/3", 460.0f, 622.0f, 246.0f, 120.0f, -1, 164, false, 168, 7, false },
-  { "lfo3", "LFO 2/3", 460.0f, 622.0f, 246.0f, 120.0f, -1, 164, true, 175, 7, false },
-  { "voice", "VOICE", 714.0f, 622.0f, 374.0f, 120.0f, -1, -1, false, 182, 9, false },
-  { "fx", "EFFECTS", 12.0f, 748.0f, 496.0f, 98.0f, -1, -1, false, 191, 12, true },
-  { "play", "PLAY", 516.0f, 748.0f, 584.0f, 98.0f, -1, -1, false, 203, 6, true },
-  { "keys", "", 0.0f, 852.0f, 1100.0f, 98.0f, -1, -1, false, 209, 3, false },
-  { "chord", "CHORD KEYBOARD", 12.0f, 970.0f, 1076.0f, 104.0f, -1, 87, true, 212, 7, false },
+  { "header", "", 0.0f, 0.0f, 1100.0f, 48.0f, -1, -1, false, 0, 8, false, false },
+  { "oscframe", "", 6.0f, 50.0f, 1088.0f, 444.0f, -1, -1, false, 8, 1, false, false },
+  { "tone_a1", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 0, -1, false, 9, 11, false, false },
+  { "filter_a1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 0, -1, false, 20, 7, false, false },
+  { "position_a1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 0, -1, false, 27, 4, false, false },
+  { "osc_a1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 0, -1, false, 31, 13, false, false },
+  { "tone_a2", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 1, -1, false, 44, 11, false, false },
+  { "filter_a2", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 1, -1, false, 55, 7, false, false },
+  { "position_a2", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 1, -1, false, 62, 4, false, false },
+  { "osc_a2", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 1, -1, false, 66, 13, false, false },
+  { "tone_b1", "WAVELET · ADDITIVE", 12.0f, 98.0f, 544.0f, 250.0f, 2, -1, false, 79, 22, false, false },
+  { "filter_b1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 2, -1, false, 101, 7, false, false },
+  { "position_b1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 2, -1, false, 108, 4, false, false },
+  { "osc_b1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 2, -1, false, 112, 13, false, false },
+  { "mix", "OSC MIX", 572.0f, 56.0f, 124.0f, 290.0f, -1, -1, false, 125, 7, false, false },
+  { "display", "SCOPE · ALL OSCILLATORS", 704.0f, 56.0f, 384.0f, 290.0f, -1, -1, false, 132, 3, false, false },
+  { "flt", "FILTER", 12.0f, 496.0f, 504.0f, 120.0f, -1, -1, false, 135, 11, false, false },
+  { "ampenv", "AMP ENVELOPE", 524.0f, 496.0f, 284.0f, 120.0f, -1, -1, false, 146, 6, false, false },
+  { "modenv", "MOD ENVELOPE", 816.0f, 496.0f, 272.0f, 120.0f, -1, -1, false, 152, 5, false, false },
+  { "lfo", "LFO 1", 12.0f, 622.0f, 440.0f, 98.0f, -1, -1, false, 157, 11, false, false },
+  { "lfo2", "LFO 2/3", 460.0f, 622.0f, 246.0f, 98.0f, -1, 164, false, 168, 7, false, true },
+  { "lfo3", "LFO 2/3", 460.0f, 622.0f, 246.0f, 98.0f, -1, 164, true, 175, 7, false, true },
+  { "voice", "VOICE", 714.0f, 622.0f, 374.0f, 98.0f, -1, -1, false, 182, 9, false, false },
+  { "fx", "EFFECTS", 12.0f, 726.0f, 496.0f, 98.0f, -1, -1, false, 191, 12, true, false },
+  { "play", "PLAY", 516.0f, 726.0f, 572.0f, 98.0f, -1, -1, false, 203, 6, true, false },
+  { "keys", "", 0.0f, 830.0f, 1100.0f, 98.0f, -1, -1, false, 209, 3, false, false },
+  { "chord", "CHORD KEYBOARD", 12.0f, 948.0f, 1076.0f, 104.0f, -1, 87, true, 212, 7, false, false },
 };
 inline constexpr int kNumSections = 27;
 
