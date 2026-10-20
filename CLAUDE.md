@@ -404,6 +404,22 @@ scale** (it was 1e-5 in the earlier code, 400 times looser than the real 2.4e-7;
 **any** DSP change, compile `vst/devtest/dsp_render.cpp` (`-ffp-contract=off`) and run `node tools/dsp_compare.js <dir>`
 (`--list <dir>` first to write the cases), then `node tests/regress_v07.js` and `node tests/idle_skip.js`.
 
+### 3.7 CPU optimisations (output bit-identical; the study is `Revue_CPU.md`)
+The CPU load of a chord was measured and cut by about 35-40 % (167 presets, chords of 3 / 6 / 8 notes: mean 2.5 / 4.8 / 6.0 % of a core before, 1.6 / 2.9 / 3.6 % after; the worst preset of the 1182,
+"Choir Keys", 27 % before and 11 % after on a chord of 6) **without changing one bit of the C++ output**: `core.js` did not change (no operation changed), the cross-check and `regress_v07` are as before.
+- **Tools** (`vst/devtest/`, `tools/`): `cpu_bench.cpp` (thread CPU time = `QueryThreadCycleTime` at the TSC rate, never the wall clock; FTZ/DAZ as the plug-in sets them; `--dump` / `--check` compare renders with a reference, bit for bit;
+  `--sample` is a sampling profiler read by `tools/cpu_profile.js`); `cpu_ab.cpp` + `cpu_ab_engine.cpp` run two builds of the engine (each compiled with `-Dws=ws_old` / `-Dws=ws_new` and its own `dsp.h`) in turn, render after
+  render, which is the only fair comparison on a shared machine; `tools/cpu_cases.js` writes the cases (`all`, `check`, `sample`) and the preset features, `tools/cpu_report.js` the tables by class. Commands in `Revue_CPU.md`.
+- **What `dsp.h` does now** (every line keeps the scalar operations and their order; without SSE2 the scalar form is compiled): `bandTerms` computes the interpolated terms of a table row two layers at a time (SSE2, the pairs
+  that hold an active layer) and `renderVoice` adds them one by one in the order of the active list, as before; the per-sample ramp of the band gains is skipped while every step is exactly 0; an oscillator whose own
+  envelope is exactly 0 for the block only moves its phases; the voices of a block go through the filter together (`filterVoices`: after all of them are rendered, sample by sample, the left / right pair of each stage
+  in one SSE2 register, so that the chains of divisions of different voices overlap; the float sums of the mix are still added in voice order; the states `Voice::fs` are interleaved pairs, which is a layout, not a calculation:
+  core.js keeps four left then four right); the results of pure functions of their inputs are memoised on the **exact** inputs (`Slot::mA..mFg`, `Voice::mSemis`, `fgMemo`, `ExpMemo` for the envelopes' `exp` factors, the
+  unison copies, the output stage's `exp` / `tanh`): a new input of `filterGains`, the pitch, the mip level or an envelope factor must be part of its key; `softplus` below -9.5 and a resonance of +0 return their exact 0 without a
+  libm call; `polyComp` with a settled gain is a plain scaling.
+- **Rule**: a change here must give the same bits as the build before it. Check with `cpu_bench --dump` (reference) then `--check` on `cases_check.txt` (224 presets x chords of 3 / 6 / 8 x velocity 1 / 0.7), and render
+  all cases of `dsp_render` with both builds and compare the files (`cmp`). A change that moves the sound (CTRL = 64, a higher threshold for the bands that are skipped, ...) belongs in the owner's decisions, see `Revue_CPU.md` §7.
+
 ## 4. Web app (`web/`)
 - `spec.js` (generated) → `core.js` → `worklet.js` (AudioWorkletProcessor; also a sample-accurate **sequencer** for the
   demo) → `ui.js` (`SynthUI`: builds the panel from the layout; knobs, segments, drawbars, canvases, preset menu,
