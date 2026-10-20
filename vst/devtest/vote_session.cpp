@@ -541,6 +541,15 @@ int wmain(int argc, wchar_t** argv) {
     px = h.pixels({pA, pL});
     check(closeTo(px[0], kOrientA) && closeTo(px[1], kOrientA), "TUNING ARAB: terracotta accent (oscillator tab A1, LFO 2 tab)", hex(px[0]) + " " + hex(px[1]));
     h.shot(out + L"\\15_arab.png");
+    {   // the pattern and its clip in a scaled window (the zoom "fit" of a small screen)
+      SetEnvironmentVariableW(L"MW_WORKAREA", L"1366x728");
+      setP(P_CHORD_MODE, 1); setP(P_CHORD_MODE, 0);
+      ViewRect vf; h.view->getSize(&vf);
+      check(vf.getHeight() < kDeviceH, "TUNING ARAB on a 1366 x 728 screen: the window is scaled", fmt("%.0f x %.0f", (double)vf.getWidth(), (double)vf.getHeight()));
+      h.shot(out + L"\\15_arab_fit.png");
+      SetEnvironmentVariableW(L"MW_WORKAREA", L"3840x2160");
+      setP(P_CHORD_MODE, 1); setP(P_CHORD_MODE, 0);
+    }
     h.click(lt[0] + 6 + 60 + 29, tabY); h.run(0.2);
     h.shot(out + L"\\15_arab_lfo3.png");
     h.click(lt[0] + 6 + 29, tabY); h.run(0.2);   // back to LFO 2
