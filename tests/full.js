@@ -7,6 +7,7 @@
 //   node tests/full.js                run everything
 //   node tests/full.js --skip web     leave out the steps whose name contains "web" (several words: --skip web,crackle)
 //   node tests/full.js --only quick   only the steps whose name contains "quick"
+//   node tests/full.js --parallel     the web suites and everything else side by side (two processes, two logs: tests/out/full-web.log and full-main.log): about half the time
 'use strict';
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
@@ -15,7 +16,24 @@ const skip = arg('skip').split(',').filter(Boolean), only = arg('only').split(',
 const LLVM = path.join(process.env.LLVM_MINGW || path.join(process.env.USERPROFILE, 'tools', 'llvm-mingw'), 'bin');
 const CXX = path.join(LLVM, 'x86_64-w64-mingw32-clang++.exe'), SCRATCH = path.join(ROOT, 'tests', 'out', 'full');
 fs.mkdirSync(SCRATCH, { recursive: true });
-const LOG = path.join(ROOT, 'tests', 'out', 'full.log');
+const LOGNAME = arg('log') || 'full';
+const LOG = path.join(ROOT, 'tests', 'out', LOGNAME + '.log');
+if (process.argv.includes('--parallel')) {   // the web suites (headless Edge) and the rest (node, C++) do not need each other: two child runs
+  const kids = [['web', ['--only', 'web:', '--log', 'full-web']], ['main', ['--skip', 'web:', '--log', 'full-main']]];
+  console.log('Okto MultiWave Synth - full validation, two lanes side by side (logs: tests/out/full-web.log, full-main.log)');
+  let pending = kids.length, bad = 0;
+  const t0 = Date.now();
+  for (const [name, a] of kids) {
+    const p = cp.spawn(process.execPath, [__filename, ...a], { cwd: ROOT, windowsHide: true });
+    let out = ''; p.stdout.on('data', d => { out += d; });
+    p.on('close', code => {
+      console.log(`--- lane ${name} ---\n${out.trim()}`);
+      if (code) bad++;
+      if (--pending === 0) { console.log(`${bad ? 'FAIL' : 'PASS'}: both lanes in ${((Date.now() - t0) / 60000).toFixed(1)} min`); process.exit(bad ? 1 : 0); }
+    });
+  }
+  return;
+}
 fs.writeFileSync(LOG, 'full validation ' + new Date().toISOString() + '\n');
 const env = Object.assign({}, process.env, { PATH: LLVM + path.delimiter + process.env.PATH });
 
