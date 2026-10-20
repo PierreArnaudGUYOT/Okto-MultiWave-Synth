@@ -458,7 +458,8 @@ inline void buildTables(const double* params, bool withMips, Tables& t) {
 }
 
 // ------------------------------------------------------------------ gains & window
-inline double softplus(double x) { return x > 10 ? x : std::log(1 + std::exp(4 * x)) / 4; }
+// below -9.5 exp(4x) is under 3.2e-17, 1 + exp(4x) is exactly 1, its log exactly 0: no call needed (the same value)
+inline double softplus(double x) { return x > 10 ? x : x < -9.5 ? 0.0 : std::log(1 + std::exp(4 * x)) / 4; }
 inline void filterGains(int type, double cut, double slope, double res, double* out) {
   for (int b = 0; b < NB; b++) {
     double d = (b + 1) - cut, g;
@@ -470,7 +471,7 @@ inline void filterGains(int type, double cut, double slope, double res, double* 
       if (type == 0) att = slope * softplus(d);
       else if (type == 1) att = slope * softplus(-d);
       else att = slope * softplus(std::fabs(d) - 0.5);
-      double boost = res * std::exp(-d * d / (2 * 0.36));
+      double boost = res == 0 && !std::signbit(res) ? 0.0 : res * std::exp(-d * d / (2 * 0.36));   // +0 times a finite number is +0
       att = std::min(att, 140.0);
       g = std::exp((boost - att) * (LN10 / 20));
     }
@@ -1135,6 +1136,8 @@ class Engine {
   double fg[NB], tmpB[NB], panL[4], panR[4], inc[4], detMul[4];
   // exp() memos of the envelopes' factors (amp, mod, filter, each oscillator's own envelope and pitch envelope) and of the filter gains of the last voice that asked (per oscillator)
   ExpMemo mAmpD, mAmpR, mAmpQ, mModD, mModR, mFeD, mFeR, mOwnD[NS], mOwnR[NS], mOwnStepD[NS], mOwnStepR[NS], mPe[NS];
+  ExpMemo mKd, mVol, mLvl; double mCompKd = std::nan(""), mComp = 0;   // the output stage's and the level smoothing's factors
+  int uMemoU = -1; double uMemoDet = std::nan(""), uMemoWidth = std::nan("");   // the unison copies' detune and pan, for the settings they were computed with
   struct FgMemo { int type = -1; double cut = 0, slope = 0, res = 0, fg[NB] = {}; } fgMemo[NS];
   int act[NL];
   // per block, computed once for all voices (prepBlock): the oscillators' levels (smoothed over 20 ms) and settings
@@ -1146,7 +1149,7 @@ class Engine {
   int U = 1; double topMul = 1; int role2 = -1; double d2 = 0; int role3 = -1; double d3 = 0; double dMorph = 0;
   // per voice and block: the amp envelope (with the velocity gain) per sample, each oscillator's own envelope, end states
   double envAv[MAXV][CTRL], ownBuf[NS][CTRL], endPh[NS][4];   // envAv: each voice's amp envelope for the block (the filtered voices go through the filter first, see filterVoices)
-  bool ownOn[NS] = {}; double ownLevel[NS] = {}; int ownStage[NS] = {};
+  bool ownOn[NS] = {}, ownZero[NS] = {}; double ownLevel[NS] = {}; int ownStage[NS] = {};   // ownZero: the own envelope is exactly 0 for the whole block
   double endLevel = 0, endSubPhase = 0; int endStage = 0;
 
   void removeFromStack(int note) {
@@ -1261,15 +1264,18 @@ class Engine {
     // unison copies (detune and pan are the same for every oscillator)
     const int Un = (int)jsRound(p[P_V_UNISON]); const double det = p[P_V_DETUNE], width = p[P_V_WIDTH];
     U = std::max(1, std::min(4, Un));
-    const double uGain = 1 / std::sqrt((double)U);
-    topMul = std::pow(2.0, (U > 1 ? det : 0) / 1200);
-    for (int u = 0; u < U; u++) {
-      const double pos = U > 1 ? 2.0 * u / (U - 1) - 1 : 0;
-      detMul[u] = std::pow(2.0, det * pos / 1200);
-      const double th = (pos * width + 1) * PI / 4;
-      panL[u] = std::sqrt(2.0) * std::cos(th) * uGain; panR[u] = std::sqrt(2.0) * std::sin(th) * uGain;
+    if (U != uMemoU || det != uMemoDet || width != uMemoWidth) {   // topMul, detMul, panL, panR depend on these three only
+      uMemoU = U; uMemoDet = det; uMemoWidth = width;
+      const double uGain = 1 / std::sqrt((double)U);
+      topMul = std::pow(2.0, (U > 1 ? det : 0) / 1200);
+      for (int u = 0; u < U; u++) {
+        const double pos = U > 1 ? 2.0 * u / (U - 1) - 1 : 0;
+        detMul[u] = std::pow(2.0, det * pos / 1200);
+        const double th = (pos * width + 1) * PI / 4;
+        panL[u] = std::sqrt(2.0) * std::cos(th) * uGain; panR[u] = std::sqrt(2.0) * std::sin(th) * uGain;
+      }
     }
-    const double a = 1 - std::exp(-n / (0.02 * sr));
+    const double a = 1 - mLvl.get(-n / (0.02 * sr));
     for (int s = 0; s < NS; s++) {
       const SlotDef& k = kSlots[s]; Prep& q = pr[s];
       m0[s] = lvlSm[s];
@@ -1418,6 +1424,7 @@ class Engine {
   void ownPass(const Voice& vc, int s, int n) {
     const SlotDef& k = kSlots[s]; const Slot& sl = vc.sl[s];
     double lev = sl.own.level; int st = sl.own.stage;
+    bool zero = true;
     const double sus = p[k.es];
     const double aInc = 1 / (p[k.ea] * sr), dC = mOwnD[s].get(-LN1000 / (p[k.ed] * sr)), rC = mOwnR[s].get(-LN1000 / (p[k.er] * sr));
     for (int i = 0; i < n; i++) {
@@ -1425,7 +1432,9 @@ class Engine {
       else if (st == 2) { lev = sus + (lev - sus) * dC; if (std::fabs(lev - sus) < 1e-9) lev = sus; }
       else if (st == 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
       ownBuf[s][i] = lev;
+      if (lev != 0) zero = false;
     }
+    ownZero[s] = zero;
     ownLevel[s] = lev; ownStage[s] = st;
   }
 
@@ -1457,8 +1466,15 @@ class Engine {
     for (int j = 0; j < na; j++) { const int b = act[j]; dgl[b] = dg[b]; if (dg[b] != 0) ramp = true; pairs |= 1u << (b >> 1); }
     int pq[NL / 2], npq = 0;
     for (int q = 0; q < NL / 2; q++) if (pairs >> q & 1) pq[npq++] = q;
+    const bool contig = na > 0 && act[na - 1] - act[0] + 1 == na;   // the active layers are consecutive: the sum runs straight along tv from the first one
+    const double* tvA = tv + (na > 0 ? act[0] : 0);
     const double pc = sl.pc, pw = sl.pw, pd = sl.pd;
     const double* own = ownOn[s] ? ownBuf[s] : nullptr;
+    if (own && ownZero[s]) {   // the output is the product of the envelope and the own envelope, which is 0 all block: every sample adds (float)(x * 0) = +-0, which changes no sum; the phases move as ever
+      for (int i = 0; i < n; i++)
+        for (int u = 0; u < U; u++) { double x = ph[u] + inc[u]; if (x >= 1) x -= std::floor(x); ph[u] = x; }
+      return;
+    }
     const bool unity = gain0 == 1 && gainInc == 0;
     double fade = fade0, gain = gain0;
     for (int i = 0; i < n; i++) {
@@ -1479,17 +1495,23 @@ class Engine {
         double y;
         if (mode == 0) {
           double sum = 0;
-          for (int j = 0; j < na; j++) sum += tv[act[j]];
+          if (contig) { for (int j = 0; j < na; j++) sum += tvA[j]; }
+          else for (int j = 0; j < na; j++) sum += tv[act[j]];
           if (useDry) {
             double v0 = base[DRY], dry = v0 + fr * (nx[DRY] - v0);
             y = dry + windowValue(x, pc, pw, pd) * (sum - dry);
           } else y = sum;
         } else {
           double first = 0, sum = 0;
-          for (int j = 0; j < na; j++) {
-            int b = act[j]; double v = tv[b];
-            if (b == 0) first = v; else sum += v;
-          }
+          if (contig) {
+            int j = 0;
+            if (act[0] == 0) { first = tv[0]; j = 1; }
+            for (; j < na; j++) sum += tvA[j];
+          } else
+            for (int j = 0; j < na; j++) {
+              int b = act[j]; double v = tv[b];
+              if (b == 0) first = v; else sum += v;
+            }
           y = pd > 0 ? first + windowValue(x, pc, pw, pd) * sum : first + sum;
         }
         oL += y * panL[u]; oR += y * panR[u];
@@ -1681,6 +1703,10 @@ class Engine {
     const double gT = nv > POLY_FREE + 1e-6 ? std::sqrt(POLY_FREE / nv) : 1;
     double g = polyG;
     if (g == 1 && gT == 1) return;
+    if (g == gT) {   // settled: g += (gT - g) * c adds 0 and the snap keeps g, so every sample is scaled by the same g
+      for (int i = 0; i < n; i++) { L[i] = (float)(L[i] * g); R[i] = (float)(R[i] * g); }
+      return;
+    }
     const double c = gT < g ? polyDown : polyUp;
     for (int i = 0; i < n; i++) {
       g += (gT - g) * c;
@@ -1760,11 +1786,13 @@ class Engine {
     polyComp(bufL, bufR, n);
 
     // effects
-    const double drive = p[P_FX_DRIVE], kd = std::exp(drive * 24 * (LN10 / 20)), comp = 0.5 / std::tanh(0.5 * kd);
+    const double drive = p[P_FX_DRIVE], kd = mKd.get(drive * 24 * (LN10 / 20));
+    if (kd != mCompKd) { mCompKd = kd; mComp = 0.5 / std::tanh(0.5 * kd); }
+    const double comp = mComp;
     const double fb = p[P_FX_DFB], dmix = p[P_FX_DMIX], rmix = p[P_FX_RMIX];
     const double dTarget = delaySec() * sr;
     const double feedback = 0.7 + 0.28 * p[P_FX_RSIZE];
-    const double volT = std::exp(p[P_MASTER] * (LN10 / 20));
+    const double volT = mVol.get(p[P_MASTER] * (LN10 / 20));
     const double chMix = p[P_CH_MIX], chBase = CH_BASE * sr, chDepth = p[P_CH_DEPTH] * CH_DEPTH * sr;
     const double chInc = p[P_CH_RATE] / sr, chInc2 = chInc * CH_FAST;
     // the chorus's two LFOs as rotating vectors (sin and cos of the phase, turned by one step per sample): two sines and two
