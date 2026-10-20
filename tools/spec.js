@@ -19,8 +19,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: 'beta 0.3.3',
-  versionNum: '0.3.3',
+  version: 'beta 0.3.4',
+  versionNum: '0.3.4',
   date: '2026-10-20',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -591,12 +591,16 @@ function convertLegacy(v0) {
 }
 // The new presets (tools/presets_new.js, written with tools/make_presets.js): { name, cat, v } in this version's parameters,
 // numbered in their names ("012 A1A2 · Glass Bell": the oscillators they use) for the listening test (EVALUATE SOUNDS).
-let OLD_RAW = [], SUPER_RAW = [], LFO3_RAW = [];
+let OLD_RAW = [], SUPER_RAW = [], LFO3_RAW = [], FILTER_RAW = [], FAV_RAW = [];
 try { OLD_RAW = require('./presets_new.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }   // the 200 presets of beta 0.1 (001-200), unchanged
 // beta 0.2: 300 more (201-500, tools/supermod/build.js); MW_NO_SUPER=1 leaves them out (the builder measures the others)
 if (!process.env.MW_NO_SUPER) try { SUPER_RAW = require('./presets_super.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 // beta 0.3: 600 more (501-1100, tools/supermod/build.js: 50 in each category, LFO 2 / LFO 3 and the FILTER); MW_NO_LFO3=1 leaves them out (the builder measures the others)
 if (!process.env.MW_NO_LFO3) try { LFO3_RAW = require('./presets_lfo3.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+// beta 0.3.4: 150 more (1401-1550, tools/supermod: the FILTER used a little more, with a little resonance), after the owner's second listening
+if (!process.env.MW_NO_FILTER) try { FILTER_RAW = require('./presets_filter.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+// beta 0.3.4: 100 more (1551-1650, inspired by the owner's favourites: one or two oscillators, the FILTER, sustained, organic and warm)
+if (!process.env.MW_NO_FAV) try { FAV_RAW = require('./presets_fav.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 // beta 0.3: the second additive oscillator (B2) is gone. A preset that played it (b2_lvl > 0: 192 of the 500) is left out, with its number (the
 // ratings of the others stay valid); the others only lose their b2_* values (an unused oscillator: the sound does not change) and a view of B2.
 const usesB2 = r => (r.v.b2_lvl || 0) > 0;
@@ -610,9 +614,19 @@ const withoutB2 = r => {
 // ratings of the others stay valid); the others keep their stars (the preset browser shows them, and he can change them) and those above 7 are in TOP Sounds.
 const RATED = require('./ratings_beta03.js');
 const numOfName = r => parseInt(r.name, 10);   // the number written first in a new preset's name (3 or 4 digits)
-const lowRated = r => RATED[numOfName(r)] !== undefined && RATED[numOfName(r)] < 5;
+// beta 0.3.4: the owner's second listening (his export of the presets file, tools/review_export.js -> tools/ratings_owner2.js): the presets rated one star or less (1 or 2 of 10) are
+// left out (the numbers are not used again), except the favourites he named; the others keep their stars (the built-in votes) and those above 7 are in TOP Sounds; the ten presets he
+// adjusted take his values (only the parameters he changed).
+const RATED2 = require('./ratings_owner2.js');
+const isFav = r => RATED.FAV.includes(numOfName(r));
+const lowRated = r => (RATED[numOfName(r)] !== undefined && RATED[numOfName(r)] < 5) || (!isFav(r) && RATED2.numbers[numOfName(r)] !== undefined && RATED2.numbers[numOfName(r)] <= 2);
+const withAdjusted = r => (RATED2.adjusted[r.name] ? Object.assign({}, r, { v: Object.assign({}, r.v, RATED2.adjusted[r.name]) }) : r);
+const starsOf = r => RATED2.numbers[numOfName(r)] || RATED[numOfName(r)];
+// beta 0.3.4: the master volume of a preset lowered in whole dB after measuring a loud chord at velocity 1 (tools/supermod/loud.js --spec -> tools/master_adjust.js, by number)
+let MASTER_ADJ = {};
+try { MASTER_ADJ = require('./master_adjust.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 // the presets EVALUATE SOUNDS rates, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones and the low-rated ones)
-const NEW_RAW = [...LFO3_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).filter(r => !lowRated(r)).map(withoutB2);
+const NEW_RAW = [...LFO3_RAW, ...FILTER_RAW, ...FAV_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).filter(r => !lowRated(r)).map(withoutB2).map(withAdjusted);
 const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
@@ -621,13 +635,13 @@ for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 const CATEGORIES = ['SuperModulation', 'Bass', 'Lead', 'Keys', 'Organ', 'Pad', 'Strings', 'Brass & Wind', 'Pluck', 'Bells & Mallets', 'FX', 'Drums & Perc'];
 const TOP_RAW = require('./presets_top.js');
 const PRESETS = [];
-for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: convertLegacy(r.v) });
+for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: convertLegacy(r.v), ...(RATED2.names[r.name] ? { stars: RATED2.names[r.name] } : {}) });
 const TOP_COUNT = PRESETS.length;
-// beta 0.3.3: while the owner has not chosen the good presets of beta 0.3 yet, every preset numbered 501 and up plays NEW_TRIM_DB lower (its master volume; the loud-chord
-// calibration of tools/supermod/loud.js is already in the file): a loud chord crackled in many of them. Set it to 0 to take it off.
-const NEW_TRIM_DB = 2;
-const trimmed = r => (numOfName(r) >= 501 ? { ...r.v, master: Math.max(-36, (r.v.master !== undefined ? r.v.master : -3) - NEW_TRIM_DB) } : r.v);
-for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: trimmed(r), ...(RATED[numOfName(r)] ? { stars: RATED[numOfName(r)] } : {}) });
+// beta 0.3.3: a uniform trim of every preset numbered 501 and up while the good ones had not been chosen (2 dB); the owner has chosen them (beta 0.3.4): 0, and the loud-chord
+// calibration is per preset (MASTER_ADJ, on top of the masters of the data files).
+const NEW_TRIM_DB = 0;
+const trimmed = r => { const down = NEW_TRIM_DB + (MASTER_ADJ[numOfName(r)] || 0); return down ? { ...r.v, master: Math.max(-36, (r.v.master !== undefined ? r.v.master : -3) - down) } : r.v; };
+for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: trimmed(r), ...(starsOf(r) ? { stars: starsOf(r) } : {}) });
 // the presets he rated above 7 and the favourites he named (RATED.FAV, 7 stars) go to TOP Sounds (after the 22 of beta 0.7), the best first
 const TOP_EXTRA = PRESETS.map((p, i) => i).filter(i => i >= TOP_COUNT && (PRESETS[i].stars > 7 || RATED.FAV.includes(parseInt(PRESETS[i].name, 10))))
   .sort((a, b) => PRESETS[b].stars - PRESETS[a].stars || a - b);
@@ -651,9 +665,15 @@ const TOUR_PICKS = ['A · Warm Pad', 'A · Wavelet Lead',
   'new:Harp Pluck', 'A · Wave Brass', 'new:Silk Cloud', 'A · Wave Attack Lead', 'new:Celeste Bell', 'A · Warm Pad', 'new:Rhodes Warm',
   'AB · Glass Choir', 'new:Chapel Organ', 'A · Dub Echo Lead', 'new:Solo Violin', 'A · Wave Pulse Lead', 'new:Brass Section',
   'A · Cello Section', 'new:Dream Keys', 'AB · Silk Strings', 'new:Orchestra Swell'];
+// beta 0.3.4: a pick that the owner rated one star or less is left out of the list: a preset he rated high (TOP Sounds after the 22) takes its place
+const SPARE = TOP_EXTRA.map(i => PRESETS[i].name).filter(n => !TOUR_PICKS.includes(n));
+let spareAt = 0;
 const TOUR = TOUR_PICKS.map(n => {
   const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.slice(4).split(' · ')[1] === n.slice(4)) : PRESETS.find(q => q.name === n);
-  if (!p) throw new Error('TOUR: preset not found: ' + n);
+  if (!p) {
+    if (!n.startsWith('new:') || spareAt >= SPARE.length) throw new Error('TOUR: preset not found: ' + n);
+    return SPARE[spareAt++];
+  }
   return p.name;
 });
 if (!PRESETS.some(p => p.name === DEFAULT_PRESET)) throw new Error('DEFAULT_PRESET not found: ' + DEFAULT_PRESET);

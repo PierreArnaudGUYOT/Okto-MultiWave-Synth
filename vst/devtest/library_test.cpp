@@ -181,19 +181,19 @@ int wmain(int argc, wchar_t** argv) {
     lib.restore(kA);
   }
 
-  std::printf("8b. the lists of a file of beta 0.3 (\"LIST ORDER v3\") are not read: the default lists, with the new TOP Sounds\n");
+  std::printf("8b. the lists of a file of beta 0.3.3 (\"LIST ORDER v4\") are not read: the default lists, with the new TOP Sounds\n");
   {
     e = lib.setTop(kA, true);   // a list the player changed ...
     check(e.empty() && lib.inTop(kA), "a player's TOP Sounds addition is written", u8(e));
     std::string t = readAll(file);
-    const size_t lo = t.find("######## LIST ORDER v4");
-    check(lo != std::string::npos, "the file says LIST ORDER v4");
+    const size_t lo = t.find("######## LIST ORDER v5");
+    check(lo != std::string::npos, "the file says LIST ORDER v5");
     if (lo != std::string::npos) {
-      t.replace(lo, 22, "######## LIST ORDER v3");   // ... and the same file as beta 0.3 wrote it
+      t.replace(lo, 22, "######## LIST ORDER v4");   // ... and the same file as beta 0.3.3 wrote it
       writeTextFile(file, t);
       sleepMs(30);
       lib.refresh();
-      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + kNumTopExtra, "the v3 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
+      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + kNumTopExtra, "the v4 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
     }
     lib.setTop(kA, false);
   }

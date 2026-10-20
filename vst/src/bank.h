@@ -422,7 +422,7 @@ class Library {
   static void parse(const std::string& all, State& t) {
     int part = 0;   // 0 = before any marker (a beta 0.3 user-bank file), 1 = factory presets, 2 = user bank, 3 = list order
     int orderList = -1;
-    bool v2 = false;   // lists of this version's format ("LIST ORDER v4", beta 0.3.1; they say which presets they hold); older ones are not read
+    bool v2 = false;   // lists of this version's format ("LIST ORDER v5", beta 0.3.4; they say which presets they hold); older ones are not read
     std::vector<std::vector<int>> orders(listLabels().size());
     std::vector<char> present(listLabels().size(), 0), known(kNumPresets, 0);
     int sec = -1;
@@ -460,7 +460,7 @@ class Library {
         cur = nullptr; sec = -1;
         part = line.find("FACTORY") != std::string::npos ? 1 : line.find("USER BANK") != std::string::npos ? 2 :
                line.find("LIST ORDER") != std::string::npos ? 3 : 0;
-        if (part == 3) v2 = line.find("LIST ORDER v4") != std::string::npos;   // beta 0.3.1: the lists of beta 0.3 ("v3", kept from beta 0.7) are rebuilt: the presets rated above 7 and the favourites join TOP Sounds
+        if (part == 3) v2 = line.find("LIST ORDER v5") != std::string::npos;   // beta 0.3.4 (v5: the presets he rated above 7 in his second listening join TOP Sounds); beta 0.3.1: the lists of beta 0.3 ("v3", kept from beta 0.7) are rebuilt: the presets rated above 7 and the favourites join TOP Sounds
         orderList = -1;
         continue;
       }
@@ -560,7 +560,7 @@ class Library {
       paramLines(t.vals[k].data(), s);
     }
     L("");
-    L("######## LIST ORDER v4 (the preset browser: what each list holds, in its order; built-in names) ########");
+    L("######## LIST ORDER v5 (the preset browser: what each list holds, in its order; built-in names) ########");
     for (size_t i = 0; i < t.lists.size(); i++) {
       L("");
       L("== " + listLabels()[i] + " ==");
