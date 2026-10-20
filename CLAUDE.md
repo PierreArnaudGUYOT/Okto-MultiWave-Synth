@@ -1,5 +1,7 @@
 # CLAUDE.md — Okto MultiWave Synth: architecture and maintenance guide
 
+> New here? [CLAUDE_DIFFERENCES.md](CLAUDE_DIFFERENCES.md) says in two pages how this version differs from the initial Wavelet Synthesizer (Free-Wavelet-Synthesizer-VST) and explains the design (panel, signal path, presets file); this file is the detailed guide by topic.
+
 **Final version: EVALUATE SOUNDS (the listening test of the new presets, web app and plug-in) and the extra demo songs were removed** at the owner's request: the web app's DEMO plays Beethoven's Appassionata (III) only, with its preset tour, and has no song menu (the arrow) and no MIDI file loading; the plug-in has no evaluation session. The sections below that describe them are history (marked "removed") or were deleted.
 
 **Okto MultiWave Synth** (beta 0.3, 2026-10-19, a test version; beta 0.2 was the same day, beta 0.1 2026-10-18) is the Wavelet Synthesizer beta 0.7 (commit f16b46a of

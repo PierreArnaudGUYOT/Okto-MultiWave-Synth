@@ -6,11 +6,12 @@
 // the time the output goes above the limiter's knee (0.7).
 //   node tools/demo_level.js                   trims 0 -3 -6 -9 -12 dB, a table per trim
 //   node tools/demo_level.js --trims 0,-6      other trims
+//   node tools/demo_level.js --all --window 13 every preset of the factory list (the plug-in's) plays one window of the piece, here the densest (4 s from 4 x 13 s), the demo's way
 'use strict';
 const path = require('path');
 const { fork } = require('child_process');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i >= 0 ? process.argv[i + 1] : d; };
-const TRIMS = arg('trims', '0,-3,-6,-9,-12').split(',').map(Number), PROCS = +arg('procs', 12), STEP = 4, TAIL = 0.6;
+const TRIMS = arg('trims', '0,-3,-6,-9,-12').split(',').map(Number), PROCS = +arg('procs', 12), STEP = 4, TAIL = 0.6, ALL = process.argv.includes('--all'), WIN = +arg('window', 13);
 
 function load() {
   const fs = require('fs');
@@ -27,9 +28,12 @@ if (process.argv.includes('--worker')) {
   const { SPEC, C, song } = load();
   const P = C.P, sr = 48000, mp = SPEC.PARAMS[P.master];
   const out = [];
-  SPEC.TOUR.forEach((name, k) => {
-    if (k < 2 || k % of !== part) return;
-    const pr = SPEC.DEMO_PRESETS.find(p => p.name === name) || SPEC.PRESETS.find(p => p.name === name);
+  const LIST = process.env.DEMOSET ? SPEC.DEMO_PRESETS : SPEC.PRESETS;   // (DEMOSET=1 with --all: the presets of the demo's tour on that one window)
+  const items = ALL ? LIST.map((p, i) => [p.name, i]) : SPEC.TOUR.map((n, k) => [n, k]);
+  items.forEach(([name, idx]) => {
+    const k = ALL ? WIN : idx;
+    if (ALL ? idx % of !== part : (k < 2 || k % of !== part)) return;
+    const pr = ALL ? LIST[idx] : SPEC.DEMO_PRESETS.find(p => p.name === name) || SPEC.PRESETS.find(p => p.name === name);
     const base = Float64Array.from(pr.values);
     // as demo.js enterScene: polyphonic, normal octave, no glide, short attack, little delay
     base[P.v_voices] = 16; base[P.v_oct] = 0; base[P.v_glide] = 0;
@@ -80,11 +84,11 @@ const fs = require('fs');
 fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
 let done = 0; const t0 = Date.now();
 for (let w = 0; w < PROCS; w++) {
-  fork(__filename, ['--worker', String(w), '--of', String(PROCS), '--trims', TRIMS.join(',')]).on('exit', () => {
+  fork(__filename, ['--worker', String(w), '--of', String(PROCS), '--trims', TRIMS.join(',')].concat(ALL ? ['--all', '--window', String(WIN)] : [])).on('exit', () => {
     if (++done < PROCS) return;
     let rows = [];
     for (let k = 0; k < PROCS; k++) { const f = path.join(__dirname, 'out', `demo_level_${k}.json`); rows = rows.concat(JSON.parse(fs.readFileSync(f, 'utf8'))); fs.unlinkSync(f); }
-    console.log(`${new Set(rows.map(r => r.name)).size} tour presets, 4 s each, in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+    console.log(`${new Set(rows.map(r => r.name)).size} ${ALL ? 'presets of the list' : 'tour presets'}, 4 s each, in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
     console.log('trim dB | presets with output-stage distortion d above 2 % / 5 % / 10 % | median d | median time above the knee (0.7) | median peak before the output stage');
     for (const trim of TRIMS) {
       const r = rows.filter(x => x.trim === trim), med = (f) => { const v = r.map(f).sort((a, b) => a - b); return v[v.length >> 1]; };
