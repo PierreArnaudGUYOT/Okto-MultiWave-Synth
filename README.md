@@ -10,9 +10,9 @@ transform** instead of Fourier filters: one cycle of each tone is split into 11 
 band by band. It comes as a **web application** and a **VST3 / VST2 instrument** for Windows x64 (Ableton Live and other
 hosts).
 
-This is a *test version*: its 908 presets to rate (the 600 new ones of beta 0.3, then 175 of beta 0.2 and 133 of beta 0.1) are waiting for your ears. **EVALUATE
-SOUNDS** plays a piece of music with each of them and asks for 1 to 10 stars; the ratings (and the changes you make to the
-sounds you like) are saved in a text file you can send back.
+The listening test of the earlier betas (**EVALUATE SOUNDS**, which asked for 1 to 10 stars for each new preset) was removed in the final
+version, and so were the extra demo songs, the song menu next to DEMO and the loading of a MIDI file: the ratings it collected shaped
+the preset list (see the notes of the betas below), and the demo is one piece, Beethoven's *Appassionata*.
 
 **Play online:** https://pierrearnaudguyot.github.io/Okto-MultiWave-Synth/ (Chrome or Edge; a MIDI keyboard plays it
 directly, no DAW needed).
@@ -101,7 +101,7 @@ Beta 0.3.1 applies the first ratings of OktoPierre (80 of the new presets rated 
   sound); the left hand remembers its last chord.
 - **Oriental keyboard**: a three-position switch **TUNING** (Western · Arabic · Turkish) under CHORD MODE retunes the keys with
   **quarter tones** (Arabic, 24 tones to the octave) or **commas** (Turkish makams, 53 to the octave), by scale (**Rast, Bayati,
-  Hijaz, Saba, Nahawand**) and tonic; the keys it moves are marked on the keyboard. The demo and EVALUATE SOUNDS stay in equal
+  Hijaz, Saba, Nahawand**) and tonic; the keys it moves are marked on the keyboard. The demo stays in equal
   temperament.
 - The **preset browser at the right follows the preset box**: step with ◀ ▶ or the menu and it shows the sound's category and the
   sound itself.
@@ -122,7 +122,6 @@ Beta 0.3.1 applies the first ratings of OktoPierre (80 of the new presets rated 
   oscillators; the letters of its name say which (`A1A2`, `A1B1`, `A1A2B1` …); an oscillator is often the attack (a click, a
   breath, a pluck) of another.
 
-- **EVALUATE SOUNDS** (header, web app and plug-in): see below.
 - **CHORD MODE** (button of the PLAY card, above the keyboard): the panel grows and a *chord harp* card appears (twelve chord pads, the chord
   name, KEYS OCT, STACKED / FOLDED voicing, BASS, STRUM and a strum plate): one octave of the keyboard chooses the chord type, one
   finger plays the whole chord. With CHORD MODE off the panel is the plain synthesizer and none of it is shown.
@@ -132,32 +131,6 @@ Beta 0.3.1 applies the first ratings of OktoPierre (80 of the new presets rated 
   instead of `pow(10, ·)`, a two-sine chorus, no `%` in the wavelet transform, idle instances skip their silent blocks, the
   smoothing constants no longer depend on the host's sample rate, table builds run in a Web Worker, the plug-in's builder
   thread and library are safer. What was left out, and why, is in [RELEASE_HISTORY.md](RELEASE_HISTORY.md).
-
-## EVALUATE SOUNDS
-
-Click **EVALUATE SOUNDS** in the header, then **Start at…**: a small window asks for the **number of the first sound** to rate (it offers the first one not
-rated yet; the list is the factory order: the 600 presets of beta 0.3 first, `501`–`1100`, then the 175 of beta 0.2, then the 133 of beta 0.1).
-- The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) **and then a long C minor chord** (4 seconds: a
-  sustained sound can be judged too, not only quick notes) with the preset, then asks for **1 to 10 stars** (a click; in the web app also the keys
-  1–9 and 0 = 10). It goes on with the next preset; **Skip**, **Previous**, **Replay** and **Stop** are always there.
-- **Sets of 40 sounds.** The first set starts at the sound you chose, the next ones every 40 sounds, and every set has **its own file**, named after
-  its first and last sound (`sound 501 to sound 540.txt`): the web app downloads it when the set is finished, the plug-in writes it next to its
-  ratings file after every rating. Send back the files of the sets you rated.
-- **Stop half way whenever you like** — nothing is lost (every answer is saved) — and keep this state under a name of your own with
-  **Save as…** (on the start, rating and end windows): it saves a copy of the ratings so far (while a set is being rated, a copy of that set), and
-  the session goes on with its own files.
-- **More than 5 stars** offers to *modify* the preset: it loads exactly as designed, you change the panel with the mouse and
-  play it on your keyboard, then **Keep initial settings** or **Record preset change**. The parameters that differ from the
-  preset are written in the file.
-- Every rating is saved at once, so you can stop and **continue where you stopped** (the file is read again at the next
-  session: **Continue at …**).
-- **Web app**: the ratings are kept in the browser meanwhile; in Edge or Chrome you can also choose a ratings file at the start
-  (`okto-multiwave-ratings.txt`), rewritten after every rating or change; in other browsers **Save as…** downloads a copy.
-- **Plug-in**: the file is `Documents\Okto MultiWave Synth\okto-multiwave-ratings.txt` (the local application data folder when
-  there is no Documents folder), written after every rating or change, with the files of the sets next to it; **Change file…** chooses another
-  one, **Show file** opens its folder, **Save now** writes it again. Both versions write the same readable text: the stars of every preset, a
-  ranking, and the recorded changes as `parameter key: value in the preset -> new value`.
-
 
 ## Use it
 
@@ -169,8 +142,8 @@ the demo**, **Play the synth** or **Download the VST**. **MANUAL** (header) open
 - **MIDI**: notes, pitch bend, mod wheel, sustain; Program Change selects a preset; **MIDI learn** by a right-click on a control.
 - Presets: the **preset browser** at the right of the panel (TOP Sounds and the categories, ↑ ↓ ← → keys), ◀ ▶ and the
   preset name's menu. **Save preset / Export / Import** are in the status bar.
-- **▶ DEMO** plays Beethoven's *Appassionata* (III), in equal temperament, while touring 29 presets (the TOP Sounds mixed with new ones that show
-  the oscillators at work); **▾** opens other pieces or *Load a MIDI file…*.
+- **▶ DEMO** plays Beethoven's *Appassionata* (III), in equal temperament, while touring the presets (the TOP Sounds mixed with new ones that show
+  the oscillators at work), a new one about every 4 seconds; **■ STOP** (or Esc) ends it and gives back your sound.
 
 ### VST3 / VST2 in Ableton Live (Windows)
 1. Build the plugin (see below), or take the zip of the Releases page.
@@ -192,7 +165,7 @@ It installs next to the Wavelet Synthesizer: its own name, class IDs and VST2 ID
 
 Requirements: the portable [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) toolchain
 (`llvm-mingw-<date>-ucrt-x86_64.zip`, extract it anywhere; no admin rights, no Visual Studio, no CMake). Node.js is optional:
-if present, the build regenerates the C++ parameter table and the listening passage from `tools/spec.js`.
+if present, the build regenerates the C++ parameter table from `tools/spec.js`.
 
 ```bat
 set LLVM_MINGW=C:\Users\<you>\tools\llvm-mingw   (default: %USERPROFILE%\tools\llvm-mingw)
@@ -205,7 +178,7 @@ uses `-ffp-contract=off`, so that the C++ and JavaScript engines do the same flo
 
 ```
 tools/spec.js          single source of truth: parameters, the three oscillators, panel layout, presets
-tools/gen_spec.js      generates web/js/spec.js, vst/src/generated/spec.h and vote_data.h (the listening passage)
+tools/gen_spec.js      generates web/js/spec.js and vst/src/generated/spec.h
 tools/presets_top.js   the 22 TOP Sounds;  tools/presets_new.js  the 200 presets of beta 0.1;  tools/presets_super.js  the 300 of beta 0.2;  tools/presets_lfo3.js  the 600 of beta 0.3
 tools/make_presets.js  builds the presets of beta 0.1 from tools/recipes_*.js (tools/preset_dsl.js, preset_lab.js: loudness
                        matching, distinctness check, contact sheets)
@@ -214,8 +187,8 @@ tools/dsp_selftest.js  engine self-test;  tools/dsp_compare.js  C++ engine again
 tools/manual/          generator of the user manuals
 web/                   web application (vanilla JS, Web Audio AudioWorklet, no libraries)
   js/core.js           DSP reference implementation (also runs inside the AudioWorklet and the table-building Worker)
-  js/ui.js, app.js     panel UI, presets, MIDI, computer keyboard;  js/evaluate.js  the rating session
-  js/demo.js           demo player (a tour of the presets)
+  js/ui.js, app.js     panel UI, presets, MIDI, computer keyboard
+  js/demo.js           demo player (a tour of the presets on Beethoven's Appassionata; js/demo_data.js holds its notes)
 vst/                   VST3 / VST2 plugin (C++17)
   src/dsp.h            C++ port of core.js;  src/plugin.cpp  processor, controller, factory
   src/editor.cpp       the panel window (draws through editor_platform.h; editor_win.cpp is its Windows side)
@@ -247,7 +220,7 @@ node tests/web/smoke.js           # the three oscillator views, the folder tabs 
 ```
 To cross-check the C++ engine, compile `vst/devtest/dsp_render.cpp` (with `-ffp-contract=off`) and run
 `node tools/dsp_compare.js <dir>`: all 1000 cases (the 930 presets and 70 variants of every feature) agree within 2e-6 of full scale (worst: 3.6e-7). `vst/devtest/vote_session.cpp`
-drives the plug-in's EVALUATE SOUNDS window like a player (and CHORD MODE) in an off-screen window.
+drives the plug-in's window like a player in an off-screen window (folder tabs, CHORD MODE, fit to the screen, preset browser and its stars).
 
 ## Licence
 
@@ -265,8 +238,8 @@ example a link to the project's repository), as the GPL requires.
 Parts that keep their own licence:
 - `vst/external/pluginterfaces/`: Steinberg VST3 interface headers, MIT licence (compatible with the GPL; its licence text is
   kept in the folder and copied into the plugin bundle).
-- `tools/demo/*.mid` and `web/js/demo_data.js`: demo music from the Mutopia Project, public domain except the *Moonlight*
-  Sonata III (CC BY-SA 2.5, Stewart Holmes). This music data is not covered by the GPL (see `tools/demo/SOURCE.md`).
+- `tools/demo/appassionata3.mid` and `web/js/demo_data.js`: the demo music, Beethoven's *Appassionata* III from the Mutopia Project,
+  public domain. This music data is not covered by the GPL (see `tools/demo/SOURCE.md`).
 
 ## Credits
 
@@ -274,9 +247,7 @@ Created by Pierre Arnaud GUYOT ("OktoPierre"), on the basis of his
 [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
 (DOI [10.5281/zenodo.23431760](https://doi.org/10.5281/zenodo.23431760)). The chord keyboard comes from his WaveChord work.
 
-- Demo music: MIDI from the [Mutopia Project](https://www.mutopiaproject.org): J. S. Bach *Toccata in D minor* BWV 565 and
-  Beethoven's Op. 57 III, Op. 129, Op. 67 I (piano), Op. 13 I, Op. 31/2 I, Op. 111 I — public domain; Beethoven *Moonlight*
-  Sonata Op. 27/2 III typeset by Stewart Holmes — CC BY-SA 2.5. The listening passage of EVALUATE SOUNDS is a part of Op. 57 III.
+- Demo music: MIDI from the [Mutopia Project](https://www.mutopiaproject.org): Beethoven's Piano Sonata No. 23 *Appassionata*, Op. 57 III — public domain.
 - VST3 interface headers: Steinberg Media Technologies, MIT licence.
 - Wavelet filter coefficients were generated with PyWavelets (MIT licence) and are stored in `tools/wavelets.json`.
 
