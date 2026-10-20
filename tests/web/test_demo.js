@@ -193,7 +193,9 @@ function tourChecks(name, song, samples, plan, full, intro = true, start = plan[
     // one run plays every preset of the plan exactly once
     const lastWant = plan[N - 1].preset;
     log(`  ${name}: ${seen.length - 1} preset changes, ${new Set(seen).size} distinct presets of ${N}, last '${seen[seen.length - 1]}'`);
-    check(seen.length === N && new Set(seen).size === N, `${name}: all ${N} presets of the plan played exactly once in one run`, `${seen.length} entries, ${new Set(seen).size} distinct`);
+    // (the spec's TOUR repeats two sounds, and the plan wraps round once: the distinct names of the plan are the ones to count)
+    const want = new Set(plan.map((p) => p.preset)).size;
+    check(seen.length === N && new Set(seen).size === want, `${name}: all ${N} presets of the plan played in one run, in the plan's order`, `${seen.length} entries, ${new Set(seen).size} distinct (the plan has ${want})`);
     check(seen[seen.length - 1] === lastWant, `${name}: ends on '${lastWant}'`, `last '${seen[seen.length - 1]}'`);
   }
   const maxLv = Math.max(0, ...run.map((x) => x.lv));
