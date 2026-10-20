@@ -9,7 +9,7 @@ const spec = require('./spec.js');
 const wav = JSON.parse(fs.readFileSync(path.join(__dirname, 'wavelets.json'), 'utf8'));
 
 const root = path.join(__dirname, '..');
-const { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, TOP_EXTRA, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, MICRO_TABLES,
+const { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, TOP_EXTRA, TOP_LIST, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, MICRO_TABLES,
   CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR } = spec;
 // the fields of an oscillator, in the order of the C++ SlotDef (a field an oscillator lacks is -1: the subtractive ones have no
 // atom pattern, the additive ones no source wave)
@@ -122,6 +122,7 @@ h += `inline constexpr int kNumPresets = ${presetValues.length};\n`;
 h += `inline constexpr int kNumTop = ${TOP};   // beta 0.5: the first presets are TOP Sounds, in their order\n`;
 // beta 0.3.1: the presets rated above 7 in the owner's listening test are in TOP Sounds too (after the first kNumTop, in this order)
 h += `inline constexpr int kTopExtra[] = { ${TOP_EXTRA.length ? TOP_EXTRA.join(', ') : '0'} };\ninline constexpr int kNumTopExtra = ${TOP_EXTRA.length};\n`;
+h += `// beta 1.0: the TOP Sounds list in its order (best rated first): the TOP Sounds of beta 0.7 and the presets rated above 7\ninline constexpr int kTopList[] = { ${TOP_LIST.join(', ')} };\ninline constexpr int kNumTopList = ${TOP_LIST.length};\n`;
 h += `// beta 0.3: OktoPierre's vote of each preset in his listening test (0 = none; a mark in the browser)\n`;
 h += `inline constexpr int kPresetStars[] = { ${PRESETS.map(p => p.stars || 0).join(', ')} };\n`;
 h += `// beta 0.5: each preset's place in its category's list (the preset browser's default order)\n`;

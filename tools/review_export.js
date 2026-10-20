@@ -64,15 +64,17 @@ if (require.main === module) {
 // --write <module>: { numbers: { 501: 8, ... }, names: { 'A · Warm Pad': 7 }, adjusted: { '1101 A1A2 · Bloom of Soft': { v_unison: 3 } } } (the adjusted presets: only the parameters he changed, against the preset of this version)
 if (require.main === module && process.argv.includes('--write')) {
   const out = process.argv[process.argv.indexOf('--write') + 1], e = parseExport(process.argv[2]);
-  const byName = new Map(SPEC.PRESETS.map((p, i) => [p.name, i]));
+  // --baseline <spec.js>: the values shipped in the version the owner rated (a preset he adjusted is compared with them; his master volume is kept as a delta, 'master_delta')
+  const BASE = process.argv.includes('--baseline') ? require(require('path').resolve(process.argv[process.argv.indexOf('--baseline') + 1])) : SPEC;
+  const byName = new Map(BASE.PRESETS.map((p, i) => [p.name, i]));
   const numbers = {}, names = {}, adjusted = {};
   for (const p of e.factory) {
     const n = parseInt(p.orig, 10);
     if (p.stars !== undefined && p.stars > 0) { if (n) numbers[n] = p.stars; else names[p.orig] = p.stars; }
     const i = byName.get(p.orig);
     if (p.adjusted && i !== undefined) {
-      const now = fullValues(p.params), base = SPEC.PRESETS[i].values, d = {};
-      SPEC.PARAMS.forEach((q, k) => { if (Math.abs(now[k] - base[k]) > 1e-9 * Math.max(1, Math.abs(base[k]))) d[q.key] = now[k]; });
+      const now = fullValues(p.params), base = BASE.PRESETS[i].values, d = {};
+      SPEC.PARAMS.forEach((q, k) => { if (Math.abs(now[k] - base[k]) > 1e-9 * Math.max(1, Math.abs(base[k]))) { if (q.key === 'master') d.master_delta = +(now[k] - base[k]).toFixed(4); else d[q.key] = now[k]; } });
       if (Object.keys(d).length) adjusted[p.orig] = d;
     }
   }

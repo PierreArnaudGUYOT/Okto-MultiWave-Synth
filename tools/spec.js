@@ -617,25 +617,38 @@ const numOfName = r => parseInt(r.name, 10);   // the number written first in a 
 // beta 0.3.4: the owner's second listening (his export of the presets file, tools/review_export.js -> tools/ratings_owner2.js): the presets rated one star or less (1 or 2 of 10) are
 // left out (the numbers are not used again), except the favourites he named; the others keep their stars (the built-in votes) and those above 7 are in TOP Sounds; the ten presets he
 // adjusted take his values (only the parameters he changed).
-const RATED2 = require('./ratings_owner2.js');
+// beta 1.0 (the final list): tools/ratings_final.js is the owner's LAST listening (his export of 2026-10-20 17:03 with the stars of the preset browser, 1-10): only the presets he rated
+// more than one star (3 or more of 10) are in the product, nothing else (the unrated ones, the 250 made after his listening, and the 1-2 star ones are out); the lists are sorted
+// from the best to the least rated; the synth opens on the first sound of TOP Sounds.
 const isFav = r => RATED.FAV.includes(numOfName(r));
-const lowRated = r => (RATED[numOfName(r)] !== undefined && RATED[numOfName(r)] < 5) || (!isFav(r) && RATED2.numbers[numOfName(r)] !== undefined && RATED2.numbers[numOfName(r)] <= 2);
-const withAdjusted = r => (RATED2.adjusted[r.name] ? Object.assign({}, r, { v: Object.assign({}, r.v, RATED2.adjusted[r.name]) }) : r);
+const RATED2 = require('./ratings_final.js');
+const lowRated = r => !(RATED2.numbers[numOfName(r)] >= 3);
+// the presets he adjusted (SAVE PRESET) take his values: the parameters he changed, and his master volume as a delta from the shipped one
+const applyAdj = (name, v0) => {
+  const a = RATED2.adjusted[name]; if (!a) return v0;
+  const { master_delta, ...p } = a, v = Object.assign({}, v0, p);
+  if (master_delta) v.master = (v0.master !== undefined ? v0.master : -3) + master_delta;
+  return v;
+};
+const withAdjusted = r => (RATED2.adjusted[r.name] ? Object.assign({}, r, { v: applyAdj(r.name, r.v) }) : r);
 const starsOf = r => RATED2.numbers[numOfName(r)] || RATED[numOfName(r)];
 // beta 0.3.4: the master volume of a preset lowered in whole dB after measuring a loud chord at velocity 1 (tools/supermod/loud.js --spec -> tools/master_adjust.js, by number)
 let MASTER_ADJ = {};
 try { MASTER_ADJ = require('./master_adjust.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 // the presets EVALUATE SOUNDS rates, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones and the low-rated ones)
-const NEW_RAW = [...LFO3_RAW, ...FILTER_RAW, ...FAV_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).filter(r => !lowRated(r)).map(withoutB2).map(withAdjusted);
+const NEW_RAW = [...LFO3_RAW, ...FILTER_RAW, ...FAV_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).filter(r => !lowRated(r)).map(withoutB2).map(withAdjusted)
+  .sort((a, b) => RATED2.numbers[numOfName(b)] - RATED2.numbers[numOfName(a)] || numOfName(a) - numOfName(b));   // the best first
 const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
 // Categories (preset menu groups, like the banks of a hardware synthesizer), in menu order.
 // (beta 0.2: SuperModulation first: the presets whose life is the LFOs moving the wavelet-domain controls)
 const CATEGORIES = ['SuperModulation', 'Bass', 'Lead', 'Keys', 'Organ', 'Pad', 'Strings', 'Brass & Wind', 'Pluck', 'Bells & Mallets', 'FX', 'Drums & Perc'];
-const TOP_RAW = require('./presets_top.js');
+// the 22 TOP Sounds of beta 0.7 the owner rated more than one star, best first (the same stars: the order of beta 0.7)
+const TOP_RAW = require('./presets_top.js').filter(r => RATED2.names[r.name] >= 3).map((r, i) => ({ r, i }))
+  .sort((a, b) => RATED2.names[b.r.name] - RATED2.names[a.r.name] || a.i - b.i).map(x => x.r);
 const PRESETS = [];
-for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: convertLegacy(r.v), ...(RATED2.names[r.name] ? { stars: RATED2.names[r.name] } : {}) });
+for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: applyAdj(r.name, convertLegacy(r.v)), stars: RATED2.names[r.name] });
 const TOP_COUNT = PRESETS.length;
 // beta 0.3.3: a uniform trim of every preset numbered 501 and up while the good ones had not been chosen (2 dB); the owner has chosen them (beta 0.3.4): 0, and the loud-chord
 // calibration is per preset (MASTER_ADJ, on top of the masters of the data files).
@@ -645,16 +658,13 @@ for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: trimmed(r),
 // the presets he rated above 7 and the favourites he named (RATED.FAV, 7 stars) go to TOP Sounds (after the 22 of beta 0.7), the best first
 const TOP_EXTRA = PRESETS.map((p, i) => i).filter(i => i >= TOP_COUNT && (PRESETS[i].stars > 7 || RATED.FAV.includes(parseInt(PRESETS[i].name, 10))))
   .sort((a, b) => PRESETS[b].stars - PRESETS[a].stars || a - b);
-// the factory order is each category's order too (TOP Sounds first, then the new presets, then 001 ...). Beta 0.2: "Wobble Bass" is the first of the
-// Bass list (it comes right after the TOP Sounds in the order of the lists; the numbering of the presets does not change)
-{
-  const order = PRESETS.map((p, i) => i), wob = PRESETS.findIndex(p => p.cat === 'Bass' && /· Wobble Bass$/.test(p.name));
-  if (wob >= 0) { order.splice(wob, 1); order.splice(TOP_COUNT, 0, wob); }
-  order.forEach((idx, rank) => { PRESETS[idx].rank = rank; });
-}
+// the TOP Sounds list of the plug-in (and the sound the synth opens on): the TOP Sounds of beta 0.7 and the presets rated above 7, the best rated first (a tie: the earlier one)
+const TOP_LIST = [...PRESETS.slice(0, TOP_COUNT).map((p, i) => i), ...TOP_EXTRA].sort((a, b) => (PRESETS[b].stars || 0) - (PRESETS[a].stars || 0) || a - b);
+// the factory order is each category's order too: the array is already sorted from the best to the least rated (TOP Sounds first)
+PRESETS.forEach((p, rank) => { p.rank = rank; });
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
-const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new plugin instance opens
+const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app / a new plugin instance opens: the first of TOP Sounds (beta 1.0)
 // The preset tour of the demo (the default piece, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard):
 // the TOP Sounds mixed one by one with new presets that show the oscillators at work (a TOP Sound by its name, a new preset as
 // "new:<title>": the number of its name may change). 29 presets are heard. (Beta 0.3: four picks played B2, which is gone: Crystal Choir, Harp,
@@ -666,12 +676,12 @@ const TOUR_PICKS = ['A · Warm Pad', 'A · Wavelet Lead',
   'AB · Glass Choir', 'new:Chapel Organ', 'A · Dub Echo Lead', 'new:Solo Violin', 'A · Wave Pulse Lead', 'new:Brass Section',
   'A · Cello Section', 'new:Dream Keys', 'AB · Silk Strings', 'new:Orchestra Swell'];
 // beta 0.3.4: a pick that the owner rated one star or less is left out of the list: a preset he rated high (TOP Sounds after the 22) takes its place
-const SPARE = TOP_EXTRA.map(i => PRESETS[i].name).filter(n => !TOUR_PICKS.includes(n));
+const SPARE = TOP_LIST.map(i => PRESETS[i].name).filter(n => !TOUR_PICKS.includes(n)).concat(TOP_LIST.map(i => PRESETS[i].name).filter(n => TOUR_PICKS.includes(n)));
 let spareAt = 0;
 const TOUR = TOUR_PICKS.map(n => {
   const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.slice(4).split(' · ')[1] === n.slice(4)) : PRESETS.find(q => q.name === n);
   if (!p) {
-    if (!n.startsWith('new:') || spareAt >= SPARE.length) throw new Error('TOUR: preset not found: ' + n);
+    if (spareAt >= SPARE.length) throw new Error('TOUR: preset not found: ' + n);
     return SPARE[spareAt++];
   }
   return p.name;
@@ -694,5 +704,5 @@ for (const s of S) {
   }
 }
 
-module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, CATEGORIES,
+module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, TOP_LIST, CATEGORIES,
   LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };

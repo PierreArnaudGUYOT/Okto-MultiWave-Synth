@@ -46,7 +46,7 @@ int wmain(int argc, wchar_t** argv) {
   {
     const auto lists = lib.lists();
     size_t total = 0; for (size_t i = 1; i < lists.size(); i++) total += lists[i].second.size();
-    check(lists.size() == 1 + kNumCategories && (int)lists[0].second.size() == kNumTop + kNumTopExtra && (int)total == kNumPresets,
+    check(lists.size() == 1 + kNumCategories && (int)lists[0].second.size() == kNumTopList && (int)total == kNumPresets,
           "TOP Sounds + the categories hold every preset", std::to_string(lists.size()) + " lists, " + std::to_string(total) + " in the categories");
     bool allIn = true;
     for (int i = 0; i < kNumTopExtra; i++) allIn = allIn && std::count(lists[0].second.begin(), lists[0].second.end(), kTopExtra[i]) == 1;
@@ -82,7 +82,7 @@ int wmain(int argc, wchar_t** argv) {
 
   std::printf("4. the lists: a preset to TOP Sounds, another moved to a category\n");
   e = lib.setTop(kA, true);
-  check(e.empty() && lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + kNumTopExtra + 1, "setTop adds a preset to TOP Sounds", u8(e));
+  check(e.empty() && lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTopList + 1, "setTop adds a preset to TOP Sounds", u8(e));
   lib.setTop(kA, false);
   const int cat0 = lib.categoryOf(kB), target = cat0 == 1 ? 2 : 1;
   e = lib.moveToCategory(kB, target);
@@ -193,7 +193,7 @@ int wmain(int argc, wchar_t** argv) {
       writeTextFile(file, t);
       sleepMs(30);
       lib.refresh();
-      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + kNumTopExtra, "the v4 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
+      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTopList, "the v4 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
     }
     lib.setTop(kA, false);
   }

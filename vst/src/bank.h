@@ -362,8 +362,7 @@ class Library {
   static std::vector<std::vector<int>> defaultLists() {
     const std::vector<std::string>& labels = listLabels();
     std::vector<std::vector<int>> v(labels.size());
-    for (int k = 0; k < kNumTop && k < kNumPresets; k++) v[0].push_back(k);
-    for (int i = 0; i < kNumTopExtra; i++) if (kNumTopExtra > 0 && kTopExtra[i] >= kNumTop && kTopExtra[i] < kNumPresets) v[0].push_back(kTopExtra[i]);   // beta 0.3.1: rated above 7
+    for (int i = 0; i < kNumTopList; i++) if (kTopList[i] >= 0 && kTopList[i] < kNumPresets) v[0].push_back(kTopList[i]);   // beta 1.0: the TOP Sounds of beta 0.7 and the presets rated above 7, the best first
     for (size_t i = 1; i < labels.size(); i++) {
       for (int k = 0; k < kNumPresets; k++) if (labels[i] == kPresets[k].cat) v[i].push_back(k);
       std::stable_sort(v[i].begin(), v[i].end(), [](int a, int b) { return kPresetRank[a] < kPresetRank[b]; });

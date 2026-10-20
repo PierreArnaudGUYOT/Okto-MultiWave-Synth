@@ -24,9 +24,14 @@ function render(Core, values) {
   return [L, R];
 }
 let fails = 0, worst = 0;
-for (let i = 0; i < SPEC.TOP; i++) {
-  const o = SPEC.PRESETS[i], p = OLD_SPEC.PRESETS[i];
-  if (o.name !== p.name) throw new Error('order differs: ' + o.name + ' / ' + p.name);
+// beta 1.0: the TOP Sounds are sorted by the owner's stars and one was left out (unrated); the three he adjusted (SAVE PRESET) are no longer beta 0.7's sounds: they are not compared
+const ADJ = require('../tools/ratings_final.js').adjusted;
+let compared = 0;
+for (let q = 0; q < OLD_SPEC.TOP; q++) {
+  const p = OLD_SPEC.PRESETS[q], o = SPEC.PRESETS.slice(0, SPEC.TOP).find(x => x.name === p.name);
+  if (!o) { console.log(`skip ${p.name.padEnd(26)} (left out of the final list)`); continue; }
+  if (ADJ[p.name]) { console.log(`skip ${p.name.padEnd(26)} (adjusted by the owner)`); continue; }
+  compared++;
   const a = render(OLD, p.values), b = render(C, o.values);
   let peak = 0, maxd = 0;
   for (let k = 0; k < 2; k++) for (let j = 0; j < n; j++) { peak = Math.max(peak, Math.abs(a[k][j])); maxd = Math.max(maxd, Math.abs(a[k][j] - b[k][j])); }
@@ -35,5 +40,5 @@ for (let i = 0; i < SPEC.TOP; i++) {
   worst = Math.max(worst, rel);
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${o.name.padEnd(26)} peak ${peak.toFixed(3)}  max diff / peak ${rel.toExponential(2)}`);
 }
-console.log(fails ? `${fails} TOP Sound(s) differ from beta 0.7` : `the 22 TOP Sounds match beta 0.7 (worst ${worst.toExponential(2)} of the peak)`);
+console.log(fails ? `${fails} TOP Sound(s) differ from beta 0.7` : `the ${compared} TOP Sounds that are in beta 0.7 as it was match it (worst ${worst.toExponential(2)} of the peak)`);
 process.exit(fails ? 1 : 0);
