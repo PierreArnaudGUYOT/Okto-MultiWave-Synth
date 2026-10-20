@@ -318,7 +318,7 @@ class MacWindow : public EditorWindow {
     d.withSection = withSection;
     const CGFloat W = 320, rowH = 30, H = withSection ? 2 * rowH : rowH;
     NSView* acc = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, W, H)];
-    NSTextField* label = [NSTextField labelWithString:ns(d.label)];
+    NSTextField* label = [NSTextField labelWithString:@"Name:"];
     label.frame = NSMakeRect(0, H - rowH + 5, 64, 20);
     NSTextField* name = [[NSTextField alloc] initWithFrame:NSMakeRect(68, H - rowH + 3, W - 68, 24)];
     name.stringValue = ns(d.name);
@@ -339,7 +339,7 @@ class MacWindow : public EditorWindow {
       NSAlert* a = [[NSAlert alloc] init];
       a.messageText = ns(title);
       if (note) a.informativeText = ns(note);
-      [a addButtonWithTitle:ns(d.ok)];
+      [a addButtonWithTitle:@"Save"];
       [a addButtonWithTitle:@"Cancel"];
       a.accessoryView = acc;
       [a layout];
@@ -348,7 +348,7 @@ class MacWindow : public EditorWindow {
       std::wstring n = wide(name.stringValue);
       while (!n.empty() && iswspace(n.back())) n.pop_back();
       while (!n.empty() && iswspace(n.front())) n.erase(n.begin());
-      if ((int)n.size() > std::min(48, std::max(1, d.maxLen))) n.resize(std::min(48, std::max(1, d.maxLen)));   // as the Windows dialog
+      if (n.size() > 48) n.resize(48);   // as the Windows dialog
       if (n.empty()) { NSBeep(); continue; }
       d.name = n;
       if (sec) d.section = std::max(0, (int)sec.indexOfSelectedItem);

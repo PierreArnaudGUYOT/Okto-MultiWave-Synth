@@ -272,7 +272,7 @@ class WinWindow : public EditorWindow {
     if (msg == WM_INITDIALOG) {
       s = (SaveDlg*)lp;
       SetWindowLongPtrW(d, DWLP_USER, (LONG_PTR)s);
-      SendDlgItemMessageW(d, 101, EM_LIMITTEXT, (WPARAM)std::min(48, std::max(1, s->maxLen)), 0);
+      SendDlgItemMessageW(d, 101, EM_LIMITTEXT, (WPARAM)48, 0);
       SetDlgItemTextW(d, 101, s->name.c_str());
       if (s->withSection) {
         for (int i = 0; i < kNumBankSections; i++) SendDlgItemMessageW(d, 102, CB_ADDSTRING, 0, (LPARAM)toW(kBankSections[i]).c_str());
@@ -399,13 +399,13 @@ bool WinWindow::saveDialog(SaveDlg& d, const wchar_t* title, bool withSection, c
   str(title);
   t.push_back(9); str(L"Segoe UI");
   if (note) item(SS_LEFT, 8, 7, 220, 22, 0xFFFF, 0x82, note);
-  item(SS_LEFT, 8, (short)(top + 11), 40, 10, 0xFFFF, 0x82, d.label);
+  item(SS_LEFT, 8, (short)(top + 11), 40, 10, 0xFFFF, 0x82, L"Name:");
   item(ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 50, (short)(top + 9), 178, 13, 101, 0x81, L"");
   if (withSection) {
     item(SS_LEFT, 8, (short)(top + 32), 40, 10, 0xFFFF, 0x82, L"Section:");
     item(CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 50, (short)(top + 30), 178, 160, 102, 0x85, L"");
   }
-  item(BS_DEFPUSHBUTTON | WS_TABSTOP, 122, (short)(top + bottom), 50, 16, IDOK, 0x80, d.ok);
+  item(BS_DEFPUSHBUTTON | WS_TABSTOP, 122, (short)(top + bottom), 50, 16, IDOK, 0x80, L"Save");
   item(BS_PUSHBUTTON | WS_TABSTOP, 178, (short)(top + bottom), 50, 16, IDCANCEL, 0x80, L"Cancel");
   (void)items;
   std::vector<DWORD> mem((t.size() + 1) / 2 + 1);   // DWORD-aligned copy

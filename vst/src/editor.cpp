@@ -23,7 +23,6 @@
 #include "common.h"
 #include "bank.h"
 #include "editor_platform.h"
-#include "generated/vote_data.h"   // EVALUATE SOUNDS: the listening passage and the descriptions
 
 using namespace Steinberg;
 
@@ -62,7 +61,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         items.push_back(Item{&w, s, R{sd.x + w.x, sd.y + w.y, w.w, w.h}});
       }
     }
-    for (size_t k = 0; k < items.size(); k++) if (items[k].w->type == W_EVALUATE) evalIdx = (int)k;
     for (int s = 0; s < kNumSections; s++) if (std::strcmp(kSections[s].id, "chord") == 0) chordSec = s;
     for (size_t k = 0; k < items.size(); k++) if (items[k].section == chordSec) chordItems.push_back((int)k);
     for (int i = 0; i < kNumParams; i++) lastPlain[i] = host->getPlain(i);
@@ -171,7 +169,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   int liveChordRoot = -1, liveChordLast = 60; uint32_t liveChordBits[4] = {}; uint32_t liveChordEdits = 0;
   int padHover = -1, plateTouch = -1;
   // interaction
-  int evalIdx = -1;   // the EVALUATE SOUNDS button
   int hover = -1, drag = -1; float dragY = 0; double dragNorm = 0; bool dragShift = false, dragMoved = false;   // hover -2 = SAVE PRESET
   int mouseNote = -1; int wheelDrag = -1;  // 0 bend, 1 mod
 
@@ -207,7 +204,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
 
   void cleanup() {
     if (win) {
-      voteStop();   // the sound played before the session comes back
       if (mouseNote >= 0) noteOff(mouseNote);
       if (plateTouch >= 0) { plateOff(plateTouch); plateTouch = -1; }
       delete win; win = nullptr;   // the timer, the window and its drawing resources
@@ -257,7 +253,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
 
   void timer() override { onTimer(); }
   void onTimer() {
-    voteTick();   // EVALUATE SOUNDS
     // parameter changes (automation, preset loads, host)
     uint32_t ver = host->paramVersion();
     if (ver != lastVersion) {
@@ -385,7 +380,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     int b = drag >= 0 ? drag : hover;
     if (b >= 0 && visible(items[b]) && (items[b].w->type == W_KNOBS || items[b].w->type == W_DRAWBAR)) drawBubble(g, items[b]);
     drawSaveBtn(g);
-    drawVote(g);
     if (host->browserOpen() && bCard().hits(dirty)) { drawBrowser(g); if (chordSide) drawChordInBrowser(g, dirty); }   // the browser (a copy of the library, hundreds of reads) only when its part is drawn again
   }
 
@@ -426,7 +420,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       case W_CREDIT: drawCredit(g, it.r); break;
       case W_TOGGLE: drawToggle(g, idx); break;
       case W_LABEL: text(g, toW(it.w->text ? it.w->text : ""), it.r, 10.5f, true, rgb(kDim), 0); break;   // beta 0.6: SCALOGRAM
-      case W_EVALUATE: drawEvaluateBtn(g, idx); break;   // Okto MultiWave Synth
       case W_CHORDPADS: drawChordPads(g, idx); break;
       case W_CHORDNAME: drawChordName(g, it.r); break;
       case W_STRUMPLATE: drawStrumPlate(g, it.r); break;
@@ -983,18 +976,12 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     gesture(id, v);
   }
   void wheel(float x, float y, int dir) override {
-    if (vPhase != V_OFF && (vPhase != V_EDIT || x >= kDeviceW)) return;   // EVALUATE SOUNDS
     if (host->browserOpen() && (bList().has(x, y) || bScrollR().has(x, y))) { browserWheel(dir); return; }
     int idx = hit(x, y);
     if (idx >= 0) wheelOn(idx, dir);
   }
 
   void mouseDown(float x, float y, bool dbl) override {
-    if (vPhase != V_OFF) {   // EVALUATE SOUNDS: the window takes the mouse; the header button stops the session
-      if (evalIdx >= 0 && items[evalIdx].r.has(x, y)) { if (!dbl) voteStop(); return; }
-      if (voteCovers(x, y)) { if (!dbl) voteClick(x, y); return; }
-      if (kSaveBtn.has(x, y) || x >= kDeviceW) return;   // nothing is saved or browsed while rating
-    }
     if (kSaveBtn.has(x, y)) { if (!dbl) savePreset(); onTimer(); invalidateAll(); return; }
     if (host->browserOpen() && x >= kDeviceW) { browserClick(x, y); return; }
     int idx = hit(x, y);
@@ -1033,9 +1020,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         gesture(w.param, p.min + ((cur + d) % n + n) % n);
         return;
       }
-      case W_EVALUATE: voteBegin(); return;
       case W_PRESETS: {
-        if (vPhase != V_OFF) return;
         int pi = host->presetIndex();
         if (x < it.r.x + 30) { const int k = stepPreset(pi, -1); if (k >= 0) host->loadPreset(k); }   // deleted presets skipped
         else if (x > it.r.x + it.r.w - 30) { const int k = stepPreset(pi, 1); if (k >= 0) host->loadPreset(k); }
@@ -1082,7 +1067,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
   // right-click (or Control-click on a Mac) on the preset name: the classic menu; on a sound of the browser: its menu
   void rightDown(float x, float y) override {
-    if (vPhase != V_OFF) return;
     if (host->browserOpen() && x >= kDeviceW) { browserRightClick(x, y); return; }
     const int idx = hit(x, y);
     if (idx >= 0 && items[idx].w->type == W_PRESETS) { presetMenu(items[idx]); onTimer(); invalidateAll(); }
@@ -1132,15 +1116,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       double v = toPlain(p, n);
       if (v != plainOf(it.w->param)) { setPlain(it.w->param, v); onTimer(); }
       return false;
-    }
-    if (vPhase != V_OFF) {   // EVALUATE SOUNDS: the buttons of its window; nothing else lights up behind it
-      const bool onEval = evalIdx >= 0 && items[evalIdx].r.has(x, y);
-      const int vh = !onEval && voteCovers(x, y) ? voteHit(x, y) : -1;
-      if (vh != vHover) { vHover = vh; voteInvalidate(); }
-      if (!onEval && voteCovers(x, y)) {
-        if (hover != -1) { const int old = hover; hover = -1; invalidateItem(old); if (old == -2) invalidateLogical(kSaveBtn); }
-        return true;
-      }
     }
     int h = kSaveBtn.has(x, y) ? -2 : hit(x, y);
     if (h != hover) {
@@ -1193,7 +1168,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   void mouseLeave() override {
-    if (vHover >= 0) { vHover = -1; voteInvalidate(); }
     if (drag < 0 && hover >= 0) { int o = hover; hover = -1; invalidateItem(o); }
     if (hover == -2) { hover = -1; invalidateLogical(kSaveBtn); }
     if (bHover >= 0) { bHover = -1; invalidateLogical(bCard()); }
@@ -1212,7 +1186,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // (its window procedure and IPlugView::onKeyDown) within a few milliseconds counts once.
   bool key(int k) override {
     if (k < kKeyLeft || k > kKeyDown) return false;
-    if (vPhase != V_OFF) return true;   // EVALUATE SOUNDS: the presets do not change while rating
     const auto now = std::chrono::steady_clock::now();
     if (k == lastKey && now - lastKeyAt < std::chrono::milliseconds(12)) return true;
     lastKey = k; lastKeyAt = now;
@@ -1252,500 +1225,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     return true;
   }
 
-  // ================================================================ EVALUATE SOUNDS: listen-and-rate session
-  // EVALUATE SOUNDS plays each of the new presets (beta 0.3: 501-1100, then 201-500, then 001-200) with the same 3.5 s of Beethoven as the web app
-  // and a C minor chord of 2 s (the plug-in plays it itself: vote_data.h; "Skip to vote" ends the music at once), then asks a rating from 1 to 10 stars. The sounds come in SETS OF 40:
-  // "Start at…" asks for the number of the first sound, every set has its own file next to the ratings file ("sound 502 to sound 541.txt",
-  // rewritten after every rating, so a set is never lost). Above 5 stars it offers to modify the preset: it is loaded
-  // exactly as designed, a bar replaces the on-screen keyboard, the player changes the panel with the mouse and plays it on the
-  // MIDI keyboard, then keeps the initial settings or records the change (the parameters that differ from the preset). Ratings and
-  // changes are rewritten to the ratings file after every rating or change (nothing is lost when the player stops) and read back at
-  // the next session, which continues where it stopped. The file is Documents\Okto MultiWave Synth\okto-multiwave-ratings.txt
-  // (Documents, else the local application data folder) unless the player chooses another one ("Change file…", remembered); it has
-  // the same format as the web app's file.
-  enum { V_OFF, V_START, V_PLAY, V_VOTE, V_ASK, V_EDIT, V_END };
-  static constexpr int kAskAbove = 5;                       // a rating above this offers to modify the preset
-  static constexpr int kSetSize = 40;                       // sounds per set (one file each)
-  static constexpr double kLead = 0.15;                     // seconds between loading a preset and its passage
-  static constexpr R kVoteCard{200, 280, 700, 262};         // the rating window
-  static constexpr R kVoteBar{190, 932, 898, 96};           // the bar shown while a preset is modified (over the keyboard)
-  static constexpr uint32_t kStar = 0xffcf4a;
-  struct VChange { int param; double from, to; };
-  struct VBtn { std::wstring label; std::function<void()> fn; bool main; R r; };
-  int vPhase = V_OFF, vK = 0, vHover = -1;                  // vHover: a button's index, 100 + n = star n
-  int vK0 = -1;                                             // the first sound of this session (the first set starts there, the next ones every 40), -1 = not started
-  std::vector<int> vList;                                   // preset indices of the new presets
-  std::vector<int> vVotes;                                  // per vList entry, 0 = not rated, else 1..10
-  std::vector<std::vector<VChange>> vChanges;               // per vList entry, empty = no recorded change
-  std::vector<VBtn> vBtns;
-  std::wstring vTitle, vName, vDesc, vStatus;
-  double vSaved[kNumParams] = {}; int vSavedPreset = 0; bool vSavedDirty = false; std::string vSavedUser;
-  std::chrono::steady_clock::time_point vT0{}; uint32_t vSeqId = 0; bool vSent = false; float vProgress = 0;
-  std::wstring vPath, vSaveErr;                             // the ratings file; the last save error ('' = saved)
-
-  // the number of a preset as written in its name ("012", "502", "1000"): the text before the first space; and the rest ("A1A2 · Glass Bell")
-  static std::string presetNum(const char* name) { const std::string s(name); const size_t e = s.find(' '); return e == std::string::npos ? s : s.substr(0, e); }
-  static const char* presetRest(const char* name) { const char* e = name; while (*e && *e != ' ') e++; return *e ? e + 1 : name; }
-  std::string vNum(int k) const { return presetNum(kPresets[vList[k]].name); }
-  // the set (of 40 sounds) that sound k belongs to: its first and last sound
-  void voteSetRange(int k, int& lo, int& hi) const {
-    const int n = (int)vList.size(), b = (int)std::floor((double)(k - vK0) / kSetSize);
-    lo = std::max(0, vK0 + b * kSetSize); hi = std::min(n - 1, vK0 + b * kSetSize + kSetSize - 1);
-  }
-  std::string voteSetName(int lo, int hi) const { return "sound " + vNum(lo) + " to sound " + vNum(hi) + ".txt"; }
-  // the file of the set of sound k, next to the ratings file ("" before the session has started)
-  std::wstring voteSetPath(int k) const {
-    const size_t slash = vPath.find_last_of(L"\\/");
-    if (vK0 < 0 || slash == std::wstring::npos || vList.empty()) return L"";
-    int lo, hi; voteSetRange(k, lo, hi);
-    return vPath.substr(0, slash + 1) + toW(voteSetName(lo, hi));
-  }
-  int vVoted() const { int n = 0; for (int v : vVotes) if (v > 0) n++; return n; }
-  int vChanged() const { int n = 0; for (auto& c : vChanges) if (!c.empty()) n++; return n; }
-  int vNextFree() const { for (size_t k = 0; k < vList.size(); k++) if (vVotes[k] <= 0) return (int)k; return (int)vList.size(); }
-  static std::wstring voteDir() {
-    const std::wstring t = envPath(L"MW_VOTES_DIR");   // developer tests
-    return !t.empty() ? t : userDocumentsFolder() + kPathSep + L"Okto MultiWave Synth";
-  }
-  static std::wstring voteLocationFile() { return voteDir() + kPathSep + L"ratings-location.txt"; }   // the file chosen with "Change file…"
-  static std::wstring voteRememberedPath() {
-    bool found = false;
-    std::string s = readTextFile(voteLocationFile(), found);
-    while (!s.empty() && (s.back() == '\n' || s.back() == '\r' || s.back() == ' ')) s.pop_back();
-    if (found && !s.empty()) return toW(s);
-    return voteDir() + kPathSep + L"okto-multiwave-ratings.txt";
-  }
-  // the path as shown: "Documents\..." for a file in the Documents folder
-  std::wstring voteShortPath() const {
-    const std::wstring d = userDocumentsFolder();
-    if (!d.empty() && vPath.size() > d.size() && vPath.compare(0, d.size(), d) == 0 && vPath[d.size()] == kPathSep) return L"Documents" + vPath.substr(d.size());
-    return vPath;
-  }
-  static bool isVotesFile(const std::wstring& path) {   // a file this session may read and rewrite
-    bool found = false;
-    const std::string s = readTextFile(path, found);
-    return found && s.compare(0, 37, "Okto MultiWave Synth - preset ratings") == 0;
-  }
-  static std::string jsNum(double v) {   // as JavaScript prints +v.toFixed(6)
-    char b[64]; std::snprintf(b, sizeof b, "%.6f", v);
-    std::string s = b;
-    while (!s.empty() && s.back() == '0') s.pop_back();
-    if (!s.empty() && s.back() == '.') s.pop_back();
-    return s == "-0" ? "0" : s;
-  }
-
-  // ---- ratings file (read at the start of a session, rewritten after every rating or change)
-  void voteLoad() {
-    vVotes.assign(vList.size(), 0); vChanges.assign(vList.size(), {});
-    bool found = false;
-    const std::string all = readTextFile(vPath, found);
-    if (!found) return;
-    auto entry = [&](const std::string& line, size_t* digits = nullptr) -> int {   // "NNN..." or "NNNN..." -> vList entry, or -1
-      size_t d = 0;
-      while (d < line.size() && isdigit((unsigned char)line[d])) d++;
-      if (d < 3 || d > 4 || d >= line.size() || line[d] != ' ') return -1;
-      if (digits) *digits = d;
-      const std::string num = line.substr(0, d);
-      for (size_t k = 0; k < vList.size(); k++) if (num == vNum((int)k)) return (int)k;
-      return -1;
-    };
-    bool inChanges = false; int cur = -1;
-    for (size_t p = 0; p < all.size();) {
-      size_t e = all.find('\n', p); if (e == std::string::npos) e = all.size();
-      std::string line = all.substr(p, e - p); p = e + 1;
-      if (!line.empty() && line.back() == '\r') line.pop_back();
-      if (line.rfind("PRESET CHANGES", 0) == 0) { inChanges = true; continue; }
-      if (!inChanges) {   // "001 |  7 | yes     | A1A2 · Deep Saw Bass"
-        size_t d = 0; int v;
-        const int k = entry(line, &d);
-        if (k >= 0 && line.compare(d, 2, " |") == 0 && std::sscanf(line.c_str() + d + 2, "%d", &v) == 1 && v >= 1 && v <= 10) vVotes[k] = v;
-      } else if (line.compare(0, 2, "  ") == 0 && cur >= 0) {   // "  f_cutoff: 7 -> 5.5   (Cutoff: ... -> ...)"
-        size_t c = line.find(':');
-        double a, b;
-        if (c == std::string::npos || std::sscanf(line.c_str() + c + 1, " %lf -> %lf", &a, &b) != 2) continue;
-        std::string key = line.substr(2, c - 2);
-        for (int i = 0; i < kNumParams; i++) if (key == kParams[i].key && !kParams[i].hidden && !kParams[i].perf) { vChanges[cur].push_back(VChange{i, a, b}); break; }
-      } else if (line.size() > 4) cur = entry(line);   // "012 A1A2 · Glass Bell   (8 stars)"
-    }
-  }
-  // the text of the ratings file: every sound, or (lo >= 0) the sounds lo..hi of the list (a set of 40, same format as the web app's set files)
-  std::string voteText(int lo = -1, int hi = -1) const {
-    std::string s; char b[512];
-    auto put = [&](const std::string& x) { s += x; s += "\r\n"; };
-    const LocalTime t = localNow();
-    const int n = (int)vList.size();
-    const bool set = lo >= 0 && !vList.empty();
-    if (!set) { lo = 0; hi = n - 1; }
-    int nVoted = 0, nChanged = 0;
-    for (int k = lo; k <= hi; k++) { if (vVotes[k] > 0) nVoted++; if (!vChanges[k].empty()) nChanged++; }
-    put("Okto MultiWave Synth - preset ratings (1 star = poor ... 10 stars = excellent)");
-    put("Listening: Beethoven, Appassionata (III), 3.5 s from 0:13 of the demo, then a C minor chord (2 s); each preset played polyphonic at its normal octave. Rated in the VST plug-in.");
-    put("Presets: A1 A2 = subtractive oscillators, B1 = the additive oscillator; the letters of a name say which oscillators the preset uses.");
-    if (set) put("Set: sound " + vNum(lo) + " to sound " + vNum(hi) + " (" + std::to_string(hi - lo + 1) + " sounds)");
-    std::snprintf(b, sizeof b, "Saved: %04d-%02d-%02d %02d:%02d   Rated: %d / %d   Presets with a recorded change: %d",
-                  t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, nVoted, hi - lo + 1, nChanged);
-    put(b);
-    put("");
-    put("NUMBER | STARS | CHANGED | PRESET");
-    for (int k = lo; k <= hi; k++) {
-      std::string st = vVotes[k] > 0 ? (vVotes[k] < 10 ? " " : "") + std::to_string(vVotes[k]) : " -";
-      put(vNum(k) + " | " + st + " | " + (vChanges[k].empty() ? "       " : "yes    ") + " | " + presetRest(kPresets[vList[k]].name));
-    }
-    put("");
-    put("RANKING (best first)");
-    std::vector<int> order;
-    for (int k = lo; k <= hi; k++) if (vVotes[k] > 0) order.push_back(k);
-    std::stable_sort(order.begin(), order.end(), [&](int a, int c) { return vVotes[a] > vVotes[c]; });
-    for (int k : order)
-      put((vVotes[k] < 10 ? " " : "") + std::to_string(vVotes[k]) + " | " + kPresets[vList[k]].name + (vChanges[k].empty() ? "" : "   (changed)"));
-    put("");
-    put("PRESET CHANGES (recorded by the player: apply them to the preset)");
-    put("Format: parameter key: value in the preset -> new value   (name: shown value -> new shown value)");
-    if (!nChanged) put("(none)");
-    for (int k = lo; k <= hi; k++) {
-      if (vChanges[k].empty()) continue;
-      put("");
-      put(std::string(kPresets[vList[k]].name) + "   (" + (vVotes[k] > 0 ? std::to_string(vVotes[k]) + " stars" : std::string("not rated")) + ")");
-      for (const VChange& c : vChanges[k]) {
-        const ParamDef& p = kParams[c.param];
-        put(std::string("  ") + p.key + ": " + jsNum(c.from) + " -> " + jsNum(c.to) + "   (" + p.name + ": " + formatValue(p, c.from) + " -> " + formatValue(p, c.to) + ")");
-      }
-    }
-    return s;
-  }
-  bool voteSave() {
-    const size_t slash = vPath.find_last_of(L"\\/");
-    if (slash == std::wstring::npos) { vStatus = vSaveErr = L"NOT SAVED: no folder for the ratings file (choose one with “Change file…”)."; return false; }
-    makeFolder(vPath.substr(0, slash));   // Documents\Okto MultiWave Synth, the first time
-    const std::wstring e = writeTextFile(vPath, voteText());
-    if (!e.empty()) { vStatus = vSaveErr = L"NOT SAVED: could not write " + vPath + L" (" + e + L")"; return false; }
-    // the file of the set being rated, next to it ("sound 502 to sound 541.txt")
-    const std::wstring sp = voteSetPath(vK);
-    if (!sp.empty()) {
-      int lo, hi; voteSetRange(vK, lo, hi);
-      const std::wstring e2 = writeTextFile(sp, voteText(lo, hi));
-      if (!e2.empty()) { vStatus = vSaveErr = L"NOT SAVED: could not write " + sp + L" (" + e2 + L")"; return false; }
-    }
-    vSaveErr.clear();
-    return true;
-  }
-  // "Change file…": the ratings file elsewhere (remembered). An existing ratings file continues where it stopped; a new file
-  // receives the ratings so far.
-  void voteChooseFile() {
-    if (!win) return;
-    const std::wstring path = win->saveFileDialog(L"Ratings file: where to save the ratings (an existing ratings file continues where you stopped)", L"okto-multiwave-ratings.txt");
-    if (path.empty()) return;
-    const bool exists = fileExists(path);
-    if (exists && !isVotesFile(path)) {
-      win->message(L"This file is not a ratings file of Okto MultiWave Synth: it is left untouched.\nChoose a new file name, or an existing ratings file.", false);
-      return;
-    }
-    vPath = path;
-    makeFolder(voteDir());
-    writeTextFile(voteLocationFile(), fromW(vPath));
-    if (exists) voteLoad(); else voteSave();
-    voteStartScreen();
-  }
-  void voteOpenFile() {
-    if (!fileExists(vPath)) { vStatus = L"No ratings file yet: it is written after the first rating."; voteInvalidate(); return; }
-    if (win) win->reveal(vPath);
-  }
-  // "Save as…": a copy of the ratings so far under a name of the player's choice (stop half way and keep this state); the ratings file
-  // being rewritten stays as it is, and the session goes on with it
-  void voteSaveAs() {
-    if (!win) return;
-    char b[160]; const LocalTime t = localNow();
-    // while a session runs, the copy is the set being rated (its name and its sounds), as in the web app
-    int lo = -1, hi = -1;
-    if (vK0 >= 0 && !vList.empty() && vPhase != V_START && vPhase != V_END) voteSetRange(vK, lo, hi);
-    if (lo >= 0) std::snprintf(b, sizeof b, "%s", voteSetName(lo, hi).c_str());
-    else std::snprintf(b, sizeof b, "okto-multiwave-ratings-%dof%d-%04d-%02d-%02d.txt", vVoted(), (int)vList.size(), t.wYear, t.wMonth, t.wDay);
-    const std::wstring forced = envPath(L"MW_SAVEAS_PATH");   // developer tests: no window
-    const std::wstring path = !forced.empty() ? forced : win->saveFileDialog(L"Save a copy of the ratings as…", toW(b).c_str());
-    if (path.empty()) return;
-    const std::wstring e = writeTextFile(path, voteText(lo, hi));
-    vStatus = e.empty() ? L"Copy saved (" + std::to_wstring(vVoted()) + L" rated): " + path : L"NOT SAVED: could not write " + path + L" (" + e + L")";
-    voteInvalidate();
-  }
-
-  // ---- phases
-  std::shared_ptr<SharedState> voteAudio() { return host->sharedState(); }
-  std::wstring voteFileLabel() const {
-    if (!vSaveErr.empty()) return vSaveErr;
-    return L"Saved after every rating (" + std::to_wstring(vVoted()) + L" rated): " + voteShortPath();
-  }
-  std::wstring voteNote(int k) const {
-    if (vVotes[k] <= 0) return L"";
-    return L"Already rated: " + std::to_wstring(vVotes[k]) + (vVotes[k] == 1 ? L" star" : L" stars") + (vChanges[k].empty() ? L"" : L", change recorded") + L". ";
-  }
-  void voteShow(int phase, std::vector<VBtn> btns) {
-    vPhase = phase; vBtns = std::move(btns); vHover = -1;
-    if (win) win->invalidateAll();
-  }
-  void voteBegin() {
-    if (vPhase != V_OFF) return;
-    if (vList.empty()) for (int k = 0; k < kNumNew; k++) vList.push_back(kFirstNew + k);   // the new presets (the order of the factory list)
-    if (vList.empty()) return;
-    vK0 = -1;
-    vPath = voteRememberedPath(); vSaveErr.clear();
-    voteLoad();
-    currentParams(vSaved); vSavedPreset = host->presetIndex(); vSavedDirty = host->presetDirty(); vSavedUser = host->userPresetName();
-    voteStartScreen();
-  }
-  void voteStartScreen() {
-    const int done = vVoted(), next = vNextFree(), n = (int)vList.size();
-    vK0 = -1;
-    vTitle = L"LISTEN AND RATE · " + std::to_wstring(n) + L" NEW PRESETS";
-    vName = done ? std::to_wstring(done) + L" of " + std::to_wstring(n) + L" presets rated" : std::to_wstring(n) + L" new presets to rate";
-    vDesc = L"Each preset plays 3.5 s of Beethoven and a C minor chord; rate it from 1 (poor) to 10 stars (excellent). "
-            L"Above 5 stars you can modify it. The sounds come in sets of 40, each with its own .txt file.";
-    vProgress = (float)done / n;
-    std::vector<VBtn> b;
-    b.push_back({L"Start at…", [this] { voteAskStart(); }, !done || next >= n, {}});
-    if (done && next < n) b.push_back({L"Continue at " + toW(vNum(next)), [this, next] { voteStartAt(next); }, true, {}});
-    b.push_back({L"Change file…", [this] { voteChooseFile(); }, false, {}});
-    if (done) b.push_back({L"Save as…", [this] { voteSaveAs(); }, false, {}});
-    if (fileExists(vPath)) b.push_back({L"Show file", [this] { voteOpenFile(); }, false, {}});
-    if (done) b.push_back({L"Clear all", [this] {
-      if (!win || !win->ask(L"Clear all your ratings and recorded changes?")) return;
-      vVotes.assign(vList.size(), 0); vChanges.assign(vList.size(), {});
-      voteSave(); voteStartScreen();
-    }, false, {}});
-    b.push_back({L"Close", [this] { voteStop(); }, false, {}});
-    vStatus = voteAudio() ? voteFileLabel() : L"The audio part of the plug-in is not connected: the passage cannot play.";
-    voteShow(V_START, std::move(b));
-  }
-  // "Start at…": the player types the number of the first sound (the first one not rated yet is offered)
-  void voteAskStart() {
-    const int n = (int)vList.size(), next = vNextFree();
-    long vlo = 1 << 30, vhi = 0;   // the list starts at 501 but its numbers run from 001 to 1100
-    for (int i = 0; i < n; i++) { const long x = std::atol(vNum(i).c_str()); vlo = std::min(vlo, x); vhi = std::max(vhi, x); }
-    char range[48]; std::snprintf(range, sizeof range, "%03ld to %ld", vlo, vhi);
-    std::wstring t = envPath(L"MW_START_AT");   // developer tests: no window
-    if (t.empty()) {
-      if (!win) return;
-      SaveDlg d; d.name = toW(vNum(next < n ? next : 0)); d.label = L"Number:"; d.ok = L"Start"; d.maxLen = 6;
-      if (!win->saveDialog(d, L"Start at…", false, (L"Number of the first sound to rate (the list starts at " + toW(vNum(0)) + L"; numbers go from " + toW(range) + L"):").c_str())) return;
-      t = d.name;
-    }
-    const long v = std::wcstol(t.c_str(), nullptr, 10);
-    int k = -1;
-    for (int i = 0; i < n && v > 0; i++) if (std::atol(vNum(i).c_str()) == v) { k = i; break; }
-    if (k < 0) {
-      vStatus = L"No sound numbered “" + t + L"” in the list (numbers " + toW(range) + L").";
-      voteInvalidate();
-      return;
-    }
-    voteStartAt(k);
-  }
-  void voteStartAt(int k) { vK0 = std::max(0, std::min((int)vList.size() - 1, k)); votePlay(k); }
-  // loads preset k with the same playing rules as the demo's preset tour (polyphonic, normal octave, no glide, short
-  // attacks, short echoes) and plays the passage once its sound is ready
-  void votePlay(int k) {
-    if (k >= (int)vList.size()) { voteFinish(); return; }
-    if (vK0 < 0) vK0 = std::max(0, k);
-    vK = std::max(0, k);
-    const int pk = vList[vK];
-    if (auto sh = voteAudio()) sh->seqStop.store(2);   // no tail of the previous preset
-    host->setSound(kPresets[pk].v, pk, false);
-    host->setPlainGesture(P_V_VOICES, 16); host->setPlainGesture(P_V_OCT, 0); host->setPlainGesture(P_V_GLIDE, 0);
-    if (plainOf(P_AMP_A) > 0.08) host->setPlainGesture(P_AMP_A, 0.08);
-    if (plainOf(P_FX_DMIX) > 0.1) host->setPlainGesture(P_FX_DMIX, 0.1);
-    if (plainOf(P_FX_DFB) > 0.3) host->setPlainGesture(P_FX_DFB, 0.3);
-    vT0 = std::chrono::steady_clock::now(); vSent = false; vProgress = 0;
-    int lo, hi; voteSetRange(vK, lo, hi);
-    vTitle = L"PRESET " + std::to_wstring(vK + 1) + L" OF " + std::to_wstring(vList.size()) + L" · " + toW(kPresets[pk].cat) + L" · SET " + toW(vNum(lo)) + L"–" + toW(vNum(hi));
-    vName = toW(kPresets[pk].name);
-    vDesc = L"Playing… " + toW(kPresetDesc[pk]);
-    vStatus = voteNote(vK);
-    if (vStatus.empty()) vStatus = voteFileLabel();
-    voteShow(V_PLAY, {{L"Skip to vote", [this] { voteAsk(); }, true, {}}, {L"Stop", [this] { voteStop(); }, false, {}}});   // beta 0.3.1: Skip ends the music and goes to the rating
-  }
-  void voteTick() {
-    if (vPhase != V_PLAY) return;
-    auto sh = voteAudio();
-    const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - vT0).count();
-    if (!vSent && el >= kLead) { if (sh) vSeqId = sh->seqStart.fetch_add(1) + 1; vSent = true; }
-    const float t = sh && vSent ? sh->seqTime.load() : -1.0f;
-    const bool done = vSent && sh && sh->seqDone.load() == vSeqId;
-    const float prog = done ? 1.0f : t >= 0 ? (float)std::min(1.0, t / kVotePassageLen) : vProgress;
-    if (prog != vProgress) { vProgress = prog; invalidateLogical(R{kVoteCard.x + 18, kVoteCard.y + 98, kVoteCard.w - 36, 8}); }
-    if (done) voteAsk();
-    else if (el > kLead + kVotePassageLen + 4) {   // no audio (host engine stopped?)
-      voteAsk();
-      vStatus = L"The passage did not play: is the audio engine of the host running?";
-    }
-  }
-  void voteAsk() {
-    if (auto sh = voteAudio()) sh->seqStop.store(1);   // the passage has ended: its last notes are released
-    const int pk = vList[vK];
-    vDesc = kPresetDesc[pk][0] ? toW(kPresetDesc[pk]) : L"How do you like this preset?";
-    vStatus = voteNote(vK) + L"Rate 1–10 (you can also play your MIDI keyboard to try the preset).";
-    voteShow(V_VOTE, {{L"▶ Replay", [this] { votePlay(vK); }, true, {}}, {L"◀ Previous", [this] { votePlay(vK - 1); }, false, {}},
-                      {L"Skip", [this] { votePlay(vK + 1); }, false, {}},
-                      {L"Save now", [this] { if (voteSave()) vStatus = L"Saved now (" + std::to_wstring(vVoted()) + L" rated): " + voteShortPath(); voteInvalidate(); }, false, {}},
-                      {L"Save as…", [this] { voteSaveAs(); }, false, {}},
-                      {L"Stop", [this] { voteStop(); }, false, {}}});
-  }
-  void voteCast(int n) {
-    vVotes[vK] = n;
-    voteSave();
-    if (n > kAskAbove) {
-      vDesc = L"You gave " + std::to_wstring(n) + L" stars. Do you want to modify this preset? You will change the panel with the mouse "
-              L"and play it on your MIDI keyboard, then keep the initial settings or record the change.";
-      vStatus = L"";
-      voteShow(V_ASK, {{L"Yes, modify it", [this] { voteEdit(); }, true, {}}, {L"No, next preset", [this] { votePlay(vK + 1); }, false, {}},
-                       {L"Stop", [this] { voteStop(); }, false, {}}});
-    } else votePlay(vK + 1);
-  }
-  // the preset exactly as designed (without the listening rules), with the change recorded before if any
-  void voteEdit() {
-    if (auto sh = voteAudio()) sh->seqStop.store(2);
-    const int pk = vList[vK];
-    double v[kNumParams];
-    for (int i = 0; i < kNumParams; i++) v[i] = kPresets[pk].v[i];
-    for (const VChange& c : vChanges[vK]) v[c.param] = c.to;
-    host->setSound(v, pk, !vChanges[vK].empty());
-    vTitle = L"MODIFY " + toW(kPresets[pk].name);
-    vDesc = L"Change the sound on the panel with the mouse, play it on your MIDI keyboard. Loaded as designed" +
-            std::wstring(vChanges[vK].empty() ? L"." : L", with your recorded change.");
-    vStatus = L"";
-    voteShow(V_EDIT, {{L"▶ Play the passage", [this] { if (auto sh = voteAudio()) sh->seqStart.fetch_add(1); }, false, {}},
-                      {L"Keep initial settings", [this] { vChanges[vK].clear(); voteSave(); votePlay(vK + 1); }, false, {}},
-                      {L"Record preset change", [this] { voteRecord(); }, true, {}},
-                      {L"Stop", [this] { voteStop(); }, false, {}}});
-  }
-  void voteRecord() {
-    const int pk = vList[vK];
-    std::vector<VChange> ch;
-    for (int i = 0; i < kNumParams; i++) {
-      const ParamDef& p = kParams[i];
-      if (p.hidden || p.perf || i == P_OSC_VIEW) continue;   // OSC only chooses the panel shown
-      const double base = kPresets[pk].v[i], cur = plainOf(i);
-      if (std::fabs(toNorm(p, cur) - toNorm(p, base)) > 1e-6) ch.push_back(VChange{i, base, cur});
-    }
-    if (ch.empty()) { vStatus = L"Nothing has changed yet: turn a knob, or choose “Keep initial settings”."; voteInvalidate(); return; }
-    vChanges[vK] = ch;
-    voteSave();
-    votePlay(vK + 1);
-  }
-  void voteFinish() {
-    if (auto sh = voteAudio()) sh->seqStop.store(1);
-    vTitle = L"LISTEN AND RATE · FINISHED";
-    vName = std::to_wstring(vVoted()) + L" of " + std::to_wstring(vList.size()) + L" presets rated — thank you!";
-    std::vector<int> order;
-    for (size_t k = 0; k < vList.size(); k++) if (vVotes[k] > 0) order.push_back((int)k);
-    std::stable_sort(order.begin(), order.end(), [&](int a, int c) { return vVotes[a] > vVotes[c]; });
-    vDesc.clear();
-    for (size_t i = 0; i < order.size() && i < 5; i++) vDesc += (i ? L", " : L"Your top 5: ") + toW(vNum(order[i])) + L" (" + std::to_wstring(vVotes[order[i]]) + L")";
-    vDesc += (vDesc.empty() ? L"" : L". ") + std::to_wstring(vChanged()) + L" preset change(s) recorded.";
-    vProgress = 1;
-    vStatus = voteFileLabel();
-    voteShow(V_END, {{L"Show the ratings file", [this] { voteOpenFile(); }, true, {}}, {L"Save as…", [this] { voteSaveAs(); }, false, {}},
-                     {L"Back to the start", [this] { voteStartScreen(); }, false, {}}, {L"Close", [this] { voteStop(); }, false, {}}});
-  }
-  // ends the session and gives back the sound played before it
-  void voteStop() {
-    if (vPhase == V_OFF) return;
-    if (auto sh = voteAudio()) sh->seqStop.store(2);
-    vPhase = V_OFF; vBtns.clear(); vHover = -1;
-    if (!vSavedUser.empty()) host->loadUserSound(vSaved, vSavedUser); else host->setSound(vSaved, vSavedPreset, vSavedDirty);
-    if (win) { win->invalidateAll(); onTimer(); }
-  }
-
-  // ---- window
-  void voteInvalidate() { if (vPhase != V_OFF) invalidateLogical(vPhase == V_EDIT ? kVoteBar : kVoteCard); }
-  R voteStar(int n) const {   // n = 1..10
-    const float w = (kVoteCard.w - 36 - 9 * 5) / 10;
-    return R{kVoteCard.x + 18 + (n - 1) * (w + 5), kVoteCard.y + 112, w, 46};
-  }
-  bool voteCovers(float x, float y) const { return vPhase != V_OFF && (vPhase != V_EDIT || kVoteBar.has(x, y)); }   // the window takes the mouse
-  int voteHit(float x, float y) const {
-    if (vPhase == V_OFF) return -1;
-    for (size_t i = 0; i < vBtns.size(); i++) if (vBtns[i].r.has(x, y)) return (int)i;
-    if (vPhase == V_VOTE) for (int n = 1; n <= 10; n++) if (voteStar(n).has(x, y)) return 100 + n;
-    return -1;
-  }
-  void voteClick(float x, float y) {
-    const int h = voteHit(x, y);
-    if (h >= 0 && h < (int)vBtns.size()) { auto fn = vBtns[h].fn; fn(); }
-    else if (h >= 101 && h <= 110 && vPhase == V_VOTE) voteCast(h - 100);
-  }
-  // wrapped text (at most `lines` lines) in the box r
-  void wrapText(Canvas& g, const std::wstring& s, R r, float px, Col c, int lines) {
-    std::wstring line; int n = 0;
-    size_t i = 0;
-    while (i <= s.size() && n < lines) {
-      size_t j = s.find(L' ', i); if (j == std::wstring::npos) j = s.size();
-      const std::wstring word = s.substr(i, j - i), tryLine = line.empty() ? word : line + L" " + word;
-      if (!line.empty() && g.textWidth(tryLine, px, false) > r.w) {
-        text(g, line, R{r.x, r.y + n * (px + 4), r.w, px + 4}, px, false, c, 0);
-        line = word; n++;
-      } else line = tryLine;
-      if (j >= s.size()) break;
-      i = j + 1;
-    }
-    if (n < lines && !line.empty()) text(g, line, R{r.x, r.y + n * (px + 4), r.w, px + 4}, px, false, c, 0);
-  }
-  void voteButtons(Canvas& g, float x, float y, float h) {
-    for (size_t i = 0; i < vBtns.size(); i++) {
-      VBtn& b = vBtns[i];
-      b.r = R{x, y, g.textWidth(b.label, 12, b.main) + 24, h};
-      const bool hot = vHover == (int)i;
-      fillRR(g, b.r, 6, Brush(hot ? rgb(0x262c35) : rgb(0x1d2129)));
-      strokeRR(g, R{b.r.x + 0.5f, b.r.y + 0.5f, b.r.w - 1, b.r.h - 1}, 6, b.main || hot ? rgb(accent()) : rgb(0x343b47));
-      text(g, b.label, b.r, 12, b.main, b.main ? rgb(accent()) : rgb(0xe9edf2));
-      x += b.r.w + 8;
-    }
-  }
-  void drawEvaluateBtn(Canvas& g, int idx) {   // the header's button, lit while the session runs (a click stops it)
-    const Item& it = items[idx];
-    const bool run = vPhase != V_OFF, hot = hover == idx;
-    fillRR(g, it.r, 8, run || hot ? Brush(rgb(kStar)) : Brush(rgb(kInset)));
-    strokeRR(g, R{it.r.x + 0.5f, it.r.y + 0.5f, it.r.w - 1, it.r.h - 1}, 8, rgb(run || hot ? kStar : 0x2c333e));
-    text(g, run ? L"STOP" : L"EVALUATE", R{it.r.x, it.r.y + 3, it.r.w, 12}, 9.5f, true, run || hot ? rgb(0x0d1014) : rgb(kDim));
-    text(g, run ? L"EVALUATING" : L"SOUNDS", R{it.r.x, it.r.y + 14, it.r.w, 14}, 12, true, run || hot ? rgb(0x0d1014) : rgb(kStar));
-  }
-  void drawVote(Canvas& g) {
-    if (vPhase == V_OFF) return;
-    if (vPhase == V_EDIT) {
-      const R b = kVoteBar;
-      fillRR(g, b, 10, Brush(rgb(0x0d1014, 250)));
-      strokeRR(g, R{b.x + 0.5f, b.y + 0.5f, b.w - 1, b.h - 1}, 10, rgb(kStar));
-      text(g, vTitle, R{b.x + 14, b.y + 6, b.w - 28, 18}, 12.5f, true, rgb(kStar), 0);
-      text(g, vDesc, R{b.x + 14, b.y + 24, b.w - 28, 16}, 11, false, rgb(0x9aa3b0), 0);
-      voteButtons(g, b.x + 14, b.y + 44, 26);
-      g.textEllipsis(vStatus, R{b.x + 14, b.y + 74, b.w - 28, 16}, 11, false, vSaveErr.empty() ? rgb(kStar) : rgb(0xff5d5d), true);
-      return;
-    }
-    g.fillRect(R{0, 0, kDeviceW, devH()}, Brush(argb(150, 0, 0, 0)));   // the panel behind is dimmed (the header's button stays usable)
-    if (evalIdx >= 0) drawEvaluateBtn(g, evalIdx);
-    const R c = kVoteCard;
-    fillRR(g, c, 12, Brush(rgb(0x0d1014, 248)));
-    strokeRR(g, R{c.x + 0.5f, c.y + 0.5f, c.w - 1, c.h - 1}, 12, rgb(kStar));
-    text(g, vTitle, R{c.x + 18, c.y + 10, c.w - 36, 18}, 11, true, rgb(kStar), 0);
-    text(g, vName, R{c.x + 18, c.y + 30, c.w - 36, 26}, 19, true, rgb(0xe9edf2), 0);
-    wrapText(g, vDesc, R{c.x + 18, c.y + 60, c.w - 36, 36}, 12, rgb(0x9aa3b0), 2);
-    g.fillRect(R{c.x + 18, c.y + 100, c.w - 36, 4.f}, Brush(rgb(0x262c35)));
-    if (vProgress > 0) g.fillRect(R{c.x + 18, c.y + 100, (c.w - 36) * std::min(1.0f, vProgress), 4.f}, Brush(rgb(kStar)));
-    const bool starsOn = vPhase == V_VOTE;
-    const int cur = (vPhase == V_PLAY || vPhase == V_VOTE || vPhase == V_ASK) ? vVotes[vK] : 0;
-    for (int n = 1; n <= 10; n++) {
-      const R s = voteStar(n);
-      const bool lit = n == cur || (starsOn && vHover == 100 + n);
-      const int a = starsOn || n == cur ? 255 : 90;
-      fillRR(g, s, 8, Brush(lit ? rgb(kStar, a) : rgb(0x1d2129, a)));
-      strokeRR(g, R{s.x + 0.5f, s.y + 0.5f, s.w - 1, s.h - 1}, 8, rgb(0x343b47, a));
-      const Col fg = lit ? rgb(0x0d1014, a) : rgb(kStar, a), sub = lit ? rgb(0x0d1014, a) : rgb(0x9aa3b0, a);
-      text(g, std::to_wstring(n), R{s.x, s.y + 4, s.w, 22}, 17, true, fg);
-      if (n == 1 || n == 10) text(g, n == 1 ? L"poor" : L"excellent", R{s.x, s.y + 28, s.w, 13}, 9, false, sub);
-      else starShape(g, s.x + s.w / 2, s.y + 34, 5.5f, fg);
-    }
-    voteButtons(g, c.x + 18, c.y + 170, 28);
-    g.textEllipsis(vStatus, R{c.x + 18, c.y + 206, c.w - 36, 16}, 11.5f, false, vSaveErr.empty() ? rgb(0x9aa3b0) : rgb(0xff5d5d), true);
-    text(g, L"Every rating is saved at once; stop when you like (EVALUATE SOUNDS → Continue picks up). “Save as…” keeps a copy under a name you choose.", R{c.x + 18, c.y + 230, c.w - 36, 16}, 10.5f, false, rgb(0x6f7885), 0);
-  }
-
   // ================================================================ presets: menu, library, browser (beta 0.3)
   // The preset name opens the PRESET BROWSER (a panel at the right of the synth, which can be hidden); a right-click on it
   // opens the classic menu. SAVE PRESET overwrites the preset shown: a factory preset is ADJUSTED in the library (it
@@ -1758,7 +1237,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
                        kCmdBankImport = 903,   // beta 0.4
                        kCmdMoveTo = 7000, kCmdTopAdd = 7100, kCmdTopRemove = 7101;   // beta 0.5: the sound menu (ctxRow)
   static constexpr float kBrowserW = 420;                  // logical width added at the right while the browser is open
-  static constexpr R kSaveBtn{862, 9, 68, 30};             // SAVE PRESET, between EVALUATE and MANUAL
+  static constexpr R kSaveBtn{862, 9, 68, 30};             // SAVE PRESET, before MANUAL
   std::vector<BankPreset> menuBank;                        // the bank as listed by the last menu / browser (commands index it)
   struct BCat { std::wstring label; std::vector<int> presets; };   // a factory category of the browser
   std::vector<BCat> fCats;                                 // TOP Sounds, then the categories in factory order

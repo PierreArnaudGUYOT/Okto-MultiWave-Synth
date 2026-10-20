@@ -146,14 +146,6 @@ class SynthUI {
         this.manualBtn = b;
         return;
       }
-      case 'evaluate': {   // Okto MultiWave Synth: the listening test of the new presets
-        const b = el('button', 'hbtn evalbtn', box, { width: '100%', height: '100%' });
-        b.innerHTML = 'EVALUATE<b>SOUNDS</b>';
-        b.title = 'Listen to the new presets on a piece of music and rate each from 1 to 10 stars; export the ratings as a .txt file';
-        b.onclick = () => this.host.evaluate();
-        this.evalBtn = b;
-        return;
-      }
       case 'download': {   // beta 0.6, web only: the plug-in's releases on GitHub
         const a = el('a', 'hbtn dl', box, { width: '100%', height: '100%' });
         a.href = VST_RELEASES; a.target = '_blank'; a.rel = 'noopener';
@@ -736,7 +728,6 @@ class SynthUI {
     };
     this.demoBtn = b;
   }
-  setEvaluating(on) { if (this.evalBtn) this.evalBtn.classList.toggle('running', on); }
   setDemoRunning(on) {
     if (!this.demoBtn) return;
     this.demoBtn.classList.toggle('running', on);

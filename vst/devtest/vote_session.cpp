@@ -1,11 +1,10 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Developer check of EVALUATE SOUNDS, the listen-and-rate session of the plug-in editor. Loads the VST3 like a host (one
-// thread: window messages + real-time paced audio blocks), opens the editor in an off-screen window and clicks through
-// a session: EVALUATE SOUNDS, "Start at…" (the number is given by MW_START_AT instead of the typed-number window), the
-// passage of the first preset plays (Beethoven and the long chord), 7 stars, modify it (a knob dragged), play the
-// passage, record the change, 3 stars on the second, stop, reopen. Checks the parameters sent to the host, the audio, the ratings
-// file and the file of the set of 40 sounds next to it, and saves screenshots. The files go to <outdir>\ratings (MW_VOTES_DIR): never the player's own file.
+// Developer check of the plug-in's editor window (the file keeps the name of the EVALUATE SOUNDS test it used to be: that session was
+// removed in the final version). Loads the VST3 like a host (one thread: window messages + real-time paced audio blocks) and
+// opens the editor in an off-screen window: the three folder tabs choose the oscillator shown, CHORD MODE (the chord card, keys and
+// pads play chords, the window fits the screen), the preset browser following the preset box and the stars of its rows (the presets
+// file is written to <outdir>\data through WS_PRESETS_FILE: never the player's own file). Saves screenshots (header, panel, browser).
 //   x86_64-w64-mingw32-clang++ -std=c++17 -O2 -static -municode -DUNICODE -D_UNICODE -DNOMINMAX -I vst/external -I vst/src
 //     vst/devtest/vote_session.cpp vst/src/iids.cpp vst/external/pluginterfaces/base/funknown.cpp -o vote_session.exe
 //     -lgdiplus -lgdi32 -luser32 -lole32 -luuid
@@ -176,35 +175,6 @@ struct Host {
   }
 };
 
-// the rating window's buttons, laid out as the editor does (Segoe UI 12 px, bold = main, 24 px padding, 8 px gaps)
-static float buttonCenter(const std::vector<std::pair<const wchar_t*, bool>>& row, size_t which, float x0) {
-  HDC dc = GetDC(nullptr);
-  float x = x0, c = 0;
-  {
-    G::Graphics g(dc);
-    g.SetSmoothingMode(G::SmoothingModeAntiAlias); g.SetTextRenderingHint(G::TextRenderingHintAntiAlias); g.SetPixelOffsetMode(G::PixelOffsetModeHalf);
-    G::FontFamily fam(L"Segoe UI");
-    for (size_t i = 0; i < row.size(); i++) {
-      G::Font f(&fam, 12, row[i].second ? G::FontStyleBold : G::FontStyleRegular, G::UnitPixel);
-      G::RectF bound; G::StringFormat sf; sf.SetFormatFlags(G::StringFormatFlagsNoWrap);
-      g.MeasureString(row[i].first, -1, &f, G::PointF(0, 0), &sf, &bound);
-      const float w = bound.Width + 24;
-      if (i == which) c = x + w / 2;
-      x += w + 8;
-    }
-  }
-  ReleaseDC(nullptr, dc);
-  return c;
-}
-// kVoteCard {200, 280, 700, 262}: buttons at +18, +170 (28 high); stars at +112 (46 high); kVoteBar {190, 932, 898, 96}: buttons at +14, +44 (26 high)
-static const float CARD_X = 218, CARD_Y = 280 + 170 + 14, BAR_X = 204, BAR_Y = 932 + 44 + 13;
-static float starX(int n) { const float w = (700.f - 36 - 9 * 5) / 10; return 218 + (n - 1) * (w + 5) + w / 2; }
-static const float STAR_Y = 280 + 112 + 23;
-
-// the number of a preset as written in its name ("012", "502", "1000") and the rest of the name
-static std::string numOf(const char* name) { const char* e = name; while (*e && *e != ' ') e++; return std::string(name, e); }
-static std::string restOf(const char* name) { const char* e = name; while (*e && *e != ' ') e++; return *e ? std::string(e + 1) : std::string(name); }
-
 static std::string readFile(const std::wstring& p) {
   FILE* f = _wfopen(p.c_str(), L"rb"); if (!f) return "";
   std::string s; char b[4096]; size_t n; while ((n = std::fread(b, 1, sizeof b, f)) > 0) s.append(b, n); std::fclose(f); return s;
@@ -244,13 +214,10 @@ static LRESULT CALLBACK topProc(HWND h, UINT m, WPARAM w, LPARAM l) { return Def
 
 int wmain(int argc, wchar_t** argv) {
   if (argc < 3) { std::printf("usage: vote_session.exe <plugin dll> <outdir>\n"); return 2; }
-  const std::wstring dll = argv[1], out = argv[2], votesDir = out + L"\\ratings", votes = votesDir + L"\\okto-multiwave-ratings.txt";
-  CreateDirectoryW(out.c_str(), nullptr); CreateDirectoryW(votesDir.c_str(), nullptr);
-  DeleteFileW(votes.c_str());
-  DeleteFileW((votesDir + L"\\ratings-location.txt").c_str());
+  const std::wstring dll = argv[1], out = argv[2], dataDir = out + L"\\data";
+  CreateDirectoryW(out.c_str(), nullptr); CreateDirectoryW(dataDir.c_str(), nullptr);
   SetEnvironmentVariableW(L"MW_WORKAREA", L"3840x2160");   // beta 0.3.2: the window fits the screen; the tests click at 100 %, so the screen is a large one (the fit is tested below)
-  SetEnvironmentVariableW(L"MW_VOTES_DIR", votesDir.c_str());   // before loading: the plug-in's C runtime copies it
-  const std::wstring presetsFile = votesDir + L"\\presets.txt";   // beta 0.3.1: the library file (the stars of the browser): never the player's own file
+  const std::wstring presetsFile = dataDir + L"\\presets.txt";   // beta 0.3.1: the library file (the stars of the browser): never the player's own file
   DeleteFileW(presetsFile.c_str());
   SetEnvironmentVariableW(L"WS_PRESETS_FILE", presetsFile.c_str());
   G::GdiplusStartupInput gi; ULONG_PTR gt; G::GdiplusStartup(&gt, &gi, nullptr);
@@ -278,30 +245,10 @@ int wmain(int argc, wchar_t** argv) {
   h.proc->setupProcessing(ps);
   h.comp->setActive(true); h.proc->setProcessing(true);
 
-  // the sound before the session: a distinctive MASTER level, as set by host automation
-  const double master0 = -7.5;
-  h.ctrl->setParamNormalized(P_MASTER, h.ctrl->plainParamToNormalized(P_MASTER, master0));
-  h.changes.clear(); h.handler.pending.push_back({P_MASTER, h.ctrl->plainParamToNormalized(P_MASTER, master0)});
-
-  const int P1 = kFirstNew, P2 = kFirstNew + 1, P3 = kFirstNew + 2;   // the first three presets to rate (beta 0.3: 501 502 503)
-  const std::string N1 = numOf(kPresets[P1].name), N2 = numOf(kPresets[P2].name), N3 = numOf(kPresets[P3].name);
-  const std::string N40 = numOf(kPresets[kFirstNew + 39].name);   // the first set of 40 sounds: N1 to N40
-  // the scale filter's cutoff of the oscillator a preset shows (beta 0.2: the first presets are additive: B1's cutoff, not A1's f_cutoff)
-  auto cutOf = [](int k) { return kSlots[(int)kPresets[k].v[P_OSC_VIEW]].fcut; };
-  const int C1 = cutOf(P1), C2 = cutOf(P2), C3 = cutOf(P3);
-  const std::wstring startLbl = L"Start at…", contLbl = L"Continue at " + std::wstring(N3.begin(), N3.end());
-  const std::wstring setFile = votesDir + L"\\sound " + std::wstring(N1.begin(), N1.end()) + L" to sound " + std::wstring(N40.begin(), N40.end()) + L".txt";
-  DeleteFileW(setFile.c_str());
-  const std::string ofAll = " / " + std::to_string(kNumNew);
-  float evalX = 0, evalY = 0, cutX = 0, cutY = 0;
-  check(widgetCenter(W_EVALUATE, -1, 0, evalX, evalY), "EVALUATE SOUNDS button in the layout", fmt("(%.0f, %.0f)", evalX, evalY));
-  check(widgetCenter(W_KNOBM, P_F_CUTOFF, 0, cutX, cutY) || widgetCenter(W_KNOBL, P_F_CUTOFF, 0, cutX, cutY) || widgetCenter(W_KNOBS, P_F_CUTOFF, 0, cutX, cutY),
-        "CUTOFF knob in the layout of A1", fmt("(%.0f, %.0f)", cutX, cutY));
-
   // the editor, at 100 %, in an off-screen window
-  WNDCLASSW wc{}; wc.lpfnWndProc = topProc; wc.hInstance = GetModuleHandleW(nullptr); wc.lpszClassName = L"MwVoteTestTop";
+  WNDCLASSW wc{}; wc.lpfnWndProc = topProc; wc.hInstance = GetModuleHandleW(nullptr); wc.lpszClassName = L"MwWindowTestTop";
   RegisterClassW(&wc);
-  h.top = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, wc.lpszClassName, L"vote test", WS_POPUP | WS_VISIBLE, -4000, 0, 1100, kDeviceH + kChordH, nullptr, nullptr, wc.hInstance, nullptr);
+  h.top = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, wc.lpszClassName, L"window test", WS_POPUP | WS_VISIBLE, -4000, 0, 1100, kDeviceH + kChordH, nullptr, nullptr, wc.hInstance, nullptr);
   h.view = h.ctrl->createView(ViewType::kEditor);
   IPlugViewContentScaleSupport* sc = nullptr;
   if (h.view->queryInterface(IPlugViewContentScaleSupport::iid, (void**)&sc) == kResultOk && sc) { sc->setContentScaleFactor(1.0f); sc->release(); }
@@ -309,7 +256,6 @@ int wmain(int argc, wchar_t** argv) {
   h.ed = FindWindowExW(h.top, nullptr, L"OktoMultiWaveSynthEditorWnd", nullptr);
   check(h.ed != nullptr, "editor window found");
   h.run(0.5);
-  check(std::fabs(h.plain(P_MASTER) - master0) < 1e-6, "sound before the session", fmt("master %.2f dB", h.plain(P_MASTER)));
 
   // beta 0.3: the three folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1 choose the oscillator shown (and leave the sound alone)
   std::printf("0. the folder tabs choose the oscillator shown\n");
@@ -329,109 +275,7 @@ int wmain(int argc, wchar_t** argv) {
     h.click(tab(0), fy); h.run(0.15);
     check(h.plain(P_OSC_VIEW) == 0, "the folder tab OSC1 A1 shows A1", fmt("osc_view %.0f", h.plain(P_OSC_VIEW)));
   }
-  std::printf("1. EVALUATE SOUNDS opens the start screen\n");
-  h.click(evalX, evalY);
-  h.run(0.3);
-  h.shot(out + L"\\1_start.png");
-  std::printf("2. Start at…: a wrong number starts nothing; then %s: the first preset with the listening rules, the passage plays\n", N1.c_str());
-  SetEnvironmentVariableW(L"MW_START_AT", L"zzz");   // the typed number (the window that asks it is replaced by this variable here)
-  h.click(buttonCenter({{startLbl.c_str(), true}, {L"Change file…", false}, {L"Close", false}}, 0, CARD_X), CARD_Y);
-  h.resetPeak(); h.run(1.0);
-  check(h.peak < 1e-4, "a number that is not in the list starts nothing", fmt("peak %.6f", h.peak));
-  h.shot(out + L"\\1b_start_refused.png");
-  SetEnvironmentVariableW(L"MW_START_AT", std::wstring(N1.begin(), N1.end()).c_str());
-  h.click(buttonCenter({{startLbl.c_str(), true}, {L"Change file…", false}, {L"Close", false}}, 0, CARD_X), CARD_Y);
-  h.run(0.12);
-  check(h.plain(P_V_VOICES) == 16 && h.plain(P_V_OCT) == 0 && h.plain(P_V_GLIDE) == 0, "listening rules (16 voices, octave 0, no glide)",
-        fmt("voices %.0f oct %.0f glide %.3f", h.plain(P_V_VOICES), h.plain(P_V_OCT), h.plain(P_V_GLIDE)));
-  check(std::fabs(h.plain(C1) - kPresets[P1].v[C1]) < 1e-6, "the first preset is loaded", fmt("cutoff %.3f", h.plain(C1)));
-  h.run(0.3); h.resetPeak(); h.run(2.0);
-  check(h.peak > 0.02, "the passage of Beethoven sounds", fmt("peak %.3f", h.peak));
-  h.shot(out + L"\\2_playing.png");
-  h.run(4.0);   // until the end of the passage and of the chord (0.15 s lead + 5.9 s)
-  h.shot(out + L"\\3_rate.png");
-  std::printf("3. 7 stars: saved at once, asks to modify\n");
-  h.click(starX(7), STAR_Y);
-  h.run(0.3);
-  std::string txt = readFile(votes);
-  if (txt.empty()) {   // the plug-in did not use the test folder: stop before it writes the player's own ratings file
-    check(false, "ratings file in the test folder (MW_VOTES_DIR)", "not found: stopping");
-    return 1;
-  }
-  const std::string name1 = std::string(kPresets[P1].name);
-  check(has(txt, N1 + " |  7 |         | " + restOf(kPresets[P1].name)), ("ratings file written after the rating (" + N1 + " = 7)").c_str());
-  check(has(txt, "Rated: 1" + ofAll), "ratings file header");
-  {   // the file of the set of 40 sounds, next to it
-    const std::string st = readFile(setFile);
-    check(!st.empty() && has(st, "Set: sound " + N1 + " to sound " + N40 + " (40 sounds)") && has(st, "Rated: 1 / 40") && has(st, N1 + " |  7 |") && has(st, N40 + " |  - |") && !has(st, numOf(kPresets[kFirstNew + 40].name) + " |"),
-          ("the set file \"sound " + N1 + " to sound " + N40 + ".txt\" is written next to the ratings file").c_str(), std::to_string(st.size()) + " bytes");
-    check(has(st, "then a C minor chord"), "the files say that the passage ends with a chord");
-  }
-  h.shot(out + L"\\4_ask.png");
-  std::printf("4. Yes, modify it: the preset exactly as designed\n");
-  h.click(buttonCenter({{L"Yes, modify it", true}, {L"No, next preset", false}, {L"Stop", false}}, 0, CARD_X), CARD_Y);
-  h.run(0.3);
-  check(h.plain(P_V_VOICES) == kPresets[P1].v[P_V_VOICES] && h.plain(P_V_OCT) == kPresets[P1].v[P_V_OCT] &&
-        std::fabs(h.plain(P_V_GLIDE) - kPresets[P1].v[P_V_GLIDE]) < 1e-6, "edit: preset 001 as designed (1 voice, octave -1, glide)",
-        fmt("voices %.0f oct %.0f glide %.3f", h.plain(P_V_VOICES), h.plain(P_V_OCT), h.plain(P_V_GLIDE)));
-  h.shot(out + L"\\5_edit.png");
-  std::printf("5. drag the CUTOFF knob up, play the passage, record\n");
-  h.drag(cutX, cutY, kPresets[P1].v[C1] > 6 ? 45 : -45);   // up raises it; down when the preset already has it wide open (beta 0.2: 12)
-  h.run(0.2);
-  const double cut = h.plain(C1);
-  check(std::fabs(cut - kPresets[P1].v[C1]) > 0.5, "cutoff changed with the mouse", fmt("%.3f -> %.3f", kPresets[P1].v[C1], cut));
-  const std::vector<std::pair<const wchar_t*, bool>> bar = {{L"▶ Play the passage", false}, {L"Keep initial settings", false}, {L"Record preset change", true}, {L"Stop", false}};
-  h.click(buttonCenter(bar, 0, BAR_X), BAR_Y);
-  h.run(0.4); h.resetPeak(); h.run(1.5);
-  check(h.peak > 0.02, "edit: ▶ Play the passage sounds", fmt("peak %.3f", h.peak));
-  h.shot(out + L"\\6_edit_changed.png");
-  h.click(buttonCenter(bar, 2, BAR_X), BAR_Y);
-  h.run(0.3);
-  txt = readFile(votes);
-  auto js = [](double v) { char b[64]; std::snprintf(b, sizeof b, "%.6f", v); std::string s = b; while (s.back() == '0') s.pop_back(); if (s.back() == '.') s.pop_back(); return s; };
-  const std::string chLine = std::string("  ") + kParams[C1].key + ": " + js(kPresets[P1].v[C1]) + " -> " + js(cut);
-  check(has(txt, N1 + " |  7 | yes     | ") && has(txt, name1 + "   (7 stars)") && has(txt, chLine), "change recorded in the ratings file", chLine);
-  {
-    // only the cutoff: nothing else differs from the preset
-    const size_t a = txt.find("(7 stars)"), b = txt.find("\r\n\r\n", a);
-    int n = 0; for (size_t p = txt.find("\r\n  ", a); p != std::string::npos && p < b; p = txt.find("\r\n  ", p + 2)) n++;
-    check(n == 1, "the change holds only the parameter moved", std::to_string(n) + " line(s)");
-  }
-  check(h.plain(P_V_VOICES) == 16 && std::fabs(h.plain(C2) - kPresets[P2].v[C2]) < 1e-6, "after recording, the second preset plays");
-  std::printf("6. 002: Skip to vote (the music stops), 3 stars (no question), 003 plays, Stop\n");
-  h.run(1.0);
-  h.click(buttonCenter({{L"Skip to vote", true}, {L"Stop", false}}, 0, CARD_X), CARD_Y);   // beta 0.3.1: the music ends at once, the rating window is there
-  h.run(0.3);
-  h.click(starX(3), STAR_Y);
-  h.run(0.4);
-  txt = readFile(votes);
-  check(has(txt, N2 + " |  3 |"), (N2 + " = 3 saved").c_str());
-  check(std::fabs(h.plain(C3) - kPresets[P3].v[C3]) < 1e-6 && h.plain(P_V_VOICES) == 16, "3 stars: no question, the third plays");
-  h.run(1.0);
-  h.click(buttonCenter({{L"Skip to vote", true}, {L"Stop", false}}, 1, CARD_X), CARD_Y);
-  h.run(0.25); h.resetPeak(); h.run(0.5);
-  check(std::fabs(h.plain(P_MASTER) - master0) < 1e-6, "Stop gives back the sound played before", fmt("master %.2f dB", h.plain(P_MASTER)));
-  check(h.peak < 1e-4, "silence after Stop", fmt("peak %.6f", h.peak));
-  std::printf("7. reopen: continues at 003\n");
-  h.click(evalX, evalY);
-  h.run(0.3);
-  h.shot(out + L"\\7_reopen.png");
-  {   // "Save as…": a copy of the ratings so far under a name of the player's choice (the window is replaced by MW_SAVEAS_PATH here)
-    const std::wstring copy = votesDir + L"\\my special ratings.txt";
-    DeleteFileW(copy.c_str());
-    SetEnvironmentVariableW(L"MW_SAVEAS_PATH", copy.c_str());
-    h.click(buttonCenter({{startLbl.c_str(), false}, {contLbl.c_str(), true}, {L"Change file…", false}, {L"Save as…", false}, {L"Show file", false}, {L"Clear all", false}, {L"Close", false}}, 3, CARD_X), CARD_Y);
-    h.run(0.3);
-    const std::string cp = readFile(copy), main = readFile(votes);
-    check(has(cp, "Rated: 2" + ofAll) && has(cp, N1 + " |  7 | yes     |") && has(cp, N2 + " |  3 |"), "Save as…: a copy of the ratings so far under another name", std::to_string(cp.size()) + " bytes");
-    check(!main.empty() && has(main, "Rated: 2" + ofAll), "the ratings file being rewritten is untouched");
-    h.shot(out + L"\\7b_saved_as.png");
-    SetEnvironmentVariableW(L"MW_SAVEAS_PATH", nullptr);
-  }
-  h.click(evalX, evalY);   // the lit button stops the session
-  h.run(0.2);
-  h.shot(out + L"\\8_closed.png");
-  std::printf("8. CHORD MODE: the panel grows, the chord card shows, keys and pads play chords, off again\n");
+  std::printf("1. CHORD MODE: the panel grows, the chord card shows, keys and pads play chords, off again\n");
   {
     float cm[2], pads[4], kb[4], plate[4];
     check(widgetCenter(W_TOGGLE, P_CHORD_MODE, 0, cm[0], cm[1]), "CHORD MODE toggle in the layout", fmt("(%.0f, %.0f)", cm[0], cm[1]));
@@ -478,7 +322,7 @@ int wmain(int argc, wchar_t** argv) {
       check(v3.getHeight() == kDeviceH && v3.getWidth() == 1100 + 420, "fit: a large screen keeps the panel at 100 % (with the browser: 1520 wide)", fmt("%.0f x %.0f", (double)v3.getWidth(), (double)v3.getHeight()));
     }
   }
-  std::printf("9. beta 0.2: the preset browser follows the preset box (the screenshot shows the browser on SuperModulation, the sound selected)\n");
+  std::printf("2. beta 0.2: the preset browser follows the preset box (the screenshot shows the browser on SuperModulation, the sound selected)\n");
   {
     float pr[4];
     check(widgetBox(W_PRESETS, pr), "the preset box in the layout");
@@ -516,7 +360,6 @@ int wmain(int argc, wchar_t** argv) {
   cpA->disconnect(cpB); cpB->disconnect(cpA); cpA->release(); cpB->release();
   h.ctrl->setComponentHandler(nullptr);
   h.proc->release(); h.ctrl->terminate(); h.comp->terminate(); h.ctrl->release(); h.comp->release();
-  std::printf("\nratings file:\n%s\n", readFile(votes).substr(0, 1400).c_str());
   std::printf(gFails ? "%d FAILED\n" : "ALL PASS\n", gFails);
   return gFails ? 1 : 0;
 }

@@ -63,9 +63,8 @@ struct MenuItem {
   static MenuItem popup(const std::wstring& t, std::vector<MenuItem> s, bool chk = false) { MenuItem m; m.text = t; m.sub = std::move(s); m.checked = chk; m.isPopup = true; return m; }
 };
 
-// the save window: a name (proposed, editable) and, for the user bank, a section
-// (beta 0.3: also a one-line question: the label before the field, the text of the OK button and the length limit; "Start at…" of EVALUATE SOUNDS asks a number with it)
-struct SaveDlg { std::wstring name; int section = 0; bool withSection = true; const wchar_t* label = L"Name:"; const wchar_t* ok = L"Save"; int maxLen = 48; };
+// the save window: a name (proposed, editable, 48 characters at most) and, for the user bank, a section
+struct SaveDlg { std::wstring name; int section = 0; bool withSection = true; };
 
 // the editor, as the system window sees it (coordinates in logical units)
 struct EditorEvents {

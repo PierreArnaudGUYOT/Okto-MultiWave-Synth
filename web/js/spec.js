@@ -4075,13 +4075,6 @@ var WS_SPEC = {
      "h": 30
     },
     {
-     "type": "evaluate",
-     "x": 752,
-     "y": 9,
-     "w": 104,
-     "h": 30
-    },
-    {
      "type": "download",
      "only": "web",
      "x": 862,

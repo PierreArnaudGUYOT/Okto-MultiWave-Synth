@@ -197,7 +197,7 @@ enum ParamId : int {
 
 enum Curve : int { CURVE_LIN, CURVE_EXP, CURVE_POW2, CURVE_INT, CURVE_CHOICE };
 enum Fmt : int { FMT_PCT, FMT_DB, FMT_SEC, FMT_HZ, FMT_CENTS, FMT_BAND, FMT_DBBAND, FMT_INT, FMT_CHOICE, FMT_DEG, FMT_CYC, FMT_SEMI, FMT_BIPCT, FMT_BANDAMT };
-enum WidgetType : int { W_KNOBL, W_KNOBM, W_KNOBS, W_KNOBT, W_SEG, W_STEP, W_DRAWBAR, W_SCOPE, W_SCALOGRAM, W_ATOM, W_SOURCE, W_WINDOW, W_ADSR, W_LEDS, W_FXHEADS, W_KEYBOARD, W_WHEELS, W_LOGO, W_PRESETS, W_MANUAL, W_DOWNLOAD, W_METER, W_ZOOM, W_CREDIT, W_MENU, W_TOGGLE, W_LABEL, W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_EVALUATE, W_OSCTABS };
+enum WidgetType : int { W_KNOBL, W_KNOBM, W_KNOBS, W_KNOBT, W_SEG, W_STEP, W_DRAWBAR, W_SCOPE, W_SCALOGRAM, W_ATOM, W_SOURCE, W_WINDOW, W_ADSR, W_LEDS, W_FXHEADS, W_KEYBOARD, W_WHEELS, W_LOGO, W_PRESETS, W_MANUAL, W_DOWNLOAD, W_METER, W_ZOOM, W_CREDIT, W_MENU, W_TOGGLE, W_LABEL, W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_OSCTABS };
 
 struct ParamDef {
   const char* key; const char* name; const char* shortName;
@@ -476,7 +476,6 @@ inline constexpr WidgetDef kWidgets[] = {
   { W_LOGO, -1, 16.0f, 8.0f, 200.0f, 32.0f, 0, -1, -1, false, 0, nullptr },
   { W_ZOOM, -1, 222.0f, 14.0f, 50.0f, 20.0f, 0, -1, -1, false, 0, nullptr },
   { W_PRESETS, -1, 384.0f, 9.0f, 296.0f, 30.0f, 0, -1, -1, false, 0, nullptr },
-  { W_EVALUATE, -1, 752.0f, 9.0f, 104.0f, 30.0f, 0, -1, -1, false, 0, nullptr },
   { W_DOWNLOAD, -1, 862.0f, 9.0f, 68.0f, 30.0f, 0, -1, -1, false, 1, nullptr },
   { W_MANUAL, -1, 936.0f, 9.0f, 68.0f, 30.0f, 0, -1, -1, false, 0, nullptr },
   { W_KNOBS, 61, 1028.0f, 6.0f, 36.0f, 36.0f, 0, -1, -1, false, 0, nullptr },
@@ -693,36 +692,36 @@ inline constexpr WidgetDef kWidgets[] = {
   { W_KNOBM, 92, 746.0f, 22.0f, 52.0f, 60.0f, 0, -1, -1, false, 0, nullptr },
   { W_STRUMPLATE, -1, 812.0f, 26.0f, 252.0f, 70.0f, 0, -1, -1, false, 0, nullptr },
 };
-inline constexpr int kNumWidgets = 219;
+inline constexpr int kNumWidgets = 218;
 
 inline constexpr SectionDef kSections[] = {
-  { "header", "", 0.0f, 0.0f, 1100.0f, 48.0f, -1, -1, false, 0, 8, false },
-  { "oscframe", "", 6.0f, 50.0f, 1088.0f, 444.0f, -1, -1, false, 8, 1, false },
-  { "tone_a1", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 0, -1, false, 9, 11, false },
-  { "filter_a1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 0, -1, false, 20, 7, false },
-  { "position_a1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 0, -1, false, 27, 4, false },
-  { "osc_a1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 0, -1, false, 31, 13, false },
-  { "tone_a2", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 1, -1, false, 44, 11, false },
-  { "filter_a2", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 1, -1, false, 55, 7, false },
-  { "position_a2", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 1, -1, false, 62, 4, false },
-  { "osc_a2", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 1, -1, false, 66, 13, false },
-  { "tone_b1", "WAVELET · ADDITIVE", 12.0f, 98.0f, 544.0f, 250.0f, 2, -1, false, 79, 22, false },
-  { "filter_b1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 2, -1, false, 101, 7, false },
-  { "position_b1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 2, -1, false, 108, 4, false },
-  { "osc_b1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 2, -1, false, 112, 13, false },
-  { "mix", "OSC MIX", 572.0f, 56.0f, 124.0f, 290.0f, -1, -1, false, 125, 7, false },
-  { "display", "SCOPE · ALL OSCILLATORS", 704.0f, 56.0f, 384.0f, 290.0f, -1, -1, false, 132, 3, false },
-  { "flt", "FILTER", 12.0f, 496.0f, 504.0f, 120.0f, -1, -1, false, 135, 11, false },
-  { "ampenv", "AMP ENVELOPE", 524.0f, 496.0f, 284.0f, 120.0f, -1, -1, false, 146, 6, false },
-  { "modenv", "MOD ENVELOPE", 816.0f, 496.0f, 272.0f, 120.0f, -1, -1, false, 152, 5, false },
-  { "lfo", "LFO 1", 12.0f, 622.0f, 440.0f, 120.0f, -1, -1, false, 157, 11, false },
-  { "lfo2", "LFO 2/3", 460.0f, 622.0f, 246.0f, 120.0f, -1, 164, false, 168, 7, false },
-  { "lfo3", "LFO 2/3", 460.0f, 622.0f, 246.0f, 120.0f, -1, 164, true, 175, 7, false },
-  { "voice", "VOICE", 714.0f, 622.0f, 374.0f, 120.0f, -1, -1, false, 182, 9, false },
-  { "fx", "EFFECTS", 12.0f, 748.0f, 496.0f, 98.0f, -1, -1, false, 191, 12, true },
-  { "play", "PLAY", 516.0f, 748.0f, 584.0f, 98.0f, -1, -1, false, 203, 6, true },
-  { "keys", "", 0.0f, 852.0f, 1100.0f, 98.0f, -1, -1, false, 209, 3, false },
-  { "chord", "CHORD KEYBOARD", 12.0f, 970.0f, 1076.0f, 104.0f, -1, 87, true, 212, 7, false },
+  { "header", "", 0.0f, 0.0f, 1100.0f, 48.0f, -1, -1, false, 0, 7, false },
+  { "oscframe", "", 6.0f, 50.0f, 1088.0f, 444.0f, -1, -1, false, 7, 1, false },
+  { "tone_a1", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 0, -1, false, 8, 11, false },
+  { "filter_a1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 0, -1, false, 19, 7, false },
+  { "position_a1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 0, -1, false, 26, 4, false },
+  { "osc_a1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 0, -1, false, 30, 13, false },
+  { "tone_a2", "WAVELET · SUBTRACTIVE", 12.0f, 98.0f, 544.0f, 250.0f, 1, -1, false, 43, 11, false },
+  { "filter_a2", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 1, -1, false, 54, 7, false },
+  { "position_a2", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 1, -1, false, 61, 4, false },
+  { "osc_a2", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 1, -1, false, 65, 13, false },
+  { "tone_b1", "WAVELET · ADDITIVE", 12.0f, 98.0f, 544.0f, 250.0f, 2, -1, false, 78, 22, false },
+  { "filter_b1", "SCALE FILTER", 12.0f, 356.0f, 336.0f, 132.0f, 2, -1, false, 100, 7, false },
+  { "position_b1", "POSITION", 356.0f, 356.0f, 180.0f, 132.0f, 2, -1, false, 107, 4, false },
+  { "osc_b1", "TUNE · OWN ENVELOPE · PITCH ENVELOPE", 544.0f, 356.0f, 544.0f, 132.0f, 2, -1, false, 111, 13, false },
+  { "mix", "OSC MIX", 572.0f, 56.0f, 124.0f, 290.0f, -1, -1, false, 124, 7, false },
+  { "display", "SCOPE · ALL OSCILLATORS", 704.0f, 56.0f, 384.0f, 290.0f, -1, -1, false, 131, 3, false },
+  { "flt", "FILTER", 12.0f, 496.0f, 504.0f, 120.0f, -1, -1, false, 134, 11, false },
+  { "ampenv", "AMP ENVELOPE", 524.0f, 496.0f, 284.0f, 120.0f, -1, -1, false, 145, 6, false },
+  { "modenv", "MOD ENVELOPE", 816.0f, 496.0f, 272.0f, 120.0f, -1, -1, false, 151, 5, false },
+  { "lfo", "LFO 1", 12.0f, 622.0f, 440.0f, 120.0f, -1, -1, false, 156, 11, false },
+  { "lfo2", "LFO 2/3", 460.0f, 622.0f, 246.0f, 120.0f, -1, 164, false, 167, 7, false },
+  { "lfo3", "LFO 2/3", 460.0f, 622.0f, 246.0f, 120.0f, -1, 164, true, 174, 7, false },
+  { "voice", "VOICE", 714.0f, 622.0f, 374.0f, 120.0f, -1, -1, false, 181, 9, false },
+  { "fx", "EFFECTS", 12.0f, 748.0f, 496.0f, 98.0f, -1, -1, false, 190, 12, true },
+  { "play", "PLAY", 516.0f, 748.0f, 584.0f, 98.0f, -1, -1, false, 202, 6, true },
+  { "keys", "", 0.0f, 852.0f, 1100.0f, 98.0f, -1, -1, false, 208, 3, false },
+  { "chord", "CHORD KEYBOARD", 12.0f, 970.0f, 1076.0f, 104.0f, -1, 87, true, 211, 7, false },
 };
 inline constexpr int kNumSections = 27;
 
@@ -1760,7 +1759,7 @@ inline constexpr int kPresetRank[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 // the factory categories, in browser and menu order (after TOP Sounds)
 inline constexpr const char* kCategories[] = { "SuperModulation", "Bass", "Lead", "Keys", "Organ", "Pad", "Strings", "Brass & Wind", "Pluck", "Bells & Mallets", "FX", "Drums & Perc" };
 inline constexpr int kNumCategories = 12;
-// the presets to evaluate (EVALUATE SOUNDS): the new ones, numbered in their names, from kFirstNew
+// the new presets (numbered in their names), from kFirstNew
 inline constexpr int kFirstNew = 22, kNumNew = 999;
 inline constexpr int kDefaultPreset = 11;   // A · Warm Pad
 
