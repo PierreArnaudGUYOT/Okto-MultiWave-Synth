@@ -657,8 +657,10 @@ const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evalua
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
 // Categories (preset menu groups, like the banks of a hardware synthesizer), in menu order.
-// (beta 0.2: SuperModulation first: the presets whose life is the LFOs moving the wavelet-domain controls)
-const CATEGORIES = ['SuperModulation', 'Bass', 'Lead', 'Keys', 'Organ', 'Pad', 'Strings', 'Brass & Wind', 'Pluck', 'Bells & Mallets', 'FX', 'Drums & Perc'];
+// (beta 0.2: SuperModulation: the presets whose life is the LFOs moving the wavelet-domain controls. Version 1.0: Pad comes right after TOP Sounds, and Keys and Pluck are one section,
+// Keyboard: the presets' own category names (the data files, the user bank) are unchanged, SECTION_OF maps them)
+const CATEGORIES = ['Pad', 'SuperModulation', 'Bass', 'Lead', 'Keyboard', 'Organ', 'Strings', 'Brass & Wind', 'Bells & Mallets', 'FX', 'Drums & Perc'];
+const SECTION_OF = { Keys: 'Keyboard', Pluck: 'Keyboard' };
 // the 22 TOP Sounds of beta 0.7 the owner rated more than one star, best first (the same stars: the order of beta 0.7)
 const TOP_RAW = require('./presets_top.js').filter(r => RATED2.names[r.name] >= 3).map((r, i) => ({ r, i }))
   .sort((a, b) => RATED2.names[b.r.name] - RATED2.names[a.r.name] || a.i - b.i).map(x => x.r);
@@ -675,8 +677,9 @@ const TOP_EXTRA = PRESETS.map((p, i) => i).filter(i => i >= TOP_COUNT && (PRESET
   .sort((a, b) => PRESETS[b].stars - PRESETS[a].stars || a - b);
 // the TOP Sounds list of the plug-in (and the sound the synth opens on): the TOP Sounds of beta 0.7 and the presets rated above 7, the best rated first (a tie: the earlier one)
 const TOP_LIST = [...PRESETS.slice(0, TOP_COUNT).map((p, i) => i), ...TOP_EXTRA].sort((a, b) => (PRESETS[b].stars || 0) - (PRESETS[a].stars || 0) || a - b);
-// the factory order is each category's order too: the array is already sorted from the best to the least rated (TOP Sounds first)
-PRESETS.forEach((p, rank) => { p.rank = rank; });
+for (const p of PRESETS) if (SECTION_OF[p.cat]) p.cat = SECTION_OF[p.cat];
+// the factory order is each category's order too: every section lists its presets from the best to the least rated (the owner's stars; a tie: TOP Sounds first, then by number)
+PRESETS.map((p, i) => i).sort((x, y) => (PRESETS[y].stars || 0) - (PRESETS[x].stars || 0) || x - y).forEach((i, rank) => { PRESETS[i].rank = rank; });
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
 const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app / a new plugin instance opens: the first of TOP Sounds (beta 1.0)

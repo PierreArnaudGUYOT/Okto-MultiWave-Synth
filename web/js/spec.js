@@ -327,15 +327,14 @@ var WS_SPEC = {
   "A · Shimmering Strings"
  ],
  "CATEGORIES": [
+  "Pad",
   "SuperModulation",
   "Bass",
   "Lead",
-  "Keys",
+  "Keyboard",
   "Organ",
-  "Pad",
   "Strings",
   "Brass & Wind",
-  "Pluck",
   "Bells & Mallets",
   "FX",
   "Drums & Perc"
@@ -5891,7 +5890,7 @@ var WS_SPEC = {
   {
    "name": "A · Noise Wash Pad",
    "cat": "Pad",
-   "rank": 2,
+   "rank": 3,
    "stars": 9,
    "values": [
     0,
@@ -6074,7 +6073,7 @@ var WS_SPEC = {
   {
    "name": "A · Siren Sweep",
    "cat": "FX",
-   "rank": 3,
+   "rank": 4,
    "stars": 9,
    "values": [
     0,
@@ -6257,7 +6256,7 @@ var WS_SPEC = {
   {
    "name": "B · Choir Pad",
    "cat": "Pad",
-   "rank": 4,
+   "rank": 5,
    "stars": 9,
    "values": [
     2,
@@ -6440,7 +6439,7 @@ var WS_SPEC = {
   {
    "name": "A · Wave Attack Lead",
    "cat": "Lead",
-   "rank": 5,
+   "rank": 6,
    "stars": 9,
    "values": [
     0,
@@ -6623,7 +6622,7 @@ var WS_SPEC = {
   {
    "name": "A · Cello Section",
    "cat": "Strings",
-   "rank": 6,
+   "rank": 7,
    "stars": 9,
    "values": [
     0,
@@ -6806,7 +6805,7 @@ var WS_SPEC = {
   {
    "name": "AB · Silk Strings",
    "cat": "Strings",
-   "rank": 7,
+   "rank": 8,
    "stars": 9,
    "values": [
     0,
@@ -6989,7 +6988,7 @@ var WS_SPEC = {
   {
    "name": "B · Theatre Organ",
    "cat": "Organ",
-   "rank": 8,
+   "rank": 17,
    "stars": 8,
    "values": [
     2,
@@ -7172,7 +7171,7 @@ var WS_SPEC = {
   {
    "name": "B · Space Choir",
    "cat": "Pad",
-   "rank": 9,
+   "rank": 18,
    "stars": 8,
    "values": [
     2,
@@ -7355,7 +7354,7 @@ var WS_SPEC = {
   {
    "name": "A · Wavelet Lead",
    "cat": "Lead",
-   "rank": 10,
+   "rank": 19,
    "stars": 8,
    "values": [
     0,
@@ -7538,7 +7537,7 @@ var WS_SPEC = {
   {
    "name": "B · Focus Sweep",
    "cat": "FX",
-   "rank": 11,
+   "rank": 20,
    "stars": 8,
    "values": [
     2,
@@ -7721,7 +7720,7 @@ var WS_SPEC = {
   {
    "name": "A · Wave Pulse Lead",
    "cat": "Lead",
-   "rank": 12,
+   "rank": 21,
    "stars": 8,
    "values": [
     0,
@@ -7904,7 +7903,7 @@ var WS_SPEC = {
   {
    "name": "AB · Glass Choir",
    "cat": "Pad",
-   "rank": 13,
+   "rank": 22,
    "stars": 8,
    "values": [
     2,
@@ -8087,7 +8086,7 @@ var WS_SPEC = {
   {
    "name": "A · Spiccato Strings",
    "cat": "Strings",
-   "rank": 14,
+   "rank": 23,
    "stars": 8,
    "values": [
     0,
@@ -8270,7 +8269,7 @@ var WS_SPEC = {
   {
    "name": "A · Shimmering Strings",
    "cat": "Strings",
-   "rank": 15,
+   "rank": 24,
    "stars": 8,
    "values": [
     0,
@@ -8453,7 +8452,7 @@ var WS_SPEC = {
   {
    "name": "A · Wave Robot",
    "cat": "FX",
-   "rank": 16,
+   "rank": 25,
    "stars": 8,
    "values": [
     0,
@@ -8636,7 +8635,7 @@ var WS_SPEC = {
   {
    "name": "A · Laser Sweep",
    "cat": "FX",
-   "rank": 17,
+   "rank": 26,
    "stars": 8,
    "values": [
     0,
@@ -8819,7 +8818,7 @@ var WS_SPEC = {
   {
    "name": "B · Flute Lead",
    "cat": "Lead",
-   "rank": 18,
+   "rank": 46,
    "stars": 7,
    "values": [
     2,
@@ -9002,7 +9001,7 @@ var WS_SPEC = {
   {
    "name": "A · Dub Echo Lead",
    "cat": "Lead",
-   "rank": 19,
+   "rank": 47,
    "stars": 7,
    "values": [
     0,
@@ -9185,7 +9184,7 @@ var WS_SPEC = {
   {
    "name": "A · Warm Pad",
    "cat": "Pad",
-   "rank": 20,
+   "rank": 78,
    "stars": 6,
    "values": [
     0,
@@ -9368,7 +9367,7 @@ var WS_SPEC = {
   {
    "name": "508 A1A2 · Moss Tide",
    "cat": "SuperModulation",
-   "rank": 21,
+   "rank": 2,
    "stars": 10,
    "values": [
     0,
@@ -9551,7 +9550,7 @@ var WS_SPEC = {
   {
    "name": "079 A1A2 · Analog Cloud",
    "cat": "Pad",
-   "rank": 22,
+   "rank": 9,
    "stars": 9,
    "values": [
     0,
@@ -9734,7 +9733,7 @@ var WS_SPEC = {
   {
    "name": "527 A1A2 · Salt Beam Strings",
    "cat": "SuperModulation",
-   "rank": 23,
+   "rank": 10,
    "stars": 9,
    "values": [
     0,
@@ -9917,7 +9916,7 @@ var WS_SPEC = {
   {
    "name": "545 A1A2 · Sweep of Pixel",
    "cat": "SuperModulation",
-   "rank": 24,
+   "rank": 11,
    "stars": 9,
    "values": [
     0,
@@ -10100,7 +10099,7 @@ var WS_SPEC = {
   {
    "name": "608 A1A2 · Chalk Edge Call",
    "cat": "Lead",
-   "rank": 25,
+   "rank": 12,
    "stars": 9,
    "values": [
     0,
@@ -10283,7 +10282,7 @@ var WS_SPEC = {
   {
    "name": "762 A1B1 · Mosaic & Velvet",
    "cat": "Pad",
-   "rank": 26,
+   "rank": 13,
    "stars": 9,
    "values": [
     0,
@@ -10466,7 +10465,7 @@ var WS_SPEC = {
   {
    "name": "782 A1B1 · Lean of Pure",
    "cat": "Pad",
-   "rank": 27,
+   "rank": 14,
    "stars": 9,
    "values": [
     0,
@@ -10649,7 +10648,7 @@ var WS_SPEC = {
   {
    "name": "788 A1A2 · Surge of Breath",
    "cat": "Pad",
-   "rank": 28,
+   "rank": 15,
    "stars": 9,
    "values": [
     0,
@@ -10832,7 +10831,7 @@ var WS_SPEC = {
   {
    "name": "1067 A1A2 · Sizzle Surge",
    "cat": "Drums & Perc",
-   "rank": 29,
+   "rank": 16,
    "stars": 9,
    "values": [
     0,
@@ -11015,7 +11014,7 @@ var WS_SPEC = {
   {
    "name": "095 A1B1 · Silk Cloud",
    "cat": "Pad",
-   "rank": 30,
+   "rank": 27,
    "stars": 8,
    "values": [
     0,
@@ -11198,7 +11197,7 @@ var WS_SPEC = {
   {
    "name": "502 A1B1 · Resonance Storm",
    "cat": "SuperModulation",
-   "rank": 31,
+   "rank": 28,
    "stars": 8,
    "values": [
     0,
@@ -11381,7 +11380,7 @@ var WS_SPEC = {
   {
    "name": "506 A1A2 · Orbit Pad",
    "cat": "SuperModulation",
-   "rank": 32,
+   "rank": 29,
    "stars": 8,
    "values": [
     0,
@@ -11564,7 +11563,7 @@ var WS_SPEC = {
   {
    "name": "539 A1A2 · Cavern Sweep Cloud",
    "cat": "SuperModulation",
-   "rank": 33,
+   "rank": 30,
    "stars": 8,
    "values": [
     0,
@@ -11747,7 +11746,7 @@ var WS_SPEC = {
   {
    "name": "558 A2B1 · Step Sub",
    "cat": "Bass",
-   "rank": 34,
+   "rank": 31,
    "stars": 8,
    "values": [
     1,
@@ -11929,8 +11928,8 @@ var WS_SPEC = {
   },
   {
    "name": "669 A1A2B1 · Resonance Keys",
-   "cat": "Keys",
-   "rank": 35,
+   "cat": "Keyboard",
+   "rank": 32,
    "stars": 8,
    "values": [
     0,
@@ -12113,7 +12112,7 @@ var WS_SPEC = {
   {
    "name": "774 A1B1 · Velvet Cloud",
    "cat": "Pad",
-   "rank": 36,
+   "rank": 33,
    "stars": 8,
    "values": [
     0,
@@ -12296,7 +12295,7 @@ var WS_SPEC = {
   {
    "name": "786 A1B1 · Sweep of Faint",
    "cat": "Pad",
-   "rank": 37,
+   "rank": 34,
    "stars": 8,
    "values": [
     0,
@@ -12479,7 +12478,7 @@ var WS_SPEC = {
   {
    "name": "799 A1A2B1 · Rust Aurora",
    "cat": "Pad",
-   "rank": 38,
+   "rank": 35,
    "stars": 8,
    "values": [
     2,
@@ -12662,7 +12661,7 @@ var WS_SPEC = {
   {
    "name": "800 A1B1 · Step Spiral",
    "cat": "Pad",
-   "rank": 39,
+   "rank": 36,
    "stars": 8,
    "values": [
     0,
@@ -12845,7 +12844,7 @@ var WS_SPEC = {
   {
    "name": "1006 A1A2 · Drum Bloom",
    "cat": "FX",
-   "rank": 40,
+   "rank": 37,
    "stars": 8,
    "values": [
     0,
@@ -13028,7 +13027,7 @@ var WS_SPEC = {
   {
    "name": "1101 A1A2 · Bloom of Soft",
    "cat": "SuperModulation",
-   "rank": 41,
+   "rank": 38,
    "stars": 8,
    "values": [
     0,
@@ -13211,7 +13210,7 @@ var WS_SPEC = {
   {
    "name": "1104 A1A2B1 · Sweep Call",
    "cat": "SuperModulation",
-   "rank": 42,
+   "rank": 39,
    "stars": 8,
    "values": [
     0,
@@ -13394,7 +13393,7 @@ var WS_SPEC = {
   {
    "name": "1129 A1A2B1 · Dive Texture",
    "cat": "SuperModulation",
-   "rank": 43,
+   "rank": 40,
    "stars": 8,
    "values": [
     0,
@@ -13577,7 +13576,7 @@ var WS_SPEC = {
   {
    "name": "1155 A1A2B1 · Ice & Halo",
    "cat": "SuperModulation",
-   "rank": 44,
+   "rank": 41,
    "stars": 8,
    "values": [
     0,
@@ -13760,7 +13759,7 @@ var WS_SPEC = {
   {
    "name": "1187 A1A2B1 · Pick & Soft",
    "cat": "SuperModulation",
-   "rank": 45,
+   "rank": 42,
    "stars": 8,
    "values": [
     0,
@@ -13943,7 +13942,7 @@ var WS_SPEC = {
   {
    "name": "1210 A1A2B1 · Static & Fibre",
    "cat": "SuperModulation",
-   "rank": 46,
+   "rank": 43,
    "stars": 8,
    "values": [
     0,
@@ -14126,7 +14125,7 @@ var WS_SPEC = {
   {
    "name": "1287 A1A2 · Chalk Drift",
    "cat": "SuperModulation",
-   "rank": 47,
+   "rank": 44,
    "stars": 8,
    "values": [
     0,
@@ -14309,7 +14308,7 @@ var WS_SPEC = {
   {
    "name": "1355 A1A2B1 · Breath & Drift",
    "cat": "SuperModulation",
-   "rank": 48,
+   "rank": 45,
    "stars": 8,
    "values": [
     0,
@@ -14491,8 +14490,8 @@ var WS_SPEC = {
   },
   {
    "name": "377 A1B1 · Hornet & Cello",
-   "cat": "Keys",
-   "rank": 49,
+   "cat": "Keyboard",
+   "rank": 48,
    "stars": 7,
    "values": [
     0,
@@ -14675,7 +14674,7 @@ var WS_SPEC = {
   {
    "name": "401 A1B1 · Pure Fog",
    "cat": "Pad",
-   "rank": 50,
+   "rank": 49,
    "stars": 7,
    "values": [
     2,
@@ -14858,7 +14857,7 @@ var WS_SPEC = {
   {
    "name": "513 A1B1 · Moss Beam Strum",
    "cat": "SuperModulation",
-   "rank": 51,
+   "rank": 50,
    "stars": 7,
    "values": [
     0,
@@ -15041,7 +15040,7 @@ var WS_SPEC = {
   {
    "name": "514 A1A2B1 · Lung of Quartz",
    "cat": "SuperModulation",
-   "rank": 52,
+   "rank": 51,
    "stars": 7,
    "values": [
     0,
@@ -15224,7 +15223,7 @@ var WS_SPEC = {
   {
    "name": "529 A1A2 · Breathe Pluck",
    "cat": "SuperModulation",
-   "rank": 53,
+   "rank": 52,
    "stars": 7,
    "values": [
     0,
@@ -15407,7 +15406,7 @@ var WS_SPEC = {
   {
    "name": "550 A1A2 · Origami & Honey",
    "cat": "SuperModulation",
-   "rank": 54,
+   "rank": 53,
    "stars": 7,
    "values": [
     0,
@@ -15590,7 +15589,7 @@ var WS_SPEC = {
   {
    "name": "554 A1A2 · Hollow Bass",
    "cat": "Bass",
-   "rank": 55,
+   "rank": 54,
    "stars": 7,
    "values": [
     0,
@@ -15773,7 +15772,7 @@ var WS_SPEC = {
   {
    "name": "562 A1B1 · Ripple of Marimba",
    "cat": "Bass",
-   "rank": 56,
+   "rank": 55,
    "stars": 7,
    "values": [
     0,
@@ -15956,7 +15955,7 @@ var WS_SPEC = {
   {
    "name": "575 A1A2 · Orbit Bloom",
    "cat": "Bass",
-   "rank": 57,
+   "rank": 56,
    "stars": 7,
    "values": [
     0,
@@ -16139,7 +16138,7 @@ var WS_SPEC = {
   {
    "name": "593 A1B1 · Ghost Foundation",
    "cat": "Bass",
-   "rank": 58,
+   "rank": 57,
    "stars": 7,
    "values": [
     0,
@@ -16322,7 +16321,7 @@ var WS_SPEC = {
   {
    "name": "602 A1B1 · Atoms Signal",
    "cat": "Lead",
-   "rank": 59,
+   "rank": 58,
    "stars": 7,
    "values": [
     0,
@@ -16505,7 +16504,7 @@ var WS_SPEC = {
   {
    "name": "603 A1A2 · Flint Line",
    "cat": "Lead",
-   "rank": 60,
+   "rank": 59,
    "stars": 7,
    "values": [
     0,
@@ -16688,7 +16687,7 @@ var WS_SPEC = {
   {
    "name": "607 A1A2B1 · Ripple Signal",
    "cat": "Lead",
-   "rank": 61,
+   "rank": 60,
    "stars": 7,
    "values": [
     0,
@@ -16870,8 +16869,8 @@ var WS_SPEC = {
   },
   {
    "name": "680 A2B1 · Swing of Odd",
-   "cat": "Keys",
-   "rank": 62,
+   "cat": "Keyboard",
+   "rank": 61,
    "stars": 7,
    "values": [
     1,
@@ -17053,8 +17052,8 @@ var WS_SPEC = {
   },
   {
    "name": "692 A1B1 · Ice Chords",
-   "cat": "Keys",
-   "rank": 63,
+   "cat": "Keyboard",
+   "rank": 62,
    "stars": 7,
    "values": [
     0,
@@ -17236,8 +17235,8 @@ var WS_SPEC = {
   },
   {
    "name": "694 A1B1 · Cave Pinch Keys",
-   "cat": "Keys",
-   "rank": 64,
+   "cat": "Keyboard",
+   "rank": 63,
    "stars": 7,
    "values": [
     0,
@@ -17420,7 +17419,7 @@ var WS_SPEC = {
   {
    "name": "768 A1A2 · Velvet Aurora",
    "cat": "Pad",
-   "rank": 65,
+   "rank": 64,
    "stars": 7,
    "values": [
     0,
@@ -17603,7 +17602,7 @@ var WS_SPEC = {
   {
    "name": "773 A1A2B1 · Swell of Drop",
    "cat": "Pad",
-   "rank": 66,
+   "rank": 65,
    "stars": 7,
    "values": [
     0,
@@ -17786,7 +17785,7 @@ var WS_SPEC = {
   {
    "name": "781 A1A2 · Knock Sweep",
    "cat": "Pad",
-   "rank": 67,
+   "rank": 66,
    "stars": 7,
    "values": [
     0,
@@ -17969,7 +17968,7 @@ var WS_SPEC = {
   {
    "name": "785 A1A2 · Flint Ripple Haze",
    "cat": "Pad",
-   "rank": 68,
+   "rank": 67,
    "stars": 7,
    "values": [
     0,
@@ -18152,7 +18151,7 @@ var WS_SPEC = {
   {
    "name": "841 A1B1 · Moss Tide Strings",
    "cat": "Strings",
-   "rank": 69,
+   "rank": 68,
    "stars": 7,
    "values": [
     0,
@@ -18335,7 +18334,7 @@ var WS_SPEC = {
   {
    "name": "844 A1A2 · Ripple of Mist",
    "cat": "Strings",
-   "rank": 70,
+   "rank": 69,
    "stars": 7,
    "values": [
     0,
@@ -18518,7 +18517,7 @@ var WS_SPEC = {
   {
    "name": "845 A1A2 · Wood Rise Bows",
    "cat": "Strings",
-   "rank": 71,
+   "rank": 70,
    "stars": 7,
    "values": [
     0,
@@ -18701,7 +18700,7 @@ var WS_SPEC = {
   {
    "name": "847 A1A2 · Breath Section",
    "cat": "Strings",
-   "rank": 72,
+   "rank": 71,
    "stars": 7,
    "values": [
     0,
@@ -18884,7 +18883,7 @@ var WS_SPEC = {
   {
    "name": "1035 A1A2 · Mist & Origami",
    "cat": "FX",
-   "rank": 73,
+   "rank": 72,
    "stars": 7,
    "values": [
     0,
@@ -19067,7 +19066,7 @@ var WS_SPEC = {
   {
    "name": "1092 A1A2 · Orbit Drum",
    "cat": "Drums & Perc",
-   "rank": 74,
+   "rank": 73,
    "stars": 7,
    "values": [
     0,
@@ -19250,7 +19249,7 @@ var WS_SPEC = {
   {
    "name": "1141 A1A2 · Pure Tide Pad",
    "cat": "SuperModulation",
-   "rank": 75,
+   "rank": 74,
    "stars": 7,
    "values": [
     0,
@@ -19433,7 +19432,7 @@ var WS_SPEC = {
   {
    "name": "1205 A1B1 · Atom Shapeshift",
    "cat": "SuperModulation",
-   "rank": 76,
+   "rank": 75,
    "stars": 7,
    "values": [
     0,
@@ -19616,7 +19615,7 @@ var WS_SPEC = {
   {
    "name": "1219 A1B1 · Breath of Hornet",
    "cat": "SuperModulation",
-   "rank": 77,
+   "rank": 76,
    "stars": 7,
    "values": [
     0,
@@ -19799,7 +19798,7 @@ var WS_SPEC = {
   {
    "name": "1321 A1A2 · Lantern Signal",
    "cat": "SuperModulation",
-   "rank": 78,
+   "rank": 77,
    "stars": 7,
    "values": [
     0,
@@ -24373,7 +24372,7 @@ var WS_SPEC = {
   },
   {
    "name": "697 A1B1 · Moss Hold Chords",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 103,
    "stars": 6,
    "values": [
@@ -34255,7 +34254,7 @@ var WS_SPEC = {
   },
   {
    "name": "677 A1A2 · Crystal Swirl",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 157,
    "stars": 5,
    "values": [
@@ -39379,7 +39378,7 @@ var WS_SPEC = {
   },
   {
    "name": "380 A1A2B1 · Marimba Wah",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 185,
    "stars": 4,
    "values": [
@@ -40477,7 +40476,7 @@ var WS_SPEC = {
   },
   {
    "name": "901 A1B1 · Ice Tide Strum",
-   "cat": "Pluck",
+   "cat": "Keyboard",
    "rank": 191,
    "stars": 4,
    "values": [
@@ -45418,7 +45417,7 @@ var WS_SPEC = {
   },
   {
    "name": "371 A1B1 · Air Tide",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 218,
    "stars": 3,
    "values": [
@@ -46333,7 +46332,7 @@ var WS_SPEC = {
   },
   {
    "name": "678 A1B1 · Drawbar Shift",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 223,
    "stars": 3,
    "values": [
@@ -46516,7 +46515,7 @@ var WS_SPEC = {
   },
   {
    "name": "689 A1B1 · Moon Resonance Clav",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 224,
    "stars": 3,
    "values": [
@@ -46699,7 +46698,7 @@ var WS_SPEC = {
   },
   {
    "name": "693 A1B1 · Stair Pulse Tines",
-   "cat": "Keys",
+   "cat": "Keyboard",
    "rank": 225,
    "stars": 3,
    "values": [
