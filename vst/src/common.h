@@ -40,11 +40,6 @@ struct SharedState {
   // the engine plays with, and a count of the times a selector key changed it (the editor then tells the controller)
   std::atomic<int> chordRoot{-1}, chordLast{60}, chordType{-1};
   std::atomic<uint32_t> chordBits[4], chordTypeEdits{0};
-  // EVALUATE SOUNDS: the editor starts and stops the listening passage, the processor plays it (vote_data.h) and tells the time
-  std::atomic<uint32_t> seqStart{0};   // editor: +1 = play the passage from its start
-  std::atomic<int> seqStop{0};         // editor: 1 = stop it (its notes are released), 2 = stop it and silence everything
-  std::atomic<uint32_t> seqDone{0};    // audio: the seqStart number of the last passage played to its end
-  std::atomic<float> seqTime{-1};      // audio: seconds played of the current passage (-1 = none, or waiting for the sound)
 
   struct Ev { int16_t note; int16_t vel; int16_t kind; };  // vel 1..127 = on, 0 = off, -1 = all notes off; kind 0 = a key (the chord layer), 1 = the strum plate
   static constexpr uint32_t QN = 256;
@@ -92,9 +87,6 @@ struct EditorHost {
   virtual std::string formerPresetName() = 0;
   // beta 0.3: the factory preset just saved (SAVE PRESET) is the sound shown, unmodified; the preset browser panel
   virtual void presetStored(int index) = 0;
-  // EVALUATE SOUNDS: this sound (every non-performance parameter) is the one playing, shown as the factory preset `index`
-  // (modified or not); the browser's state follows
-  virtual void setSound(const double* plain, int index, bool modified) = 0;
   virtual bool browserOpen() = 0;
   virtual void setBrowserOpen(bool open) = 0;
   virtual double zoom() = 0;

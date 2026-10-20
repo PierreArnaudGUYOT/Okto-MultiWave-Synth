@@ -1,11 +1,13 @@
 # CLAUDE.md — Okto MultiWave Synth: architecture and maintenance guide
 
+**Final version: EVALUATE SOUNDS (the listening test of the new presets, web app and plug-in) and the extra demo songs were removed** at the owner's request: the web app's DEMO plays Beethoven's Appassionata (III) only, with its preset tour, and has no song menu (the arrow) and no MIDI file loading; the plug-in has no evaluation session. The sections below that describe them are history (marked "removed") or were deleted.
+
 **Okto MultiWave Synth** (beta 0.3, 2026-10-19, a test version; beta 0.2 was the same day, beta 0.1 2026-10-18) is the Wavelet Synthesizer beta 0.7 (commit f16b46a of
 https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST, whose history this repository keeps) with **three
 oscillators** (A1 A2 B1; beta 0.3 removed B2) instead of two engines (§3.3, §3.3i), the **chord keyboard** of the WaveChord work (§3.3f, shown by a CHORD MODE
-button), 908 presets to rate (600 of beta 0.3, 175 of beta 0.2 and 133 of beta 0.1: the 192 older ones that played B2 were left out in beta 0.3), the **EVALUATE SOUNDS** listening test (§4, §5) and the CPU remarks of the load study (§3.5, §3.6).
+button), 908 presets to rate (600 of beta 0.3, 175 of beta 0.2 and 133 of beta 0.1: the 192 older ones that played B2 were left out in beta 0.3), the **EVALUATE SOUNDS** listening test (removed in the final version) and the CPU remarks of the load study (§3.5, §3.6).
 Beta 0.3 also adds **LFO 3** (a second LFO of the LFO 2 kind), the voice **FILTER** (4-pole, LADDER / OTA, §3.3i), three folder tabs with a plate and a global scope, 600 more presets (composed by
-`tools/supermod/`, §9) and EVALUATE SOUNDS in sets of 40 sounds with a long chord at the end of the passage (§3.3i).
+`tools/supermod/`, §9) and EVALUATE SOUNDS in sets of 40 sounds with a long chord at the end of the passage (removed in the final version).
 Beta 0.2 adds **SuperModulation** (LFO 1 on SPARSITY / RESO / ENV>WAV, LFO 2 on every wavelet control, §3.3g), the chord keyboard's **BASS** (two
 octaves down, louder, on by default), the chord that **follows the left hand** (§3.3f), the **oriental tunings** (Arabic / Turkish quarter tones, §3.3h),
 the preset browser that follows the preset box (§4, §5) and 300 more presets, composed and measured by `tools/supermod/` (§9).
@@ -31,7 +33,7 @@ products identical. Read it before changing the DSP, the parameters or the prese
 | `tools/wavelets.json` | Wavelet filter coefficients (generated with PyWavelets, MIT). |
 | `web/js/core.js` | **Reference DSP** (`WSCoreFactory(SPEC)`): transforms, table building, `Engine`, formats. |
 | `vst/src/dsp.h` | **1:1 C++ port** of `core.js` (same algorithm, same operation order). |
-| `web/` | Web app: `index.html`, `css/synth.css`, `js/{spec,core,worklet,ui,app,demo,evaluate,midi,demo_data}.js`, `manual/` (generated). |
+| `web/` | Web app: `index.html`, `css/synth.css`, `js/{spec,core,worklet,ui,app,demo,demo_data}.js`, `manual/` (generated). |
 | `vst/src/` | Plugin: `plugin.cpp` (VST3 processor, controller, factory), `editor.cpp` (GUI, every system) + `editor_platform.h` (its drawing / window interface) + `editor_win.cpp` (Win32, GDI+) + `editor_mac.mm` (Cocoa), `platform.h` (files, folders, text: Windows / macOS), `bank.h` (presets library), `vst2.cpp` (VST2 entry point, Windows), `common.h`, `iids.cpp`, `version.rc`. |
 | `vst/external/pluginterfaces/` | Steinberg VST3 interface headers (MIT, licence kept). No other SDK code is used. |
 | `vst/build.bat`, `vst/install.bat` | Build with the portable llvm-mingw toolchain (`-static`); install to the VST3 system folder (elevated, path never pasted into a command). |
@@ -42,8 +44,8 @@ products identical. Read it before changing the DSP, the parameters or the prese
 | `tools/presets_top.js`, `tools/presets_new.js`, `tools/presets_super.js`, `tools/presets_lfo3.js` | The 22 TOP Sounds (beta 0.7 parameters, converted by `convertLegacy`), the 200 presets of beta 0.1 (001-200, **unchanged since**), the 300 of beta 0.2 (201-500) and the 600 of beta 0.3 (501-1100), the last two **generated** by `tools/supermod/build.js`: do not edit. |
 | `tools/supermod/` | The composer of the 300 presets of beta 0.2 and the 600 of beta 0.3: `layers.js` (oscillator building blocks), `mods.js` (modulation recipes: LFO 1, LFO 2 and its LFO 3 twins, the filter), `perc.js` (the drums), `compose.js`, `audit.js` (renders every candidate the way a player plays it and measures it: limiter share, bursts of high frequency, motion, contrast between oscillators), `build.js` (parallel run, filters, farthest-point selection, loudness), `calib.js` (the same measures of the existing presets). |
 | `tools/make_presets.js`, `preset_dsl.js`, `preset_lab.js`, `recipes_*.js` | The presets of beta 0.1 and the language the composer writes: one recipe file per group (`P(category, title, description, {A1, A2, B1, g, win})`; the recipes of beta 0.1 wrote B2 and can no longer run), the loudness / distinctness / contact-sheet tooling. |
-| `web/js/evaluate.js`, `vst/devtest/vote_session.cpp` | EVALUATE SOUNDS in the web app; the plug-in's is in `editor.cpp` (`vote*`), tested by `vote_session.cpp`. |
-| `tools/make_demo.js`, `tools/midi.js`, `tools/demo/` | Demo songs: MIDI files (+ `SOURCE.md` licences) → `web/js/demo_data.js`. |
+| `vst/devtest/vote_session.cpp` | The plug-in window test (it was the EVALUATE SOUNDS test, a feature removed in the final version): folder tabs, CHORD MODE, fit to the screen, preset browser and its stars. |
+| `tools/make_demo.js`, `tools/midi.js`, `tools/demo/` | The demo song: the MIDI file of Appassionata III (+ `SOURCE.md` licence) → `web/js/demo_data.js` (`WS_DEMO_SONGS`, one song); `tools/midi.js` is the MIDI reader of the converter (the web app reads no MIDI file). |
 | `tools/manual/` | Manual generator: `mw.js` (the text of both manuals; tables from the spec), `lib.js` (helpers, page shell), `figs.js` (SVG figures computed with `core.js`), `shots.js` (screenshots), `top_desc.js` (the TOP Sounds' descriptions), `build.js`. |
 | `tests/` | Independent test suites (see §8), `tests/quick.js`, `regress_v07.js` (+ `ref/v07/`, the published beta 0.7 engine), `idle_skip.js`. |
 | `index.html`, `.nojekyll` | GitHub Pages home: redirects to `web/index.html`. |
@@ -64,9 +66,8 @@ products identical. Read it before changing the DSP, the parameters or the prese
   other GUI skips the widget), `vis` + `visOn` (the SYNC'd RATE / TIME knobs share their place with the free ones), `style`
   (`'value'`: a knob labelled with its value), `text`, `env`
   (an ADSR display: 0 amp, 1 mod, 2 an oscillator's own envelope, whose `param` is its `eon` + 1 .. + 4). Types include `manual`
-  (the manual of the oscillator shown), `download` (web only, the GitHub releases page), `toggle`, `label`, `evaluate` (the
-  EVALUATE SOUNDS button), `chordpads`, `chordname`, `strumplate`.
-  Panel (beta 0.3, §3.3i): header y 0 (logo, zoom, preset box x 384 w 296, EVALUATE 752, SAVE PRESET 862 (plug-in)
+  (the manual of the oscillator shown), `download` (web only, the GitHub releases page), `toggle`, `label`, `chordpads`, `chordname`, `strumplate` (the `evaluate` type, the EVALUATE SOUNDS button, was removed in the final version).
+  Panel (beta 0.3, §3.3i): header y 0 (logo, zoom, preset box x 384 w 296, SAVE PRESET 862 (plug-in)
   / DOWNLOAD VST (web), MANUAL 936, master, meter); section `oscframe` y 50 (the three folder tabs `osctabs` and the plate drawn by the section); at y 98 the tone card of the oscillator
   shown (544 × 260) inside the plate, and at its right, outside the plate, **OSC MIX** (572, 56; 124 wide: three level knobs + SUB OSC) and the SCOPE · ALL OSCILLATORS (704, 56; 384 wide); y 366:
   SCALE FILTER, POSITION, the oscillator card (TUNE | OWN ENVELOPE | PITCH ENVELOPE); y 520: the voice FILTER, AMP ENVELOPE, MOD ENVELOPE; y 656: LFO 1, LFO 2/3 (two sections, one shown by `lfo_view`),
@@ -84,10 +85,9 @@ products identical. Read it before changing the DSP, the parameters or the prese
   Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc). `PRESETS` = TOP, then the 600 of beta 0.3 (501-1100, `presets_lfo3.js`), the 300 of beta 0.2 (201-500, `presets_super.js`),
   then the 200 of beta 0.1 (001-200, `presets_new.js`, untouched: the owner asked that the old presets never change); `MW_NO_SUPER=1` and `MW_NO_LFO3=1` leave
   the 300 / the 600 out (the builder compares its candidates with the other 330). `TOP` = 22, `NEW_FIRST` = 22 / `NEW_COUNT` = 908 (beta 0.3: 600 + the 500 of the earlier betas minus the 192 that played B2, §3.3i; C++ `kFirstNew` /
-  `kNumNew`) = the presets EVALUATE SOUNDS rates, in that order (the ratings file is keyed by the number, 3 or 4 digits, so ratings of 001-500 stay
-  valid). `rank` = the factory order, which is every category's list order, except that "Wobble Bass" is the first of Bass (it takes the
+  `kNumNew`) = the new presets, in that order (their numbers are 3 or 4 digits; the owner's ratings, `tools/ratings_*.js`, are keyed by them). `rank` = the factory order, which is every category's list order, except that "Wobble Bass" is the first of Bass (it takes the
   rank right after the TOP Sounds; its number does not change). `TOUR` = the demo's preset sequence (`TOUR_PICKS`: a TOP Sound by name, a new preset as `new:<title>`; the first
-  two are not heard). `DESCRIPTIONS` (name → text) is generated into `vote_data.h` (`kPresetDesc`) and the web spec. Values
+  two are not heard). `DESCRIPTIONS` (name → text) is generated into the web spec (the manual's preset table shows them; the plug-in has no use for them since EVALUATE SOUNDS left, so `vote_data.h` is no longer generated). Values
   are validated against the ranges at generation time. Menus: web `presetList()` groups ★ TOP SOUNDS + one folding group per
   category + USER PRESETS; VST `editor.cpp presetMenu` = the library's lists. The VST stores the preset by name, so
   reordering never breaks saved Live Sets. `DEFAULT_PRESET` is the opening sound (`A · Warm Pad`).
@@ -288,8 +288,7 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
   equal-tempered key (generated: web `SPEC.MICRO`, C++ `kMicro`): Arabic = 24-tone equal temperament (degrees in cents, a quarter tone = 50), Turkish = 53
   commas of 1200/53 cents (the Arel-Ezgi-Uzdilek commas of each degree); a key that is not a degree keeps its piano pitch.
 - `microSemis(pitch)` is added to the voice's pitch in `control()` (before octave, fine, bend and LFO; interpolated between the two neighbouring keys while a note glides;
-  0 for Western, so the old sound is bit-identical). `Engine::noMicro` (set by the worklet while the demo's sequencer or the evaluation passage plays, and
-  by the processor while the passage plays, until the voices die) keeps them in equal temperament. The keyboards mark the moved keys with an amber arrow.
+  0 for Western, so the old sound is bit-identical). `Engine::noMicro` (set by the worklet while the demo's sequencer plays, until the voices die; the plug-in never sets it) keeps them in equal temperament. The keyboards mark the moved keys with an amber arrow.
 - Panel: the `mt_mode` seg under CHORD MODE (keys section); `mt_scale` menu and `mt_tonic` step under the scalogram (SCOPE card, `vis: mt_mode`: widget-level `vis`
   works in the web app for `perf` parameters, in the plug-in for any).
 
@@ -326,11 +325,6 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
   LFO 2/3, VOICE (y 656); EFFECTS and the **PLAY** card (CHORD MODE, BASS, TUNING, MAQAM, TONIC; y 792); the keyboard (y 928). The preset browser is as tall as the panel.
 - **Global scope and scalogram**: they show the sound, not the oscillator shown: `buildScopeSets` / `globalCycle` / `scopeBands` (JS) and `ScopeSets` / `globalCycle` / `scopeBands` (C++) add one cycle of
   every oscillator that plays (levels from `staticGains`, at C4) and the sub oscillator; static (no live per-oscillator animation).
-- **EVALUATE SOUNDS** (`web/js/evaluate.js`, `editor.cpp` `vote*`): the passage is the 5 s of Beethoven and, 0.4 s after it, a **long C minor chord** (C3 G3 C4 Eb4 G4, 4 s, velocity 0.7; `gen_spec.js`
-  adds its events to `vote_data.h`, `kVotePassageLen` = 9.4 s). The sounds come in **sets of 40**: `Start at…` asks for the number of the first sound (web `window.prompt`; plug-in: `SaveDlg` with
-  `label` / `ok` / `maxLen`, or the environment variable `MW_START_AT` in tests), the first set starts there, the next ones every 40; every set has its file `sound xxx to sound yyy.txt` (web: downloaded
-  when the set is finished; plug-in: written next to the ratings file after every rating, `voteSetPath`). Ratings are keyed by the preset number (3 or 4 digits: `presetNum`, the text before the
-  first space). The list is the factory order of the new presets: the 600 of beta 0.3 first.
 - **The composer** (`tools/supermod/`) now writes three oscillators (A1 A2 B1; `CONFIGS` A1A2 40, A1B1 32, A1A2B1 24, A2B1 4): `mods.js` has an LFO 2 recipe set with a twin for LFO 3
   (`withLfo`, ids ending `_3`), two filter-LFO recipes (`l2FltCut`, `l2FltRes`) and `FLT` per kind of sound (`fltSetup`); `compose.js` `modulate()` gives **every preset** LFO 2 and / or LFO 3 on a
   wavelet control (both for SuperModulation; weights `w` favour the subtractive-only controls), at most one LFO per control (`canon`), the filter with `FLT_PROB` (about two thirds), and
@@ -346,7 +340,6 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
   12 dB lower, lowers `master` by whole dB until the limiter changes the sound by < 0.4 %; `--apply`). Order: `build.js --no-write ... --pool` (candidates), `rebuild.js`, `gain.js --apply`, `gen_spec.js`.
 - **Stars** (`bank.h`): `State.stars` (-1 = none given: the built-in vote shows), `BankPreset.stars`; the file has `Stars: N` in a factory preset's or a bank sound's block (a built-in vote the player cleared is `Stars: 0`); `Library::stars / setStars / setUserStars / starredCount`; the lists are `LIST ORDER v4` (the v3 lists of beta 0.3 are not read: the lists are rebuilt so that the new TOP Sounds show; `library_test` section 8b);
   EXPORT / IMPORT carry them. Editor: five stars with half stars at the right of a row (`bStarsR`, `drawRowStars`, `starHalf`, `bRate`); the browser is 420 px wide (`kBrowserW`).
-- **EVALUATE SOUNDS**: `LEN = 3.5` and `CHORD_LEN = 2` (`gen_spec.js`, `evaluate.js`); `Skip to vote` button in the playing phase (`voteAsk()`; web `askVote`).
 - **Live scope / scalogram**: the engine publishes, for the last voice, the live gains and window of every oscillator that plays (`Display.sg / swin / mask`, `SharedState.sg / swin / smask`, JS `disp.sg`); `globalCycle` / `scopeBands` take an optional
   `live` (`ScopeLive` in C++) and use it instead of the static gains for the oscillators it names (`editor.cpp scopeLive`, `ui.js liveSlots()`). `tests/display_live.js`.
 
@@ -364,7 +357,7 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
 - `tools/spec.js` `compactPanel()` moves and shortens the sections defined above it (DEVICE 1100 x 966; the wavelet card 250, the plate's second row 356..488, OSC MIX / SCOPE 290, rows at 496 / 622 (120 tall), EFFECTS 12,748 496x98 and PLAY 516,748 584x98 with `vtitle`
   (a 22 px strip, `SectionDef.vtitle`, the web `.section.vt`, `Canvas::textVertical`), keys 852 (98 tall), chord card at DEVICE.h + 4). The mock-up tools of the review are not in the repo (the owner's pictures: Maquettes_Okto).
 - **Plug-in**: `devH()` adds `kChordH` only while CHORD MODE is on and the browser is closed; with the browser open the chord items (`chordItems`, section "chord") are re-laid out under the list (`layoutChordItems`, `bChordCard`, `drawChordInBrowser`; `bList()` is
-  `kChordSideH + 6` shorter); `vote_session` section 8 and the screenshot 13_chord_in_browser.png.
+  `kChordSideH + 6` shorter); `vote_session` section 1 and the screenshot 13_chord_in_browser.png.
 - **Presets**: `NEW_TRIM_DB = 2` in `tools/spec.js` (every preset numbered 501 and up, until the owner has chosen the good ones; 0 = off).
 - **Tests of a pre-release** are the light ones (the owner's rule): `tests/quick.js`, `vote_session`, `library_test`, `vst2_smoke`; the cross-check, `test_web` and the sweeps are for an official release.
 ### 3.4 Table rebuilds
@@ -424,8 +417,7 @@ The CPU load of a chord was measured and cut by about 35-40 % (167 presets, chor
 - `spec.js` (generated) → `core.js` → `worklet.js` (AudioWorkletProcessor; also a sample-accurate **sequencer** for the
   demo) → `ui.js` (`SynthUI`: builds the panel from the layout; knobs, segments, drawbars, canvases, preset menu,
   demo button, MIDI-learn right-click) → `app.js` (parameters, presets, tables, audio lifecycle, MIDI, keyboard,
-  manuals overlay) → `demo.js` (demo player) with `midi.js` (Standard MIDI File reader) and `demo_data.js` (generated);
-  `evaluate.js` (rating session).
+  manuals overlay) → `demo.js` (demo player) with `demo_data.js` (generated, one song).
 - The worklet code is serialised (`WSCoreFactory.toString()`, `WSWorkletMain.toString()`) and loaded from a **data:
   URL** so the app works from `file://` (blob: URLs fail there).
 - Audio lifecycle: one playing window at a time (`localStorage 'mw.audioOwner'` + `storage` event), `pagehide` closes
@@ -433,17 +425,16 @@ The CPU load of a chord was measured and cut by about 35-40 % (167 presets, chor
 - MIDI (Web MIDI, all inputs): notes, bend, CC1, CC64, CC120/123, **channel filter** (`ws.midiCh`), **Program Change**
   → preset, **MIDI learn** (`ws.ccMap`: CC → parameter key; validated on load). Stored data is untrusted: names are
   escaped / set with `textContent`, values clamped.
-- Demo: songs from `demo_data.js`; every song plays the **preset tour** `WS_SPEC.TOUR` (`tools/spec.js` `TOUR_PICKS`, written out so
+- Demo: `demo_data.js` holds **one song** (Beethoven, Appassionata III; the final version removed the other songs, the song menu next to DEMO and the MIDI file loading); it plays the **preset tour** `WS_SPEC.TOUR` (`tools/spec.js` `TOUR_PICKS`, written out so
   that new presets never change the demo), one preset about every 4 s snapped to chord onsets (`tourScenes`); the window shows
   `TOUR_INTRO` (the idea of three oscillators in plain words) during the first presets, then `presetSummary` (the oscillators that
   play, their waves / patterns, tuning, own and pitch envelopes, effects). The old animated-scene demos were removed.
   (The paragraph below is the Wavelet Synthesizer's.) `make_demo.js` `start` cuts the opening chords; the song keeps `origin` (7.84 s) and
   `tourScenes(..., origin)` computes the grid on the whole piece, then starts with the preset playing at the cut, so the
-  cut changes nothing after it. `demo.tourPlan(i)` (`WS_TEST.demoTour`) returns the plan for tests and the manual.
+  cut changes nothing after it. `demo.tourPlan()` (`WS_TEST.demoTour`) returns the plan for tests and the manual (`WS_TEST.demoStart`, `demoSong`, `demoState`, `demoStop`).
   beta 0.7 tour: OktoPierre's 16 sounds of the earlier tour mixed one by one with his TOP Sounds (`EXPECTED_TOUR` in
   `test_demo.js`); during the first presets the demo window shows `TOUR_INTRO` (the idea in plain words, one sentence
   per preset) instead of the preset summary.
-  Other songs use animated scenes.
 - Preset browser (beta 0.3, `ui.makeBrowser` / `renderBrowser`): a `#browser` element beside `#device` (the panel keeps
   its 1100 × 720 box: the test suites locate it by that shape), scaled with it by `fit()`; lists = TOP Sounds (the first
   `TOP` presets) and the categories sorted by `rank`, as the plug-in's defaults; selection only. beta 0.5: the arrow keys
@@ -458,15 +449,6 @@ The CPU load of a chord was measured and cut by about 35-40 % (167 presets, chor
   makes the panel `inert` while it is shown; it comes back (paused audio, another window playing) with the reason in
   `#w-sub`. Header: DOWNLOAD VST (`VST_RELEASES` in `ui.js`) and one MANUAL button (the manual of the engine shown, in
   the overlay viewer).
-- **EVALUATE SOUNDS** (`evaluate.js`, `WSEvaluate(api)`): the header button; a window over the panel (a bar over the keyboard while a
-  preset is modified). Passage = notes of `WS_DEMO_SONGS[0]` starting in [12.9 s, 17.9 s) cut at the end, played by the worklet's
-  sequencer after `LEAD` = 0.12 s with the demo's playing rules (`SAFE`: 16 voices, octave 0, no glide, attack ≤ 0.08 s, delay mix ≤ 0.1,
-  feedback ≤ 0.3). Stars 1–10 (keys 1–9, 0), above 5 `ASK`: modify → the preset as designed (+ the recorded change), `Keep initial
-  settings` / `Record preset change` (the parameters that differ, `EDITABLE` = sound parameters only). State in `localStorage`
-  `mw.votes`; the file `okto-multiwave-ratings.txt` through `showSaveFilePicker` (Edge / Chrome, rewritten after every answer) or a
-  download. **Save as…** (start, rating and end windows) saves a copy of the ratings so far under a name the player chooses, without changing the file being
-  rewritten (`saveCopy`: the save window in Edge / Chrome, else a `prompt` for the name and a download); the plug-in's `voteSaveAs` does the same (`MW_SAVEAS_PATH`
-  replaces its window in tests). The plug-in writes the same text (§5); the line formats are the contract between them.
 - Test hooks: `window.WS_TEST` (used by the test suites). `node.onprocessorerror` tells the player when the worklet fails. The animated
   canvases are drawn when `setLive` saw a change (`liveVer`), while the meter falls back and twice a second at rest.
 - Other storage keys: `ws.user` (user presets), `ws.state`.
@@ -536,19 +518,6 @@ The CPU load of a chord was measured and cut by about 35-40 % (167 presets, chor
   the state `"WSC2"` stores `"USER · name"` for a bank sound (name buffer 512, no NUL byte; an unknown name is taken only
   with that prefix). Knobs with ≤ 5 positions: 24 px per step, a click = next value (web `dragBehaviour` too). The
   panel's logo reads OKTOMULTIWAVE / WAVELET SYNTHESIZER (both products; the plug-in keeps its name).
-- **EVALUATE SOUNDS in the plug-in** (`editor.cpp`, the `vote*` block; phases `V_START V_PLAY V_VOTE V_ASK V_EDIT V_END`): drawn on the
-  `Canvas` (the card `kVoteCard`, the bar `kVoteBar` over the keyboard while a preset is modified), buttons laid out at paint time
-  (`voteButtons` stores their rectangles; hit-testing needs one paint first). The **passage** is played by the processor, not
-  the editor: `vote_data.h` (generated by `gen_spec.js`: `kVotePassage` events, `kVotePassageLen`, `kPresetDesc`);
-  `SharedState` `seqStart` (+1 = play from the start) / `seqStop` (1 = release, 2 = silence everything) / `seqDone` / `seqTime`;
-  `Processor::process` merges the passage events with the host's in sample order (`engine.noteOn` / `noteOff` directly, not
-  through the chord layer, counted per pitch) after the tables of the preset just loaded are in use (`seqWait`). `EditorHost::setSound`
-  (controller: `applySound`, `presetIdx`, `dirty`) loads a preset's raw values (`kPresets[k].v`, not the library's adjusted ones) and the
-  session restores the sound played before it on Stop. The ratings file: `voteDir()` = `MW_VOTES_DIR` (tests) or `Documents\Okto
-  MultiWave Synth` (`userDocumentsFolder()` in `platform.h`: the Documents known folder, else the local application data folder, else
-  the temporary folder; `makeFolder`), `ratings-location.txt` remembers a file chosen with "Change file…"; an existing file must start
-  with `Okto MultiWave Synth - preset ratings`. Rewritten after every rating or change (`voteSave`, atomic), read at the next session.
-  While a session runs the browser, SAVE PRESET, the arrow keys and the preset arrows are blocked.
 - `vst2.cpp`: `VSTPluginMain` with VST 2.4 declarations written from the public binary layout (no Steinberg VST2 file).
   It hosts the same Processor + Controller in-process (parameter queues, event list, chunk `"WSV2"` = both states,
   programs = factory presets, editor via `IPlugView` + `IPlugFrame`).
@@ -563,7 +532,7 @@ The CPU load of a chord was measured and cut by about 35-40 % (167 presets, chor
   Apple silicon. No VST2 on macOS.
 
 ## 6. Security hardening already in place (keep it)
-MIDI file reader bounds every length to the bytes present (VLQ ≤ 4 bytes, binary-search tempo map); oscillator phase
+The MIDI file reader (`tools/midi.js`, the demo converter; the web app reads no MIDI file any more) bounds every length to the bytes present (VLQ ≤ 4 bytes, binary-search tempo map); oscillator phase
 wrap and above-Nyquist silence (prevented an out-of-bounds read); state/chunk/attribute parsing validated; MIDI-learn
 and channel data validated; `install.bat` relaunches itself elevated instead of building a command line.
 beta 0.6 (independent security review, no intentional malicious code found): `reveal` starts explorer.exe by its full
@@ -586,25 +555,21 @@ runs from `file://`); GitHub Actions pinned by tag.
   The text is generated from the spec (ranges, defaults) and from `core.js` (figures).
 
 ## 8. Tests
-Beta 0.3 (B2 removed, folder tabs, LFO 3, FILTER, 600 presets, evaluation sets): the cases of the cross-check are 1000 (930 presets + 70 variants of `tools/dsp_cases.js`: B2 variants use B1 and A2, LFO 3 on
+Beta 0.3 (B2 removed, folder tabs, LFO 3, FILTER, 600 presets): the cases of the cross-check are 1000 (930 presets + 70 variants of `tools/dsp_cases.js`: B2 variants use B1 and A2, LFO 3 on
 its targets and with LFO 2, the filter in both characters with resonance, drive, key tracking, the envelope and the LFO targets; worst 3.6e-7), `tests/filter.js` (new: the voice filter's spectra, resonance, saturation, key tracking,
 envelope, LFO targets, bypass when open, stability under random settings), `tests/web/smoke.js` checks the three folder tabs, the cards of each view (one wavelet card, SCALE FILTER, POSITION and TUNE, OSC MIX, the SCOPE, FILTER, LFO 1 always
-there) and the LFO 2 | LFO 3 sub-tab, `tests/web/test_web.js` clicks the tabs and maps the 1050 px panel (`DEV_H`), `tests/web/test_evaluate.js` answers the "Start at…" prompt, checks the long chord (the passage lasts more than 7 s), a refused number, and
-the **sets of 40** (39 sounds already rated, the 40th rating downloads `sound xxx to sound yyy.txt`, which it reads), `vst/devtest/vote_session.cpp` does the same in the plug-in (`MW_START_AT`, the set file next to the ratings file) and
-clicks the three tabs, `vst/devtest/library_test.cpp` reads 3- and 4-digit numbers, `tests/quick.js` plays the last sustained sound instead of the last preset (a tambourine of a few tens of ms was missed by the 150 ms polling in about
+there) and the LFO 2 | LFO 3 sub-tab, `tests/web/test_web.js` clicks the tabs and maps the 1050 px panel (`DEV_H`), `vst/devtest/vote_session.cpp` clicks the three tabs, `vst/devtest/library_test.cpp` reads 3- and 4-digit numbers, `tests/quick.js` plays the last sustained sound instead of the last preset (a tambourine of a few tens of ms was missed by the 150 ms polling in about
 one run in three; the level is read every 50 ms) and `--dsp` writes the list of cases first. After a change of the factory order run `node tests/vst3host/make_presets.js`.
 
 Beta 0.2 adds `tests/supermod.js` (the variants' tables, the destinations moving the sound, BASS and the chord that follows the left hand, the oriental tunings measured by
 the frequency they play) and 26 cross-check cases (577 in all, with the 522 presets: LFO 1 / LFO 2 on every new destination, the live chord scenarios, the tunings with a glide and a chord).
 Okto MultiWave Synth beta 0.1 status. **Maintained and passing**: `tests/quick.js` (20 s: syntax, generated files up to date, JS engine
 on the 222 presets + chord layer + hostile MIDI, the VST3 host's `params,audio,offline,attrlist` sections, the web app's first
-checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (three oscillator views with their folder tabs, CHORD MODE, no console error), `tests/web/test_evaluate.js` (a web EVALUATE SOUNDS session end to end),
-`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp` (1000 cases), `vst/devtest/vote_session.cpp` (the plug-in's EVALUATE SOUNDS
-window and CHORD MODE in an off-screen window: the host-side parameters, the audio, the ratings file, screenshots; build line at its
-top; it needs `MW_VOTES_DIR`, which it sets itself, so it never touches the player's file), `tests/web/test_web.js` (adapted: the
+checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (three oscillator views with their folder tabs, CHORD MODE, no console error), `tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp` (1000 cases), `vst/devtest/vote_session.cpp` (the plug-in's window in an off-screen window: folder tabs, CHORD MODE, fit to the screen, the preset browser and its stars, screenshots; build line at its
+top; its presets file goes to its output folder through `WS_PRESETS_FILE`, so it never touches the player's file; it was the EVALUATE SOUNDS test, removed in the final version), `tests/web/test_web.js` (adapted: the
 oscillator tabs, 860 px panel, no Source Phase, a neutral patch made of the spec defaults — there is no Init preset; the full run plays all
-222 presets and takes about 10 minutes), `tests/web/test_demo.js` (every song is a preset tour: the plan against the spec's `TOUR`, the
-welcome sentences, the forced playing rules, stop paths, MIDI files; `--smoke` about 2 minutes), `tools/dsp_selftest.js` (12 sections; 12 =
+222 presets and takes about 10 minutes), `tests/web/test_demo.js` (the demo, one song, is a preset tour: the plan against the spec's `TOUR`, the
+welcome sentences, the forced playing rules, stop paths, no arrow / menu / MIDI input / EVALUATE button; `--smoke` about 1.5 minutes), `tools/dsp_selftest.js` (12 sections; 12 =
 the four oscillators), `vst/devtest/library_test.cpp` (the presets file, no window), `vst/devtest/vst2_smoke.cpp`. `tests/vst3host` with `--skip-editor`: the sections params, audio, state, offline, presets, sub, porta, stress, instances and sync pass (190 checks).
 **Not ported** (they drive the Wavelet Synthesizer's presets, panel or screenshots, or the macOS build): `vst/devtest/bank_session.cpp`,
 the controller-state and editor sections of `tests/vst3host` (the editor one hangs on a popup menu), `tests/machost`. Run them only after porting them. The old descriptions follow.

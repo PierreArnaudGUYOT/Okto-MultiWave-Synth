@@ -761,14 +761,14 @@ async function stepPanel() {
     JSON.stringify(bInfo && bInfo.rows.slice(0, 4)) + ` … (${bInfo ? bInfo.rows.length : 0} rows)`);
   // the classic menu (the preset name opens it while the browser is shown; a second click closes it)
   const groups = await ev(`(() => { const n = document.querySelector('.presets .pname'); if (!n) return null;
-    n.click(); const m = document.querySelector('.pmenu:not(.demo-menu)');
+    n.click(); const m = document.querySelector('.pmenu');
     const g = m ? [...m.querySelectorAll('.grp')].map((h) => { const c = h.querySelector('.cnt'); return { name: h.textContent.replace(/^[▾▸]/, '').replace(c ? c.textContent : '', '').trim(), n: c ? +c.textContent : NaN }; }) : null;
     if (m) n.click(); return g; })()`);
   const factoryGroups = (groups || []).filter((g) => g.name !== 'USER PRESETS');
   const grpWant = ['★ TOP SOUNDS', ...SPEC.CATEGORIES.map((c) => c.toUpperCase())];
   log(`  preset menu groups: ${(groups || []).map((g) => `${g.name} ${g.n}`).join(' | ')}`);
   check(!!groups && JSON.stringify(factoryGroups.map((g) => g.name)) === JSON.stringify(grpWant) && factoryGroups[0].n === TOP_N &&
-    factoryGroups[factoryGroups.length - 1].name === lastCat.toUpperCase() && !(await ev(`!!document.querySelector('.pmenu:not(.demo-menu)')`)),
+    factoryGroups[factoryGroups.length - 1].name === lastCat.toUpperCase() && !(await ev(`!!document.querySelector('.pmenu')`)),
     `preset menu: ★ TOP SOUNDS (${TOP_N}) first, then one group per category in the spec order, ${lastCat.toUpperCase()} last`, JSON.stringify(groups));
   // the preset browser selects presets (a click on a row, then the arrow key)
   const rows = await ev(`[...document.querySelectorAll('#browser .blist .bsnd')].map((e) => e.title)`);

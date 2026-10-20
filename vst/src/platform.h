@@ -7,8 +7,6 @@
 #pragma once
 #ifdef _WIN32
 #include <windows.h>
-// SHGetKnownFolderPath (shell32): declared here, shlobj.h brings ocidl.h, whose IConnectionPoint clashes with the VST3 one
-extern "C" HRESULT WINAPI SHGetKnownFolderPath(const GUID& rfid, DWORD dwFlags, HANDLE hToken, PWSTR* ppszPath);
 #else
 #include <dlfcn.h>
 #include <errno.h>
@@ -230,52 +228,6 @@ inline bool fileExists(const std::wstring& path) {
 #else
   struct stat st {};
   return stat(wideToUtf8(path).c_str(), &st) == 0;
-#endif
-}
-
-// Okto MultiWave Synth (EVALUATE SOUNDS): a folder and its missing parents (true when it exists afterwards)
-inline bool makeFolder(const std::wstring& path) {
-  if (path.empty()) return false;
-  for (size_t i = 1; i <= path.size(); i++) {
-    if (i < path.size() && path[i] != L'\\' && path[i] != L'/') continue;
-    const std::wstring part = path.substr(0, i);
-    if (part.size() == 2 && part[1] == L':') continue;   // a drive
-#ifdef _WIN32
-    CreateDirectoryW(part.c_str(), nullptr);
-#else
-    mkdir(wideToUtf8(part).c_str(), 0755);
-#endif
-  }
-#ifdef _WIN32
-  const DWORD a = GetFileAttributesW(path.c_str());
-  return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY);
-#else
-  struct stat st {};
-  return stat(wideToUtf8(path).c_str(), &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-// The user's Documents folder (Windows: the known folder, which OneDrive may redirect; macOS: ~/Documents); when there is none,
-// the local application data folder, else the temporary folder: the ratings file can always be written somewhere.
-inline std::wstring userDocumentsFolder() {
-#ifdef _WIN32
-  PWSTR p = nullptr;
-  std::wstring r;
-  static const GUID kFolderIdDocuments = {0xFDD39AD0, 0x238F, 0x46AF, {0xAD, 0xB4, 0x6C, 0x85, 0x48, 0x03, 0x69, 0xC7}};   // FOLDERID_Documents
-  if (SHGetKnownFolderPath(kFolderIdDocuments, 0, nullptr, &p) == S_OK && p) r = p;
-  CoTaskMemFree(p);
-  auto isDir = [](const std::wstring& d) { const DWORD a = GetFileAttributesW(d.c_str()); return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY); };
-  if (!r.empty() && isDir(r)) return r;
-  r = envPath(L"LOCALAPPDATA");
-  if (!r.empty() && isDir(r)) return r;
-  r = envPath(L"TEMP");
-  return r.empty() ? L"C:\\" : r;
-#else
-  std::wstring r = envPath(L"HOME");
-  if (!r.empty()) r += L"/Documents";
-  struct stat st {};
-  if (!r.empty() && stat(wideToUtf8(r).c_str(), &st) == 0) return r;
-  r = envPath(L"TMPDIR");
-  return r.empty() ? L"/tmp" : r;
 #endif
 }
 

@@ -23,7 +23,6 @@ const numOf = p => parseInt(p.name, 10);   // the number written first in a new 
 const N03 = NEW.filter(p => numOf(p) >= 501).length, N02 = NEW.filter(p => numOf(p) >= 201 && numOf(p) < 501).length, N01 = NEW.length - N03 - N02;   // presets of beta 0.3, of beta 0.2 and of beta 0.1 (left)
 const SUPER = SPEC.PRESETS.filter(p => p.cat === 'SuperModulation');
 const firstNo03 = String(Math.min(...NEW.map(numOf).filter(n => n >= 501))), lastNo03 = String(Math.max(...NEW.map(numOf)));
-const SET_SIZE = 40;   // sounds per EVALUATE SOUNDS set (one file each)
 const title = t => { const p = NEW.find(q => q.name.slice(4).split(' · ')[1] === t); if (!p) throw new Error('manual: no preset titled ' + t); return `<b>${p.name}</b>`; };
 const topName = n => { if (!SPEC.PRESETS.slice(0, SPEC.TOP).some(p => p.name === n)) throw new Error('manual: no TOP Sound ' + n); return `<b>${n}</b>`; };
 const nCat = c => SPEC.PRESETS.filter(p => p.cat === c).length;
@@ -66,7 +65,7 @@ function quickStart(E) {
 <li>Arm the track and play a MIDI keyboard, or press ${kbd('M')} to use Live's Computer MIDI Keyboard. The panel is the same as in the web app.</li>
 </ol></div>
 </div>
-${tip(`<p>Want to hear what it can do first? ${ctl('▶ DEMO')} (web app) plays Beethoven's <i>Appassionata</i> while the presets change every few seconds; <b>EVALUATE SOUNDS</b> (web app and plug-in) lets you hear each of the ${SPEC.NEW_COUNT} new presets and rate them — see <a href="#evaluate">Evaluate sounds</a>.</p>`)}`;
+${tip(`<p>Want to hear what it can do first? ${ctl('▶ DEMO')} (web app) plays Beethoven's <i>Appassionata</i> while the presets change every few seconds.</p>`)}`;
 }
 
 // ---------------------------------------------------------------- 2. the panel
@@ -95,7 +94,6 @@ const pins = E => {
   return [
     { ...at('oscframe', 12, 4), title: 'Folder tabs', desc: 'OSC1 A1 · OSC2 A2 · OSC3 B1: which oscillator\'s cards are shown on the plate; a lit dot = it is heard (the sound is set by OSC MIX).', href: 'oscillators' },
     header(392, 12, 'Preset browser', '◀ ▶ step through the presets; click the name for the list.', 'presets'),
-    header(758, 12, 'EVALUATE SOUNDS', 'the listening test of the new presets.', 'evaluate'),
     header(868, 12, 'DOWNLOAD VST / SAVE PRESET', 'the web app links to the plug-in; the plug-in has SAVE PRESET here.', 'plugin'),
     header(942, 12, 'MANUAL', 'this manual on an A tab, the other one on a B tab.', 'panel'),
     header(1032, 8, 'VOLUME and meter', 'master level and stereo peak meter.', 'effects'),
@@ -122,10 +120,9 @@ function panelChapter(E) {
   const a = isA(E);
   const ann = annotated(`panel-${E}.png`, `The whole instrument with the ${a ? 'A1' : 'B1'} oscillator shown`, pins(E));
   const hdr = [
-    ['▶ DEMO ▾ (web app)', 'Plays the default demo, a tour of the presets; the ▾ opens other pieces and "Load a MIDI file…".'],
+    ['▶ DEMO (web app)', 'Plays the demo, Beethoven\'s Appassionata: a tour of the presets, a new one about every 4 seconds. It says STOP while it runs.'],
     ['Folder tabs', `The strip of three tabs under the header — ${ctl('OSC1 A1')} · SUBTRACTIVE and ${ctl('OSC2 A2')} · SUBTRACTIVE (yellow), ${ctl('OSC3 B1')} · ADDITIVE (blue) — chooses the oscillator whose cards are shown on the plate below it; a lit dot says the oscillator is heard. It does not change the sound, and does not mark a preset as modified.`],
     ['Preset box', 'The name of the sound; a dot after it means it was modified since it was loaded. ◀ ▶ step; a click opens the preset browser.'],
-    ['EVALUATE SOUNDS', 'The listening test of the new presets (see <a href="#evaluate">Evaluate sounds</a>); it lights up and says STOP while a session runs.'],
     ['DOWNLOAD VST · SAVE PRESET', 'The web app\'s button opens the plug-in\'s release page; in the plug-in the same place holds SAVE PRESET.'],
     ['MANUAL', 'Opens the manual of the oscillator shown — Manual A on A1 or A2, Manual B on B1; each links to the other.'],
     ['VOLUME · meter', 'Master level (−36 … +6 dB) and the stereo peak meter.'],
@@ -423,7 +420,7 @@ function orientalChapter() {
 </ul>
 <p>Outside WEST two more controls show in the PLAY card, under the switch: ${ctl('MAQAM')} chooses the scale (${sc.join(', ')}) and ${ctl('TONIC')} the key it starts on (the scale is moved to it: Rast on D is Rast starting at D). The keys the tuning moves carry a small amber arrow on the keyboard (pointing down: lower than the piano key). A key that is not a degree of the scale keeps its piano pitch, so the sharps and flats you need stay in tune.</p>
 <ul>
-<li>Every note follows the tuning: the keys, the chord harp's notes (a chord on Rast has its half-flat third), the sub oscillator, the notes a MIDI file plays — except the <b>demo</b> and <b>EVALUATE SOUNDS</b>, which always play in equal temperament so that they are not out of tune with the music.</li>
+<li>Every note follows the tuning: the keys, the chord harp's notes (a chord on Rast has its half-flat third), the sub oscillator, the notes a MIDI file plays — except the <b>demo</b>, which always plays in equal temperament so that it is not out of tune with the music.</li>
 <li>TUNING, MAQAM and TONIC are <em>playing</em> settings, like CHORD MODE: they are automatable parameters, saved with the Live Set, and never part of a preset.</li>
 <li>Examples. <b>Rast on C, Arabic</b>: play C D E F G A B C — E and B are a quarter tone low, the rest is as on the piano. <b>Bayati on D</b>: D then E, a quarter tone flat, F G A B♭ C. <b>Hicaz on D, Turkish</b>: D E♭ F♯ G A B♭ C with the commas of the Turkish system.</li>
 </ul>
@@ -451,7 +448,7 @@ function presetTable() {
   return `<div class="tbl"><table class="presets"><thead><tr>${head.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 function presetsChapter(E) {
-  return `<p>Okto MultiWave Synth has <b>${SPEC.PRESETS.length} factory presets</b>: OktoPierre's ${SPEC.TOP} <b>TOP Sounds</b> (unchanged from the Wavelet Synthesizer beta 0.7: they sound exactly as there, from <b>${SPEC.PRESETS[0].name}</b> to <b>${SPEC.PRESETS[SPEC.TOP - 1].name}</b>) and <b>${SPEC.NEW_COUNT} new presets</b>: <b>${N03} of beta 0.3</b> (numbers <code>${firstNo03}</code>–<code>${lastNo03}</code>: ${Math.round(N03 / SPEC.CATEGORIES.length)} in each of the ${SPEC.CATEGORIES.length} categories), in which LFO 2 and / or LFO 3 move wavelet controls of the oscillators (mostly of the subtractive ones) and about two in three also use the new voice FILTER; <b>${N02} of beta 0.2</b> (numbers <code>201</code>–<code>500</code>), in which LFO 1 and LFO 2 move the controls of the wavelet oscillators and A1 and A2 are very different from each other; and <b>${N01} of beta 0.1</b> (<code>001</code>–<code>200</code>, unchanged), sorted into the categories ${catList}. Beta 0.3 removed the second additive oscillator (B2): the presets that used it left the list, and their numbers are not used again, so the ratings you gave to the others stay valid. A new preset's name is its number, the oscillators it uses (<code>A1A2</code>, <code>A1B1</code>, <code>A1A2B1</code> …) and a title: <code>${NEW[0].name}</code>. Every new preset uses at least two oscillators, often one of them as the attack; their loudness is matched to the TOP Sounds. The <b>SuperModulation</b> category (${SUPER.length} sounds) holds the ones whose life is the LFOs moving the scale filter, the sparsity, the window, the source phase, the morph and the additive scales (see <a href="#supermod">SuperModulation</a>). The preset browser at the right follows the preset box: step with ◀ ▶ or the name's menu and it shows the category of the sound and the sound itself. ◀ ▶ step through them in that order; clicking the name opens the list (the <b>preset browser</b> at the right of the panel: TOP Sounds and the categories, one click plays a sound, the arrow keys ${kbd('↑')} ${kbd('↓')} ${kbd('←')} ${kbd('→')} too).</p>
+  return `<p>Okto MultiWave Synth has <b>${SPEC.PRESETS.length} factory presets</b>: OktoPierre's ${SPEC.TOP} <b>TOP Sounds</b> (unchanged from the Wavelet Synthesizer beta 0.7: they sound exactly as there, from <b>${SPEC.PRESETS[0].name}</b> to <b>${SPEC.PRESETS[SPEC.TOP - 1].name}</b>) and <b>${SPEC.NEW_COUNT} new presets</b>: <b>${N03} of beta 0.3</b> (numbers <code>${firstNo03}</code>–<code>${lastNo03}</code>: ${Math.round(N03 / SPEC.CATEGORIES.length)} in each of the ${SPEC.CATEGORIES.length} categories), in which LFO 2 and / or LFO 3 move wavelet controls of the oscillators (mostly of the subtractive ones) and about two in three also use the new voice FILTER; <b>${N02} of beta 0.2</b> (numbers <code>201</code>–<code>500</code>), in which LFO 1 and LFO 2 move the controls of the wavelet oscillators and A1 and A2 are very different from each other; and <b>${N01} of beta 0.1</b> (<code>001</code>–<code>200</code>, unchanged), sorted into the categories ${catList}. Beta 0.3 removed the second additive oscillator (B2): the presets that used it left the list, and their numbers are not used again. A new preset's name is its number, the oscillators it uses (<code>A1A2</code>, <code>A1B1</code>, <code>A1A2B1</code> …) and a title: <code>${NEW[0].name}</code>. Every new preset uses at least two oscillators, often one of them as the attack; their loudness is matched to the TOP Sounds. The <b>SuperModulation</b> category (${SUPER.length} sounds) holds the ones whose life is the LFOs moving the scale filter, the sparsity, the window, the source phase, the morph and the additive scales (see <a href="#supermod">SuperModulation</a>). The preset browser at the right follows the preset box: step with ◀ ▶ or the name's menu and it shows the category of the sound and the sound itself. ◀ ▶ step through them in that order; clicking the name opens the list (the <b>preset browser</b> at the right of the panel: TOP Sounds and the categories, one click plays a sound, the arrow keys ${kbd('↑')} ${kbd('↓')} ${kbd('←')} ${kbd('→')} too).</p>
 <h3 id="saving">Saving your own sounds</h3>
 <ul>
 <li><b>Web app.</b> The buttons at the right of the status bar: <b>Save preset</b> keeps the sound in this browser's storage (the USER PRESETS group), <b>Export</b> downloads it as a <code>.json</code> file, <b>Import</b> loads one. User presets live in that browser profile only: use Export for anything you want to keep.</li>
@@ -460,25 +457,6 @@ function presetsChapter(E) {
 <h3 id="preset-list">All the presets</h3>
 <p class="small muted">★ = one of OktoPierre's TOP Sounds. The oscillators are the ones whose level is above 0.</p>
 ${presetTable()}`;
-}
-
-// ---------------------------------------------------------------- 11. evaluate
-function evaluateChapter() {
-  return `<p><b>EVALUATE SOUNDS</b> (header, web app and plug-in) is a listening test of the ${SPEC.NEW_COUNT} new presets: it plays a piece of music with each one, asks how much you like it, and writes your answers — and the changes you make to the sounds you like — in text files you can send back. The sounds come in <b>sets of ${SET_SIZE}</b>: every set has its own file.</p>
-<ol class="steps">
-<li>Click <b>EVALUATE SOUNDS</b>, then <b>Start at…</b>: a small window asks the <b>number of the first sound</b> to rate (it offers the first one not rated yet; a later session also offers <b>Continue at …</b>). The list is the factory order: the ${N03} presets of beta 0.3 first (${firstNo03}–${lastNo03}), then those of beta 0.2 (${N02}), then those of beta 0.1 (${N01}). The window plays <b>3.5 seconds of Beethoven's <i>Appassionata</i></b> (the busy passage at 0:13 of the demo) <b>and then a C minor chord</b> (two seconds: a sustained sound can be judged too, not only quick notes) with that preset — polyphonic, at its normal octave, with short echoes — and shows its name, category and one-line description.</li>
-<li>When the passage ends, give <b>1 to 10 stars</b>: click a star (in the web app also the keys ${kbd('1')}–${kbd('9')}, ${kbd('0')} = 10). The answer is saved at once and the next preset plays. You can also play the preset on your MIDI keyboard while the window waits. <b>▶ Replay</b>, <b>◀ Previous</b>, <b>Skip</b> and <b>Stop</b> are always there, and <b>Skip to vote</b> ends the music at once and asks for the stars; <b>Stop</b> (or the lit EVALUATE button) gives back the sound you were playing.</li>
-<li><b>More than 5 stars</b> asks whether to <b>modify</b> the preset. If yes, the preset loads exactly as designed, the window shrinks to a bar over the keyboard, and you change the panel with the mouse and play it on your keyboard. <b>▶ Play the passage</b> plays it again. <b>Keep initial settings</b> forgets your changes; <b>Record preset change</b> writes the parameters that differ from the preset in the file.</li>
-<li><b>Sets of ${SET_SIZE} sounds.</b> The first set starts at the sound you chose, the next ones every ${SET_SIZE} sounds, and every set has <b>its own file</b>, named after its first and last sound: <code>sound ${firstNo03} to sound ${Number(firstNo03) + SET_SIZE - 1}.txt</code>. Send back the files of the sets you rated.</li>
-<li><b>Stars in the preset browser</b> (beta 0.3.1): the browser shows five stars (half stars: 1 to 10) at the right of every sound, in normal playing too; click to rate, click the same rating to clear it. The ratings are saved in the presets file and <b>EXPORT carries them</b>, whenever you like.</li>
-<li>Stop whenever you like: the files are rewritten after every answer, and the next session continues where you stopped (it reads the ratings file again).</li>
-</ol>
-<h3 id="evaluate-file">The ratings file</h3>
-<ul>
-<li><b>Plug-in:</b> <code>Documents\\Okto MultiWave Synth\\okto-multiwave-ratings.txt</code> (the local application data folder when the Documents folder is missing) holds every rating; the file of each set (<code>sound xxx to sound yyy.txt</code>) is written next to it after every answer. ${ctl('Change file…')} chooses another ratings file (an existing ratings file continues where it stopped; the choice is remembered; the set files go next to it), ${ctl('Show file')} opens its folder, ${ctl('Save as…')} saves a copy of the ratings so far under a name you choose (while a set is being rated, a copy of that set), ${ctl('Clear all')} starts over.</li>
-<li><b>Web app:</b> the ratings are kept in the browser; in Edge or Chrome you can choose a ratings file at the start (it is rewritten after every answer), and the file of a set is <b>downloaded</b> when the set is finished (every sound rated) and you move on, stop or finish. In other browsers ${ctl('Save as…')} downloads a copy (it also works in Edge and Chrome, with the name you choose).</li>
-<li>The text is the same in both, for the whole list and for a set: a header, <code>NUMBER | STARS | CHANGED | PRESET</code> for every preset, a ranking, and <b>PRESET CHANGES</b> as <code>parameter key: value in the preset -> new value (name: shown value -> new shown value)</code>.</li>
-</ul>`;
 }
 
 // ---------------------------------------------------------------- 12. plug-in
@@ -499,7 +477,7 @@ function pluginChapter() {
 <li><b>SAVE PRESET</b> (left of MANUAL) overwrites the preset playing: a factory preset is <em>adjusted</em> in place, optionally under a new name (RESTORE brings the original back); a sound of the user bank is replaced.</li>
 <li><b>The presets file</b>: everything above lives in one readable text file, <code>OKTOMULTIWAVE presets.txt</code>, kept next to the <code>.vst3</code> folder (the folder must allow writing: <code>C:\\Program Files\\Common Files\\VST3</code> needs administrator rights, so install into a folder you own, or run Live as administrator once). It is written atomically after every edit and read again when another instance changes it. A file longer than 16 MB is never written over.</li>
 <li><b>Automation</b>: every sound parameter and the chord harp's six settings can be automated; the oscillator tabs (OSC) are a panel choice, not part of a sound.</li>
-<li><b>EVALUATE SOUNDS</b> works in the plug-in too, with the host's audio engine running (see <a href="#evaluate">Evaluate sounds</a>). While a session runs the preset browser, SAVE PRESET and the arrow keys are locked.</li>
+<li><b>Stars</b>: the preset browser shows five stars (half stars: 1 to 10) at the right of every sound; click to rate, click the same rating to clear it. The ratings are saved in the presets file and <b>EXPORT carries them</b>.</li>
 </ul>`;
 }
 
@@ -513,8 +491,6 @@ function troubleChapter() {
     ['A preset sounds quieter or louder than another', 'The new presets are matched to the TOP Sounds, but very short sounds (hats, clicks) are measured over 50 ms. Use the master VOLUME, or the level knobs.'],
     ['The plug-in does not appear in Live', 'Copy the <b>whole</b> bundle folder (not only the file inside), check <b>Use VST3 Plug-in System Folders</b> and press <b>Rescan</b>; the folder must be 64-bit Windows.'],
     ['SAVE PRESET says it cannot write', 'The presets file sits next to the <code>.vst3</code> folder; that folder must allow writing (see <a href="#vst-diff">What is specific to the plug-in</a>).'],
-    ['EVALUATE SOUNDS says the passage did not play', 'The host\'s audio engine must be running: in Live, turn the audio engine on and arm or enable the track. The window waits a few seconds, then continues so that you can still rate the preset.'],
-    ['Where is my ratings file?', 'Plug-in: <code>Documents\\Okto MultiWave Synth\\okto-multiwave-ratings.txt</code> and, next to it, one <code>sound xxx to sound yyy.txt</code> per set (use <b>Show file</b>). Web app: the file you chose at the start, or the downloads (one file per finished set).'],
     ['The CPU is high', 'Cost = voices × unison copies × oscillators that are on, and the voice FILTER (about the cost of one more oscillator) when it is not open. Lower UNISON or VOICES, turn off oscillators you do not hear, open the FILTER, avoid an LFO on PHASE with many voices.'],
   ];
   return qa.map(([q, a]) => `<details class="qa"><summary>${q}</summary><p>${a}</p></details>`).join('\n');
@@ -552,7 +528,7 @@ ${table(['Term', 'Meaning'], [
 function aboutChapter() {
   return `<p><b>Okto MultiWave Synth</b> ${SPEC.APP.version}, a test version (${SPEC.APP.date}), created by <b>Pierre Arnaud GUYOT</b> (OktoPierre), on the basis of his Wavelet Synthesizer beta 0.7 and his chord keyboard (WaveChord). Free software under the GNU General Public License v3 or later, WITHOUT ANY WARRANTY: <a href="https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth">github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth</a>.</p>
 <ul>
-<li>Demo music: MIDI from the <a href="https://www.mutopiaproject.org">Mutopia Project</a> — J. S. Bach <i>Toccata in D minor</i> and Beethoven's Op. 57 III, Op. 129, Op. 67 I, Op. 13 I, Op. 31/2 I, Op. 111 I (public domain); Beethoven <i>Moonlight</i> Op. 27/2 III typeset by Stewart Holmes (CC BY-SA 2.5). The listening passage of EVALUATE SOUNDS is part of Op. 57 III.</li>
+<li>Demo music: MIDI from the <a href="https://www.mutopiaproject.org">Mutopia Project</a> — Beethoven's Piano Sonata No. 23 <i>Appassionata</i>, Op. 57 III (public domain).</li>
 <li>VST3 interface headers: Steinberg Media Technologies, MIT licence. Wavelet filter coefficients generated with PyWavelets (MIT).</li>
 <li>Thanks to Jeremi Palmigani (Saoul Machine), Flo (Go Tiger) and Arnaud Grignard for testing and review of the Wavelet Synthesizer.</li>
 </ul>`;
@@ -573,7 +549,6 @@ function manual(E) {
     { id: 'chord', title: 'Chord mode', html: chordChapter() },
     { id: 'oriental', title: 'Oriental keyboard', html: orientalChapter() },
     { id: 'presets', title: 'Presets', html: presetsChapter(E), subs: [{ id: 'saving', title: 'Saving your own sounds' }, { id: 'preset-list', title: 'All the presets' }] },
-    { id: 'evaluate', title: 'Evaluate sounds', html: evaluateChapter(), subs: [{ id: 'evaluate-file', title: 'The ratings file' }] },
     { id: 'plugin', title: 'The plug-in', html: pluginChapter(), subs: [{ id: 'plugin-install', title: 'Installation' }, { id: 'vst-diff', title: 'What is specific to the plug-in' }] },
     { id: 'trouble', title: 'Troubleshooting', html: troubleChapter() },
     { id: 'more', title: 'More, and a glossary', html: moreChapter(), subs: [{ id: 'glossary', title: 'Glossary' }] },
@@ -581,7 +556,7 @@ function manual(E) {
   ];
   return {
     engine: E, title: `Okto MultiWave Synth — Manual ${E.toUpperCase()}: ${a ? 'subtractive oscillators A1 A2' : 'additive oscillator B1'}`,
-    description: `User manual of Okto MultiWave Synth, ${a ? 'the wavelet subtractive oscillators A1 and A2' : 'the wavelet additive oscillator B1'}: panel, controls, presets, chord mode, evaluate sounds.`,
+    description: `User manual of Okto MultiWave Synth, ${a ? 'the wavelet subtractive oscillators A1 and A2' : 'the wavelet additive oscillator B1'}: panel, controls, presets, chord mode.`,
     hero: hero(E), sections,
     footer: `<footer class="foot"><p>Okto MultiWave Synth ${SPEC.APP.version} · <a href="manual-${a ? 'b' : 'a'}.html">Manual ${a ? 'B' : 'A'}</a> · ${SPEC.APP.copyright} · GPL v3 or later</p></footer>`,
   };

@@ -42,9 +42,7 @@ const jobs = [
     clip: { x: 388, y: 14, width: 316, height: 560 }, out: 'presets-menu.png' },
   // the page without #noaudio opens on the welcome window
   { url: `${APP}#nobrowser`, clip: WELCOME, out: 'start-overlay.png' },
-  // the ▾ demo menu (opens without starting audio)
-  { url: `${APP}#nobrowser&noaudio`, eval: "document.querySelector('.demo-arrow').click();", wait: 400, clip: { x: 226, y: 18, width: 384, height: 344 }, out: 'demo-menu.png' },
-  // the default DEMO (preset tour) about 9.5 s in (4 s per preset), on its third preset; the panel only, without the status bar
+  // the DEMO (preset tour) about 9.5 s in (4 s per preset), on its third preset; the panel only, without the status bar
   { url: `${APP}#nobrowser&noaudio`, eval: '(async () => { await WS_TEST.start(); WS_TEST.demoStart(); await new Promise(r => setTimeout(r, 9500)); })()',
     clip: { x: 0, y: 0, width: 1124, height: 1074 }, after: 'WS_TEST.demoStop()', out: 'demo.png' },
   // the CHORD KEYBOARD card (CHORD MODE on: the panel is 120 px taller) with G major 7 held (FOLDED) and a string of the strum plate touched

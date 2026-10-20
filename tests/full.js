@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
 // full.js - the whole validation, for an official release (a pre-release only needs tests/quick.js, the owner's rule): builds the plug-in, then runs one after the other the quick check
-// with the C++/JS cross-check, the TOP Sounds against beta 0.7, the engine tests, the web suites (smoke, EVALUATE SOUNDS, the demo tour, the full web run on every preset), the plug-in's
+// with the C++/JS cross-check, the TOP Sounds against beta 0.7, the engine tests, the web suites (smoke, the demo tour, the full web run on every preset), the plug-in's
 // developer checks (the presets file, the VST2 entry point, the plug-in window in a host) and the loud-chord crackle measure on every preset. One line per step, the failing step's last
 // lines, a summary at the end, the full log in tests/out/full.log. Takes about 40 minutes on a quiet machine (the web run is the longest).
 //   node tests/full.js                run everything
@@ -53,7 +53,7 @@ step('build plug-in', () => { const r = run('cmd', ['/c', 'vst\\build.bat']); re
 step('quick + C++/JS cross-check', () => { const r = node('tests/quick.js', '--dsp', '--force'); return { ok: ok(r, /^PASS/m), detail: tail(r.out, 7) }; });
 step('TOP Sounds vs beta 0.7', () => { const r = node('tests/regress_v07.js'); return { ok: ok(r), detail: tail(r.out, 1) }; });
 for (const t of ['idle_skip', 'filter', 'supermod', 'display_live']) step('engine: ' + t, () => { const r = node('tests/' + t + '.js'); return { ok: ok(r), detail: tail(r.out, 1) }; });
-for (const t of ['smoke', 'test_evaluate', 'test_demo', 'test_web']) step('web: ' + t, () => { const r = node('tests/web/' + t + '.js'); return { ok: ok(r), detail: tail(r.out, 2) }; });
+for (const t of ['smoke', 'test_demo', 'test_web']) step('web: ' + t, () => { const r = node('tests/web/' + t + '.js'); return { ok: ok(r), detail: tail(r.out, 2) }; });
 // the plug-in's developer checks (each is compiled here)
 const cc = (src, exe, extra) => run(CXX, ['-std=c++17', '-O2', '-static', '-DNOMINMAX', '-I', 'vst/external', '-I', 'vst/src', ...src, '-o', exe, ...extra]);
 step('plug-in: presets file (library_test)', () => {
@@ -68,12 +68,12 @@ step('plug-in: VST2 entry point', () => {
   if (r.code !== 0) return { ok: false, detail: 'compile: ' + tail(r.out, 2) };
   r = run(exe, []); return { ok: ok(r, /0 FAIL/), detail: tail(r.out, 1) };
 });
-step('plug-in: window in a host (vote_session)', () => {
+step('plug-in: window in a host (vote_session: tabs, CHORD MODE, fit, browser)', () => {
   const exe = path.join(SCRATCH, 'vote_session.exe'), dir = path.join(SCRATCH, 'vote');
   fs.mkdirSync(dir, { recursive: true });
   let r = cc(['vst/devtest/vote_session.cpp', 'vst/src/iids.cpp', 'vst/external/pluginterfaces/base/funknown.cpp'], exe, ['-municode', '-DUNICODE', '-D_UNICODE', '-lgdiplus', '-lgdi32', '-luser32', '-lole32', '-luuid']);
   if (r.code !== 0) return { ok: false, detail: 'compile: ' + tail(r.out, 2) };
-  r = run(exe, [path.join(ROOT, 'build', 'OktoMultiWaveSynth.vst3', 'Contents', 'x86_64-win', 'OktoMultiWaveSynth.vst3'), dir], { env: Object.assign({}, env, { MW_START_AT: '501' }), timeout: 600000 });
+  r = run(exe, [path.join(ROOT, 'build', 'OktoMultiWaveSynth.vst3', 'Contents', 'x86_64-win', 'OktoMultiWaveSynth.vst3'), dir], { timeout: 600000 });
   return { ok: ok(r, /ALL PASS/), detail: tail(r.out, 1) };
 });
 // the crackle of a loud chord: the high-frequency residual of what the output stage adds, every preset, three chords at velocity 1 (tools/crackle.js)

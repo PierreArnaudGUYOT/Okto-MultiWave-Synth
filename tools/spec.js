@@ -355,7 +355,7 @@ for (const s of SLOTS) if (s.mode === 1) for (let b = 0; b < 11; b++) if (idx[s.
 // the section is shown only while that parameter is on / off (the chord card).
 // widget types: knobL knobM knobS knobT seg step drawbar scope scalogram atom source
 //               window adsr leds fxheads keyboard wheels logo presets manual download meter zoom credit menu toggle label
-//               chordpads chordname strumplate evaluate (Okto MultiWave Synth) osctabs (beta 0.3: the folder tabs of the oscillators)
+//               chordpads chordname strumplate osctabs (beta 0.3: the folder tabs of the oscillators)
 // widget fields: only 'web' / 'vst' (shown in one of them), vis + visOn (shown while that parameter is on / off,
 // the plug-in's SYNC), style 'value' (a knob labelled with its value: note values), text (toggle, label, menu caption)
 const S = [];
@@ -372,7 +372,6 @@ section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'logo', x: 16, y: 8, w: 200, h: 32 },
   { type: 'zoom', x: 222, y: 14, w: 50, h: 20 },
   { type: 'presets', x: 384, y: 9, w: 296, h: 30 },   // beta 0.3: narrower (the oscillator tabs left the header: they are the folder tabs under it)
-  { type: 'evaluate', x: 752, y: 9, w: 104, h: 30 },
   { type: 'download', only: 'web', x: 862, y: 9, w: 68, h: 30 },   // the plug-in has SAVE PRESET there
   { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
   { type: 'knobS', param: 'master', x: 1028, y: 6, w: 36, h: 36 },

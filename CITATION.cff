@@ -28,7 +28,7 @@ abstract: >-
   sound with the discrete wavelet transform instead of Fourier filters: one cycle of each tone is decomposed into 11
   octave-spaced wavelet bands and resynthesised band by band. Every oscillator has its own scale filter, position window,
   tuning, envelope and pitch envelope; a chord keyboard in the style of electronic chord harps plays whole chords with one finger.
-  It is built on the Wavelet Synthesizer and ships 222 presets and a listening test (EVALUATE SOUNDS) to rate the new ones.
+  It is built on the Wavelet Synthesizer and ships over a thousand presets.
   Web application and VST3 / VST2 instrument for Windows x64.
 keywords:
   - multi-oscillator synthesis
