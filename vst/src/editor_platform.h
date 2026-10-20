@@ -52,6 +52,9 @@ struct Canvas {
   virtual void textEllipsis(const std::wstring& s, R r, float px, bool bold, Col c, bool vcenter) = 0;
   virtual float textWidth(const std::wstring& s, float px, bool bold) = 0;   // as the text is laid out (with its margins)
   virtual void pixels(const uint32_t* argb, int w, int h, R dst) = 0;   // an image (0xAARRGGBB rows), nearest-neighbour
+  // beta 0.3.4: what is drawn between pushClipRR and the matching popClip is cut to the rounded rectangle (the oriental pattern of the PLAY card); they nest
+  virtual void pushClipRR(R, float) {}
+  virtual void popClip() {}
 };
 
 // a pop-up menu: items with a command (0: none), a check mark, greyed, separators and submenus

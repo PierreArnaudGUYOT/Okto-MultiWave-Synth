@@ -116,6 +116,9 @@ class MacCanvas : public Canvas {
     CGContextRestoreGState(ctx);
     CGImageRelease(img); CGDataProviderRelease(dp); CFRelease(data);
   }
+  // beta 0.3.4: the clip of the oriental pattern (not built or tested in this version: macOS is not built)
+  void pushClipRR(R r, float rad) override { CGContextSaveGState(ctx); CGPathRef p = rr(r, rad); CGContextAddPath(ctx, p); CGContextClip(ctx); CGPathRelease(p); }
+  void popClip() override { CGContextRestoreGState(ctx); }
 
  private:
   CGContextRef ctx;

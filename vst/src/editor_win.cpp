@@ -92,10 +92,14 @@ class GdiCanvas : public Canvas {
     g.DrawImage(&bmp, G::RectF(dst.x, dst.y, dst.w, dst.h), 0, 0, (float)w, (float)h, G::UnitPixel);
     g.SetInterpolationMode(im); g.SetPixelOffsetMode(po);
   }
+  // beta 0.3.4: the clip of the oriental pattern (the graphics state, with the window's own clip, is saved and restored)
+  void pushClipRR(R r, float rad) override { saved.push_back(g.Save()); G::GraphicsPath p; rrPath(p, r, rad); g.SetClip(&p, G::CombineModeIntersect); }
+  void popClip() override { if (!saved.empty()) { g.Restore(saved.back()); saved.pop_back(); } }
 
  private:
   G::Graphics& g;
   WinWindow& win;
+  std::vector<G::GraphicsState> saved;
   static std::unique_ptr<G::Brush> brush(const Brush& b) {
     if (b.grad) return std::unique_ptr<G::Brush>(new G::LinearGradientBrush(G::PointF(b.p0.x, b.p0.y), G::PointF(b.p1.x, b.p1.y), gc(b.c0), gc(b.c1)));
     return std::unique_ptr<G::Brush>(new G::SolidBrush(gc(b.c0)));
