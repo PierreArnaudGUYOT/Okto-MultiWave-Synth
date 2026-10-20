@@ -62,7 +62,8 @@ struct MenuItem {
 };
 
 // the save window: a name (proposed, editable) and, for the user bank, a section
-struct SaveDlg { std::wstring name; int section = 0; bool withSection = true; };
+// (beta 0.3: also a one-line question: the label before the field, the text of the OK button and the length limit; "Start at…" of EVALUATE SOUNDS asks a number with it)
+struct SaveDlg { std::wstring name; int section = 0; bool withSection = true; const wchar_t* label = L"Name:"; const wchar_t* ok = L"Save"; int maxLen = 48; };
 
 // the editor, as the system window sees it (coordinates in logical units)
 struct EditorEvents {

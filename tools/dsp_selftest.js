@@ -298,8 +298,8 @@ console.log('11. Okto MultiWave Synth: the chord layer (keyOn / keyOff over the 
   check(C.chordName(68, 3) === 'G#m7' && C.chordName(60, 0) === 'C' && C.plateNotes(67, 0).join(' ') === '74 79 83 86 91 95 98 103 107',
     'chord names (G#m7, C) and the strum plate of G major: three octaves of G B D above the root octave');
   check(S.CHORD_KEYS.length === 12 && new Set(S.CHORD_KEYS).size === 12 && S.CHORDS.length === 22 && S.PARAMS[P.chord_mode].def === 0 &&
-    S.PARAMS[P.chord_bass].def === 1 && S.PARAMS.filter(p => p.perf).length === 9,
-    'spec: 12 selector keys each with its own type, 22 chord types, CHORD off and BASS on by default, 9 perf parameters (6 chord + 3 oriental tuning)');
+    S.PARAMS[P.chord_bass].def === 1 && S.PARAMS.filter(p => p.perf).length === 10,
+    'spec: 12 selector keys each with its own type, 22 chord types, CHORD off and BASS on by default, 10 perf parameters (6 chord + 3 oriental tuning + the LFO card shown)');
 }
 
 console.log('12. Okto MultiWave Synth: the four oscillators');
@@ -323,8 +323,8 @@ console.log('12. Okto MultiWave Synth: the four oscillators');
     return c / dur;
   };
   // every oscillator alone sounds; the tables of the others are not built
-  const names = ['A1', 'A2', 'B1', 'B2'];
-  for (let o = 0; o < 4; o++) {
+  const names = ['A1', 'A2', 'B1'];
+  for (let o = 0; o < 3; o++) {
     const set = { a1_lvl: 0 }; set[SPEC.PARAMS[K[o].lvl].key] = 1;
     const { p, eng } = make(set);
     const tb = C.buildTables(p, true), built = tb.slots.map(t => !!t).join();
@@ -356,7 +356,7 @@ console.log('12. Okto MultiWave Synth: the four oscillators');
   }
   // the oscillator tab (osc_view) is only a panel choice: the sound does not change
   {
-    const a = make({ osc_view: 0, a1_lvl: 0.7, a2_lvl: 0.5 }), b = make({ osc_view: 3, a1_lvl: 0.7, a2_lvl: 0.5 });
+    const a = make({ osc_view: 0, a1_lvl: 0.7, a2_lvl: 0.5 }), b = make({ osc_view: 2, a1_lvl: 0.7, a2_lvl: 0.5 });
     const La = play(a.eng, 0.4), Lb = play(b.eng, 0.4);
     let d = 0; for (let i = 0; i < La.length; i++) d = Math.max(d, Math.abs(La[i] - Lb[i]));
     check(d === 0, `osc_view (the tab shown) does not change the sound (max difference ${d})`);

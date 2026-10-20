@@ -1,16 +1,16 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.2**, a test version (2026-10-19), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3**, a test version (2026-10-19), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
-(beta 0.7) with **four oscillators instead of two engines**: two subtractive wavelet oscillators (**A1, A2**) and two
-additive wavelet oscillators (**B1, B2**). It is a polyphonic synthesizer that shapes sound with the **discrete wavelet
+(beta 0.7) with **three oscillators instead of two engines**: two subtractive wavelet oscillators (**A1, A2**) and one
+additive wavelet oscillator (**B1**). It is a polyphonic synthesizer that shapes sound with the **discrete wavelet
 transform** instead of Fourier filters: one cycle of each tone is split into 11 octave-spaced wavelet bands and resynthesised
 band by band. It comes as a **web application** and a **VST3 / VST2 instrument** for Windows x64 (Ableton Live and other
 hosts).
 
-This is a *test version*: its 300 new presets (beta 0.2) and the 200 of beta 0.1 are waiting for your ears. **EVALUATE
+This is a *test version*: its 908 presets to rate (the 600 new ones of beta 0.3, then 175 of beta 0.2 and 133 of beta 0.1) are waiting for your ears. **EVALUATE
 SOUNDS** plays a piece of music with each of them and asks for 1 to 10 stars; the ratings (and the changes you make to the
 sounds you like) are saved in a text file you can send back.
 
@@ -20,6 +20,32 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What beta 0.3 changes
+
+- **The second additive oscillator (B2) is gone.** Okto MultiWave Synth now has three oscillators: **A1 and A2** (subtractive) and **B1**
+  (additive). The 192 presets that played B2 (67 of the 200 of beta 0.1, 125 of the 300 of beta 0.2) left the list; **their numbers are
+  not used again**, so the ratings you already gave to the others stay valid. 308 presets of the earlier betas are left to rate (175 of beta 0.2,
+  `202`–`500`, and 133 of beta 0.1, `001`–`200`), plus the 22 TOP Sounds. The 22 TOP Sounds and the sounds of the presets that stay did not change.
+  The plug-in's parameters are numbered differently (B2's 41 parameters are gone, then LFO 3 and the filter are added): sounds saved by beta 0.1 or 0.2
+  in a Live Set or in the user presets file are not read correctly any more.
+- **A new panel.** One strip of three **folder tabs** under the header — **OSC1 A1 · SUBTRACTIVE** and **OSC2 A2 · SUBTRACTIVE** (yellow),
+  **OSC3 B1 · ADDITIVE** (blue) — chooses the oscillator whose cards are shown on a soft coloured plate; a lit dot says the oscillator is heard
+  (its level in OSC MIX is above 0). **OSC MIX** and the **SCOPE** are common to every oscillator, so they sit at the top right, outside the plate,
+  and the scope and the scalogram now draw the **whole sound** (every oscillator that plays, and the sub oscillator). The ENGINE tabs left the
+  header, the preset box is narrower, and a **PLAY** card holds CHORD MODE, BASS, TUNING and the oriental scale. The panel is 190 px taller (860 → 1050).
+- **LFO 3**, a second LFO of the kind of LFO 2 (the same targets), in a second sub-tab of the same card (the small **2 | 3** switch). LFO 1 did not
+  change. LFO 2 and LFO 3 each move one control — in every oscillator that has it — and their moves add up when they aim at the same control.
+- **FILTER**: a conventional four-pole (24 dB per octave) resonant low-pass in every voice, before the amp envelope, with two characters,
+  **LADDER** and **OTA**, CUTOFF, RESO, DRIVE, KEY TRK, ENV AMT (up to ± 8 octaves) and its own small ADSR; LFO 2 and LFO 3 can move its cutoff and its
+  resonance (two new targets). It is **open by default**, and an open filter is not even computed: every older sound is exactly what it was.
+- **600 new presets** (`501`–`1100`: 50 in each of the 12 categories, Drums & Perc included), composed and measured like those of beta 0.2, now with
+  LFO 2 and / or LFO 3 moving wavelet controls in every one of them (mostly of the subtractive oscillators: sparsity, source phase and width, the window,
+  the scale cutoff and resonance, the morph …) and the new filter, with its envelope, in about two in three. They come **first in the list**:
+  908 presets to rate in all.
+- **EVALUATE SOUNDS** now ends each passage with a **long C minor chord** (4 s) so that sustained sounds can be judged too; the sounds come in
+  **sets of 40**, each set with **its own file** (`sound 501 to sound 540.txt`), and **Start at…** asks for the number of the first sound to rate.
+
 
 ## What beta 0.2 adds
 
@@ -49,21 +75,22 @@ The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; thi
 
 ## What is new compared with the Wavelet Synthesizer
 
-- **Four oscillators**, **A1 A2 B1 B2**, one tab each at the top of the panel. Every oscillator has its **own** tone
+- **Three oscillators**, **A1 A2 B1**, chosen with the folder tabs under the header. Every oscillator has its **own** tone
   (subtractive: source wave, atom shape, wavelet, sparsity, phase; additive: atom pattern, drawbars, tilt, band envelopes),
   **scale filter**, **position window**, **tuning** (octave, semitones, cents), **own envelope** (it multiplies the AMP
   ENVELOPE, so one oscillator can be a short attack and another a long pad) and **pitch envelope** (a fall or rise in
   semitones over a time: kicks, plucks, zaps). Only one oscillator's cards are shown at a time, so the panel stays as clear as
   the original's.
-- **OSC MIX** (the card next to the scope): four level knobs, one per oscillator, replace the A/B MIX knob. A1 plays at 100 %
+- **OSC MIX** (the card next to the scope): three level knobs, one per oscillator, replace the A/B MIX knob. A1 plays at 100 %
   on a new patch, the others at 0. The sub oscillator is in the same card.
-- **522 presets: the 22 TOP Sounds** (OktoPierre's favourites, unchanged: they sound exactly as in beta 0.7), **300 new ones**
-  of beta 0.2 (`201`–`500`) **and the 200 of beta 0.1** (`001`–`200`, unchanged), in 12 categories (SuperModulation, Bass, Lead,
+- **930 presets: the 22 TOP Sounds** (OktoPierre's favourites, unchanged: they sound exactly as in beta 0.7), **600 new ones of beta 0.3**
+  (`501`–`1100`), **175 of beta 0.2** (`202`–`500`) **and 133 of beta 0.1** (`001`–`200`, unchanged), in 12 categories (SuperModulation, Bass, Lead,
   Keys, Organ, Pad, Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc). Every new preset uses at least two
-  oscillators; the letters of its name say which (`A1A2`, `B1B2`, `A1B1`, `A1A2B1` …); an oscillator is often the attack (a click, a
+  oscillators; the letters of its name say which (`A1A2`, `A1B1`, `A1A2B1` …); an oscillator is often the attack (a click, a
   breath, a pluck) of another.
+
 - **EVALUATE SOUNDS** (header, web app and plug-in): see below.
-- **CHORD MODE** (button next to the keyboard): the panel grows and a *chord harp* card appears (twelve chord pads, the chord
+- **CHORD MODE** (button of the PLAY card, above the keyboard): the panel grows and a *chord harp* card appears (twelve chord pads, the chord
   name, KEYS OCT, STACKED / FOLDED voicing, BASS, STRUM and a strum plate): one octave of the keyboard chooses the chord type, one
   finger plays the whole chord. With CHORD MODE off the panel is the plain synthesizer and none of it is shown.
 - **LFO 2** moves its target in **every** oscillator at once (and the wavelet morph and the phase LFO act on each oscillator).
@@ -75,25 +102,29 @@ The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; thi
 
 ## EVALUATE SOUNDS
 
-Click **EVALUATE SOUNDS** in the header.
-- The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) with the first preset (**201**; the list is the
-  factory order: the 300 new presets first, then the 200 of beta 0.1), then asks for
-  **1 to 10 stars** (a click; in the web app also the keys 1–9 and 0 = 10). It goes on with the next preset; **Skip**,
-  **Previous**, **Replay** and **Stop** are always there.
+Click **EVALUATE SOUNDS** in the header, then **Start at…**: a small window asks for the **number of the first sound** to rate (it offers the first one not
+rated yet; the list is the factory order: the 600 presets of beta 0.3 first, `501`–`1100`, then the 175 of beta 0.2, then the 133 of beta 0.1).
+- The window plays 5 seconds of Beethoven's *Appassionata* (III, the busy passage at 0:13) **and then a long C minor chord** (4 seconds: a
+  sustained sound can be judged too, not only quick notes) with the preset, then asks for **1 to 10 stars** (a click; in the web app also the keys
+  1–9 and 0 = 10). It goes on with the next preset; **Skip**, **Previous**, **Replay** and **Stop** are always there.
+- **Sets of 40 sounds.** The first set starts at the sound you chose, the next ones every 40 sounds, and every set has **its own file**, named after
+  its first and last sound (`sound 501 to sound 540.txt`): the web app downloads it when the set is finished, the plug-in writes it next to its
+  ratings file after every rating. Send back the files of the sets you rated.
 - **Stop half way whenever you like** — nothing is lost (every answer is saved) — and keep this state under a name of your own with
-  **Save as…** (on the start, rating and end windows): it saves a copy of the ratings so far, e.g.
-  `okto-multiwave-ratings-45of500-2026-10-19.txt`, and the session goes on with its own file.
+  **Save as…** (on the start, rating and end windows): it saves a copy of the ratings so far (while a set is being rated, a copy of that set), and
+  the session goes on with its own files.
 - **More than 5 stars** offers to *modify* the preset: it loads exactly as designed, you change the panel with the mouse and
   play it on your keyboard, then **Keep initial settings** or **Record preset change**. The parameters that differ from the
   preset are written in the file.
 - Every rating is saved at once, so you can stop and **continue where you stopped** (the file is read again at the next
-  session).
-- **Web app**: the ratings are kept in the browser meanwhile; in Edge or Chrome you choose the file at the start
-  (`okto-multiwave-ratings.txt`) and it is rewritten after every rating or change; in other browsers **Save as…** downloads it.
+  session: **Continue at …**).
+- **Web app**: the ratings are kept in the browser meanwhile; in Edge or Chrome you can also choose a ratings file at the start
+  (`okto-multiwave-ratings.txt`), rewritten after every rating or change; in other browsers **Save as…** downloads a copy.
 - **Plug-in**: the file is `Documents\Okto MultiWave Synth\okto-multiwave-ratings.txt` (the local application data folder when
-  there is no Documents folder), written after every rating or change; **Change file…** chooses another one, **Show file**
-  opens its folder, **Save now** writes it again. Both versions write the same readable text: the stars of every preset, a
+  there is no Documents folder), written after every rating or change, with the files of the sets next to it; **Change file…** chooses another
+  one, **Show file** opens its folder, **Save now** writes it again. Both versions write the same readable text: the stars of every preset, a
   ranking, and the recorded changes as `parameter key: value in the preset -> new value`.
+
 
 ## Use it
 
@@ -140,12 +171,12 @@ uses `-ffp-contract=off`, so that the C++ and JavaScript engines do the same flo
 ## Project layout
 
 ```
-tools/spec.js          single source of truth: parameters, the four oscillators, panel layout, presets
+tools/spec.js          single source of truth: parameters, the three oscillators, panel layout, presets
 tools/gen_spec.js      generates web/js/spec.js, vst/src/generated/spec.h and vote_data.h (the listening passage)
-tools/presets_top.js   the 22 TOP Sounds;  tools/presets_new.js  the 200 presets of beta 0.1;  tools/presets_super.js  the 300 of beta 0.2
+tools/presets_top.js   the 22 TOP Sounds;  tools/presets_new.js  the 200 presets of beta 0.1;  tools/presets_super.js  the 300 of beta 0.2;  tools/presets_lfo3.js  the 600 of beta 0.3
 tools/make_presets.js  builds the presets of beta 0.1 from tools/recipes_*.js (tools/preset_dsl.js, preset_lab.js: loudness
                        matching, distinctness check, contact sheets)
-tools/supermod/        composes the presets of beta 0.2 from oscillator layers and LFO recipes, measures and selects them
+tools/supermod/        composes the presets of beta 0.2 and 0.3 from oscillator layers, drums and LFO 2 / LFO 3 recipes, measures and selects them
 tools/dsp_selftest.js  engine self-test;  tools/dsp_compare.js  C++ engine against the JavaScript reference
 tools/manual/          generator of the user manuals
 web/                   web application (vanilla JS, Web Audio AudioWorklet, no libraries)
@@ -176,12 +207,13 @@ tests/                 test tools (VST3 host, browser driver, regression against
 node tools/gen_spec.js            # after editing tools/spec.js or the presets
 node tests/quick.js               # 20 s: syntax, engine, VST3 host sections, web smoke test
 node tests/supermod.js            # beta 0.2: the SuperModulation destinations, the chord layer, the oriental tunings
+node tests/filter.js              # beta 0.3: the voice FILTER (LADDER and OTA, resonance, drive, key tracking, envelope, LFO targets, open = bypassed)
 node tests/regress_v07.js         # the 22 TOP Sounds against the published beta 0.7 engine (within 1.5e-7)
 node tests/idle_skip.js           # the idle rule does not cut a delay echo or a reverb tail
-node tests/web/smoke.js           # the four oscillator views and CHORD MODE in headless Edge
+node tests/web/smoke.js           # the three oscillator views, the folder tabs and CHORD MODE in headless Edge
 ```
 To cross-check the C++ engine, compile `vst/devtest/dsp_render.cpp` (with `-ffp-contract=off`) and run
-`node tools/dsp_compare.js <dir>`: all 577 cases (the 522 presets and 55 variants of every feature) agree within 2e-6 of full scale (worst: 1.8e-7). `vst/devtest/vote_session.cpp`
+`node tools/dsp_compare.js <dir>`: all 1000 cases (the 930 presets and 70 variants of every feature) agree within 2e-6 of full scale (worst: 3.6e-7). `vst/devtest/vote_session.cpp`
 drives the plug-in's EVALUATE SOUNDS window like a player (and CHORD MODE) in an off-screen window.
 
 ## Licence

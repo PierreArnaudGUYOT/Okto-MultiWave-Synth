@@ -39,6 +39,7 @@ const BASE_URL = opt.url || pathToFileURL(PAGE).href;
 let SPEC = null;
 try { SPEC = require(path.join(ROOT, 'tools', 'spec.js')); } catch (_) { /* oracle optional */ }
 const SPEC_BY_KEY = SPEC ? Object.fromEntries(SPEC.PARAMS.map((p) => [p.key, p])) : {};
+const DEV_H = SPEC ? SPEC.DEVICE.h : 894;   // beta 0.3: the panel's height (the folder tabs of the oscillators added 34 px)
 // DEFAULT_PRESET may be a preset name or an index
 if (SPEC && typeof SPEC.DEFAULT_PRESET === 'number') SPEC.DEFAULT_PRESET = (SPEC.PRESETS[SPEC.DEFAULT_PRESET] || {}).name;
 
@@ -595,10 +596,10 @@ async function stepPresets() {
 }
 
 async function stepEngines() {
-  begin('Oscillators A1 A2 B1 B2');
+  begin('Oscillators A1 A2 B1');
   await ev(NEUTRAL_EXPR());
-  const OSC = ['A1', 'A2', 'B1', 'B2'];
-  for (let e = 0; e < 4; e++) {
+  const OSC = ['A1', 'A2', 'B1'];
+  for (let e = 0; e < 3; e++) {
     await ev(`WS_TEST.setParam('osc_view', ${e})`);
     await sleep(300);
     const r = await playNote(57, 0.8, 400);
@@ -624,8 +625,8 @@ async function stepPanel() {
   const t0 = Date.now();
   if (!SPEC) { rec('WARN', 'panel checks', 'tools/spec.js not available'); return; }
   const r = await deviceRect();
-  if (!r) { rec('WARN', 'device element (1100x860 aspect) found on the page', 'panel checks skipped'); return; }
-  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 860];
+  if (!r) { rec('WARN', 'device element (panel aspect) found on the page', 'panel checks skipped'); return; }
+  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / DEV_H];
   const all = [];
   for (const s of SPEC.SECTIONS) for (const w of s.widgets) all.push(Object.assign({ sx: s.x + w.x, sy: s.y + w.y }, w));
   // cards and captions follow the spec (no CHORUS card, no 'SCOPE · SCALOGRAM', LFO 1 / LFO 2, the TARGET caption)
@@ -654,7 +655,7 @@ async function stepPanel() {
     if (c) await B.click(c.x, c.y);
     await sleep(500);
     const m = await ev(`({ open: !document.getElementById('manual-overlay').hidden, src: document.getElementById('manual-iframe').getAttribute('src') || '' })`);
-    check(!!c && m.open && m.src.endsWith(file), `MANUAL opens the manual of the oscillator shown (${['A1', 'A2', 'B1', 'B2'][e]}: ${file})`, JSON.stringify(m));
+    check(!!c && m.open && m.src.endsWith(file), `MANUAL opens the manual of the oscillator shown (${['A1', 'A2', 'B1'][e]}: ${file})`, JSON.stringify(m));
     await ev('WS_TEST.closeManual(); true');
     await sleep(200);
   }
@@ -664,7 +665,7 @@ async function stepPanel() {
   // (the widgets of beta 0.2 that show with a playing setting — BASS with CHORD MODE, MAQAM and TONIC with TUNING — are not sync twins)
   const shown = all.filter((w) => w.vis && w.only !== 'vst' && w.param && !SPEC_BY_KEY[w.vis].perf).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   const probe = (list) => ev(`(() => { const d = document.getElementById('device').getBoundingClientRect();
-    return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / 860);
+    return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / ${DEV_H});
       const k = e && e.closest('.w'); return { want: w.name, at: k ? (k.title || '').split(' — ')[0] || k.className : (e ? e.tagName : null), text: k ? k.textContent.trim() : '' }; }); })()`);
   const atVst = await probe(vstOnly), atShown = await probe(shown);
   const syncEls = await ev(`[...document.querySelectorAll('#device *')].filter((e) => /\\(sync\\)|^(Delay|LFO \\d) Sync/.test(e.title || '') || (e.children.length === 0 && /^SYNC$/.test(e.textContent.trim()))).length`);
@@ -703,7 +704,7 @@ async function stepPanel() {
     JSON.stringify(crs.map((c) => c && { size: c.size, weight: c.weight, color: c.color, faint: c.faint })));
   // left-aligned at the bottom left, inside the panel, below the VOICE card and clear of the wheels (the keyboard section)
   const clearOfWheels = !wheels || !(cr.text_l < wheels.sx + wheels.w && cr.text_r > wheels.sx && cr.text_t < wheels.sy + wheels.h - 4 && cr.text_b > wheels.sy);
-  check(!!cr && !!crw && cr.align === 'left' && Math.abs(cr.text_l - crw.sx) < 2 && !!cr.voice && cr.text_t >= cr.voice.b - 1 && clearOfWheels && cr.text_b <= 860 + 0.5,
+  check(!!cr && !!crw && cr.align === 'left' && Math.abs(cr.text_l - crw.sx) < 2 && !!cr.voice && cr.text_t >= cr.voice.b - 1 && clearOfWheels && cr.text_b <= DEV_H + 0.5,
     `credit: left-aligned at the bottom left (text from x ${crw ? crw.sx : '?'}), below the VOICE card, clear of the wheels`, JSON.stringify(cr));
   // controls greyed out when they do nothing (still driven by the parameters)
   const greyed = (key) => ev(`(() => { const e = [...document.querySelectorAll('#device .knob')].find((k) => (k.title || '').split(' — ')[0] === ${JSON.stringify(SPEC_BY_KEY[key].name)});
@@ -857,7 +858,7 @@ async function stepKeyboard() {
   check(B.errors(t0).length === 0, 'Z/X octave keys raise no errors', short(B.errors(t0)));
 }
 
-// Locate the device (1100x860 layout) on the page to click spec coordinates.
+// Locate the device (the 1100 x DEVICE.h layout) on the page to click spec coordinates.
 async function deviceRect() {
   return ev(`(() => {
     let best = null;
@@ -865,7 +866,7 @@ async function deviceRect() {
       const r = el.getBoundingClientRect();
       if (r.width < 300 || r.height < 200) continue;
       const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-      const ar = r.width / r.height, err = Math.abs(ar / (1100 / 860) - 1);
+      const ar = r.width / r.height, err = Math.abs(ar / (1100 / ${DEV_H}) - 1);
       if (err > 0.03 || r.width * r.height < 0.3 * innerWidth * innerHeight) continue;
       // closest aspect ratio wins (an outer stage/container is usually a bit off), then the larger one
       if (!best || err < best.err - 0.002 || (Math.abs(err - best.err) <= 0.002 && r.width * r.height > best.w * best.h))
@@ -879,20 +880,21 @@ async function stepMouse() {
   await ev(NEUTRAL_EXPR());
   await sleep(300);
   const r = await deviceRect();
-  if (!r) { rec('WARN', 'device element (1100x860 aspect) found on the page', 'cannot map spec coordinates; mouse checks skipped'); return; }
+  if (!r) { rec('WARN', 'device element (panel aspect) found on the page', 'cannot map spec coordinates; mouse checks skipped'); return; }
   log(`  device element <${r.tag} id='${r.id}' class='${r.cls}'> at ${r.x.toFixed(0)},${r.y.toFixed(0)} size ${r.w.toFixed(0)}x${r.h.toFixed(0)}`);
-  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / 860];
+  const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / DEV_H];
   const t0 = Date.now();
-  // the four tabs A1 A2 B1 B2 (x 296, 224 wide): B1 is the third, A1 the first
-  await B.click(...P(296 + 224 * 5 / 8, 24));
-  await sleep(300);
-  const eB = await ev(`WS_TEST.getParam('osc_view')`);
-  await B.click(...P(296 + 224 / 8, 24));
-  await sleep(300);
-  const eA = await ev(`WS_TEST.getParam('osc_view')`);
-  check(eB === 2 && eA === 0, 'clicking the oscillator tabs shows B1 then A1', `after B1 click: ${eB}, after A1 click: ${eA}`, 'WARN');
+  // beta 0.3: the three folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1 (x 6 + 182 k, 176 wide, y 50 to 90)
+  const clickView = async (x, y) => { await B.click(...P(x, y)); await sleep(300); return ev(`WS_TEST.getParam('osc_view')`); };
+  const tabC = (k) => 6 + 182 * k + 88;
+  const o1 = await clickView(tabC(1), 70);   // OSC2 A2
+  const o2 = await clickView(tabC(2), 70);   // OSC3 B1
+  const o3 = await clickView(tabC(0), 70);   // OSC1 A1
+  check(o1 === 1 && o2 === 2 && o3 === 0, 'the three folder tabs show A2, B1 and A1', `OSC2 A2: ${o1}, OSC3 B1: ${o2}, OSC1 A1: ${o3}`, 'WARN');
   const c0 = await ev(`WS_TEST.getParam('f_cutoff')`);
-  const [kx, ky] = P(50, 418);
+  let kx0 = 50, ky0 = 455;   // the CUTOFF knob of A1 (from the spec layout)
+  for (const sec of SPEC.SECTIONS) for (const w of sec.widgets) if (w.param === 'f_cutoff') { kx0 = sec.x + w.x + w.w / 2; ky0 = sec.y + w.y + w.h / 2 - 5; }
+  const [kx, ky] = P(kx0, ky0);
   await B.drag(kx, ky, kx, ky + 60, 12);
   await sleep(200);
   const c1 = await ev(`WS_TEST.getParam('f_cutoff')`);

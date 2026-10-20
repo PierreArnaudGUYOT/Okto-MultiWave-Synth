@@ -1,13 +1,15 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Okto MultiWave Synth — EVALUATE SOUNDS: a listening session on the new presets (beta 0.2: 201-500, then the 001-200 of beta 0.1), started by the header's button.
-// Each new preset plays the same 5 s of Beethoven's Appassionata (III) — the busy passage from 0:13 of the demo — then a window
+// Okto MultiWave Synth — EVALUATE SOUNDS: a listening session on the new presets (beta 0.3: the 600 of this version, 501-1100, then the 175 of beta 0.2 and the 133 of beta 0.1),
+// started by the header's button. Each new preset plays the same 5 s of Beethoven's Appassionata (III) — the busy passage from 0:13 of the demo — and then a long C minor
+// chord (4 s: a sustained sound can be judged too), then a window
 // asks for a rating from 1 to 10 stars. Above 5 stars it offers to modify the preset: the preset is reloaded exactly as
 // designed, the window shrinks to a bar, the player changes the panel (mouse or MIDI controller) and plays it (MIDI
 // keyboard), then keeps the initial settings or records the change. The ratings and the recorded changes are kept in this
 // browser (stop and resume later) and written to a .txt file after every rating or change (Edge / Chrome: the file chosen at
 // the start; otherwise "Save as…", which downloads a copy under a name the player chooses; it also keeps a copy of a session stopped half
-// way). The .txt is read later to keep, rank and correct the good presets.
+// way). The sounds are rated in SETS OF 40: the player types the number of the first sound; every set has its own file, "sound 502 to sound 541.txt", which is
+// downloaded when the set is finished. The .txt files are read later to keep, rank and correct the good presets.
 // (Adapted from the listening test of the Wavelet-Synthesizer-TEST project.)
 function WSEvaluate(api) {
   'use strict';
@@ -15,7 +17,9 @@ function WSEvaluate(api) {
   const START = 12.9, LEN = 5;                 // the passage (seconds of the default demo) and its length
   const LEAD = 0.12;                           // seconds between loading a preset and its first note
   const STORE = 'mw.votes';
-  const FIRST = WS_SPEC.NEW_FIRST, PRESETS = WS_SPEC.PRESETS.slice(FIRST);   // 201-500, then 001-200 (the order of the factory list)
+  const FIRST = WS_SPEC.NEW_FIRST, PRESETS = WS_SPEC.PRESETS.slice(FIRST);   // the presets to rate, in the order of the factory list (the newest first)
+  const SET = 40;                              // sounds per set (one ratings file each)
+  const KEY = (p) => p.name.split(' ')[0];     // the preset's number as written in its name ('001', '502', '1000')
   const DESC = WS_SPEC.DESCRIPTIONS || {};
   const TITLE = `LISTEN AND RATE · ${PRESETS.length} NEW PRESETS`;
   const ASK_ABOVE = 5;                         // a rating above this offers to modify the preset
@@ -34,6 +38,9 @@ function WSEvaluate(api) {
   }
   const t0 = notes[0];
   for (let i = 0; i < notes.length; i += 4) notes[i] -= t0;   // starts on its first note
+  // then a long chord, C minor (C3 G3 C4 Eb4 G4), held 4 s after a short pause: the same notes and times as the plug-in's passage (tools/gen_spec.js)
+  const CHORD_AT = LEN + 0.4, CHORD_LEN = 4, CHORD_VEL = 0.7, TOTAL = CHORD_AT + CHORD_LEN;
+  for (const n of [48, 55, 60, 63, 67]) notes.push(CHORD_AT, CHORD_LEN, n, CHORD_VEL);
 
   const store = {
     get() {
@@ -48,39 +55,43 @@ function WSEvaluate(api) {
   let data = store.get();            // { votes: { '001': 7, ... }, changes: { '012': { f_cutoff: [7, 5.5], ... } } }
   let s = null;                      // session: { k, saved, timer, phase: 'start'|'play'|'vote'|'ask'|'edit'|'end', base }
   let win = null, fileHandle = null, writing = Promise.resolve();
-  const num = (k) => PRESETS[k].name.slice(0, 3);
+  const num = (k) => KEY(PRESETS[k]);
   const voted = (n) => data.votes[n] !== undefined;
-  const nextFree = () => { const k = PRESETS.findIndex(p => !voted(p.name.slice(0, 3))); return k < 0 ? PRESETS.length : k; };
+  const nextFree = () => { const k = PRESETS.findIndex(p => !voted(KEY(p))); return k < 0 ? PRESETS.length : k; };
   const nVotes = () => Object.keys(data.votes).length;
   const fmt = (i, v) => C.format(PARAMS[i], v);
   const stars = (n) => n + (n === 1 ? ' star' : ' stars');
 
   // ---------------------------------------------------------------- ratings file
-  function fileText() {
+  // fileText(): every sound; fileText(lo, hi): the sounds lo..hi of the list (a set of 40)
+  function fileText(lo, hi) {
     const L = [];
+    const list = lo === undefined ? PRESETS : PRESETS.slice(lo, hi + 1);
+    const nv = list.filter(p => voted(KEY(p))).length;
     const d = new Date(), pad = (x) => String(x).padStart(2, '0');
     L.push('Okto MultiWave Synth - preset ratings (1 star = poor ... 10 stars = excellent)');
-    L.push('Listening: Beethoven, Appassionata (III), 5 s from 0:13 of the demo; each preset played polyphonic at its normal octave.');
-    L.push('Presets: A1 A2 = subtractive oscillators, B1 B2 = additive oscillators; the letters of a name say which oscillators the preset uses.');
+    L.push('Listening: Beethoven, Appassionata (III), 5 s from 0:13 of the demo, then a long C minor chord (4 s); each preset played polyphonic at its normal octave.');
+    L.push('Presets: A1 A2 = subtractive oscillators, B1 = the additive oscillator; the letters of a name say which oscillators the preset uses.');
+    if (lo !== undefined) L.push(`Set: sound ${num(lo)} to sound ${num(hi)} (${list.length} sounds)`);
     L.push(`Saved: ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}   ` +
-      `Rated: ${nVotes()} / ${PRESETS.length}   Presets with a recorded change: ${Object.keys(data.changes).length}`);
+      `Rated: ${nv} / ${list.length}   Presets with a recorded change: ${list.filter(p => data.changes[KEY(p)]).length}`);
     L.push('');
     L.push('NUMBER | STARS | CHANGED | PRESET');
-    for (const p of PRESETS) {
-      const n = p.name.slice(0, 3);
-      L.push(`${n} | ${voted(n) ? String(data.votes[n]).padStart(2) : ' -'} | ${data.changes[n] ? 'yes    ' : '       '} | ${p.name.slice(4)}`);
+    for (const p of list) {
+      const n = KEY(p);
+      L.push(`${n} | ${voted(n) ? String(data.votes[n]).padStart(2) : ' -'} | ${data.changes[n] ? 'yes    ' : '       '} | ${p.name.slice(p.name.indexOf(" ") + 1)}`);
     }
     L.push('');
     L.push('RANKING (best first)');
-    const ranked = PRESETS.filter(p => voted(p.name.slice(0, 3))).sort((a, b) => data.votes[b.name.slice(0, 3)] - data.votes[a.name.slice(0, 3)] || (a.name < b.name ? -1 : 1));
-    for (const p of ranked) L.push(`${String(data.votes[p.name.slice(0, 3)]).padStart(2)} | ${p.name}${data.changes[p.name.slice(0, 3)] ? '   (changed)' : ''}`);
+    const ranked = list.filter(p => voted(KEY(p))).sort((a, b) => data.votes[KEY(b)] - data.votes[KEY(a)] || (a.name < b.name ? -1 : 1));
+    for (const p of ranked) L.push(`${String(data.votes[KEY(p)]).padStart(2)} | ${p.name}${data.changes[KEY(p)] ? '   (changed)' : ''}`);
     L.push('');
     L.push('PRESET CHANGES (recorded by the player: apply them to the preset)');
     L.push('Format: parameter key: value in the preset -> new value   (name: shown value -> new shown value)');
-    const changed = PRESETS.filter(p => data.changes[p.name.slice(0, 3)]);
+    const changed = list.filter(p => data.changes[KEY(p)]);
     if (!changed.length) L.push('(none)');
     for (const p of changed) {
-      const n = p.name.slice(0, 3), ch = data.changes[n];
+      const n = KEY(p), ch = data.changes[n];
       L.push('');
       L.push(`${p.name}   (${voted(n) ? data.votes[n] + ' stars' : 'not rated'})`);
       for (const key of Object.keys(ch)) {
@@ -98,9 +109,9 @@ function WSEvaluate(api) {
     writing = writing.then(async () => { const w = await h.createWritable(); await w.write(text); await w.close(); })
       .catch((e) => { status('Could not write the ratings file (' + e.message + '); the ratings stay saved in this browser.'); });
   }
-  function download(name) {
+  function download(name, text) {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([fileText()], { type: 'text/plain' }));
+    a.href = URL.createObjectURL(new Blob([text !== undefined ? text : fileText()], { type: 'text/plain' }));
     a.download = name || 'okto-multiwave-ratings.txt';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -108,16 +119,18 @@ function WSEvaluate(api) {
   // "Save as…": a copy of the ratings so far under a name of the player's choice (stop half way, keep this state); the ratings file
   // being rewritten (if any) stays as it is. Edge / Chrome: the save window; other browsers: a question for the name, then a download.
   const copyName = () => {
+    if (s && s.k0 !== undefined) { const r = setRange(s.k); return setName(r[0], r[1]); }   // the set being rated
     const d = new Date(), pad = (x) => String(x).padStart(2, '0');
     return `okto-multiwave-ratings-${nVotes()}of${PRESETS.length}-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.txt`;
   };
+  const copyText = () => (s && s.k0 !== undefined ? (r => fileText(r[0], r[1]))(setRange(s.k)) : fileText());
   async function saveCopy() {
     let name = copyName();
     if (window.showSaveFilePicker) {
       try {
         const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Text file', accept: { 'text/plain': ['.txt'] } }] });
-        const w = await h.createWritable(); await w.write(fileText()); await w.close();
-        status(`Copy saved: ${h.name} (${nVotes()} rated).`);
+        const w = await h.createWritable(); await w.write(copyText()); await w.close();
+        status(`Copy saved: ${h.name}.`);
       } catch (e) { if (!e || e.name !== 'AbortError') status('Could not save the copy: ' + (e && e.message)); }
       return;
     }
@@ -125,8 +138,8 @@ function WSEvaluate(api) {
     if (asked === null) return;
     name = asked.trim().replace(/[\\/:*?"<>|]+/g, '_') || name;
     if (!/\.txt$/i.test(name)) name += '.txt';
-    download(name);
-    status(`Copy downloaded: ${name} (${nVotes()} rated).`);
+    download(name, copyText());
+    status(`Copy downloaded: ${name}.`);
   }
   async function chooseFile() {
     if (!window.showSaveFilePicker) { status('This browser cannot write a file directly: use "Save as…" (it downloads a copy; Edge or Chrome can also keep a file up to date).'); return false; }
@@ -135,6 +148,20 @@ function WSEvaluate(api) {
       saveFile();
       return true;
     } catch (_) { return false; }   // cancelled
+  }
+
+  // ---------------------------------------------------------------- sets of 40 sounds
+  // The first set starts at the sound the session began at (s.k0), the next ones every 40 sounds; each has its own file, downloaded when the set is finished
+  // (every sound rated) and the player moves on, stops or finishes. The ratings themselves stay one list, kept in this browser (and in the ratings file chosen).
+  const setRange = (k) => { const b = Math.floor((k - s.k0) / SET), lo = Math.max(0, s.k0 + b * SET); return [lo, Math.min(PRESETS.length - 1, s.k0 + b * SET + SET - 1), b]; };
+  const setName = (lo, hi) => `sound ${num(lo)} to sound ${num(hi)}.txt`;
+  const setComplete = (r) => { for (let k = r[0]; k <= r[1]; k++) if (!voted(num(k))) return false; return true; };
+  function sendSet(r) {   // a finished set: its file is downloaded (once per session)
+    if (!s || !r || !setComplete(r)) return;
+    s.sent = s.sent || {};
+    if (s.sent[r[0]]) return;
+    s.sent[r[0]] = true;
+    download(setName(r[0], r[1]), fileText(r[0], r[1]));
   }
 
   // ---------------------------------------------------------------- window
@@ -213,7 +240,7 @@ function WSEvaluate(api) {
     await api.startAudio();
     if (!win) build();
     data = store.get();
-    s = { k: nextFree(), saved: api.snapshot(), timer: 0, phase: 'start' };
+    s = { k: nextFree(), k0: undefined, saved: api.snapshot(), timer: 0, phase: 'start' };
     api.ui.setEvaluating(true);
     win.el.style.display = 'block';
     showStart();
@@ -225,21 +252,31 @@ function WSEvaluate(api) {
     win.title.textContent = TITLE;
     const done = nVotes();
     win.name.textContent = done ? `${done} of ${PRESETS.length} presets rated` : `${PRESETS.length} new presets to rate`;
-    win.desc.textContent = 'Each preset plays 5 s of Beethoven (Appassionata, the busy passage at 0:13), then rate it from 1 (poor) to 10 stars (excellent). ' +
-      `Above ${ASK_ABOVE} stars you can modify the preset and record the change. Then export the ratings as a .txt file.`;
+    win.desc.textContent = 'Each preset plays 5 s of Beethoven (Appassionata, the busy passage at 0:13) and then a long C minor chord, then rate it from 1 (poor) to 10 stars (excellent). ' +
+      `Above ${ASK_ABOVE} stars you can modify the preset and record the change. The sounds come in sets of ${SET}: each set has its own file, "sound xx to sound yy".`;
     win.bar.style.width = (100 * done / PRESETS.length) + '%';
     showStars('off');
     const next = nextFree();
     const list = [];
     if (window.showSaveFilePicker) list.push([fileHandle ? 'Change the ratings file…' : 'Choose the ratings file (.txt)…', async () => { await chooseFile(); status(fileLabel()); showStart(); }, !fileHandle]);
-    if (next < PRESETS.length) list.push([done ? `Continue at ${num(next)}` : `Start at ${num(0)}`, () => play(next), !!fileHandle || !window.showSaveFilePicker]);
-    if (done) list.push([`Start again at ${num(0)}`, () => play(0)]);
+    list.push([done ? 'Start at…' : `Start at ${num(next < PRESETS.length ? next : 0)}…`, askStart, !!fileHandle || !window.showSaveFilePicker || !done]);
+    if (done && next < PRESETS.length) list.push([`Continue at ${num(next)}`, () => startAt(next)]);
     if (done) list.push(['Save as…', saveCopy, next >= PRESETS.length]);
     if (done) list.push(['Clear all ratings', () => { if (confirm('Clear all your ratings and recorded changes?')) { data = { votes: {}, changes: {} }; saveFile(); showStart(); } }]);
     list.push(['Close', stop]);
     buttons(list);
     status(fileLabel());
   }
+  // "Start at…": the player types the number of the first sound (the first one not rated yet is offered)
+  function askStart() {
+    const next = nextFree(), def = num(next < PRESETS.length ? next : 0);
+    const t = window.prompt(`Number of the first sound to rate (${num(0)} to ${num(PRESETS.length - 1)}):`, def);
+    if (t === null) return;
+    const v = parseInt(String(t).trim(), 10), k = Number.isFinite(v) ? PRESETS.findIndex(p => parseInt(KEY(p), 10) === v) : -1;
+    if (k < 0) { status('No sound numbered "' + String(t).trim() + '" in the list (' + num(0) + ' to ' + num(PRESETS.length - 1) + ').'); return; }
+    startAt(k);
+  }
+  function startAt(k) { s.k0 = k; s.sent = {}; play(k); }
   function stopSound() { api.post({ t: 'seqstop' }); api.post({ t: 'soundoff' }); }
   function loadForListening(k) {
     stopSound();   // no tail of the previous preset
@@ -254,14 +291,16 @@ function WSEvaluate(api) {
   function playPassage() { setTimeout(() => api.post({ t: 'seq', notes, delay: 0 }), LEAD * 1000); }
   function play(k) {
     if (!s) return;
+    if (s.k0 === undefined) s.k0 = Math.max(0, Math.min(PRESETS.length - 1, k));
     if (k >= PRESETS.length) { finish(); return; }
+    if (s.phase !== 'start' && k > setRange(s.k)[1]) sendSet(setRange(s.k));   // moving on to the next set
     s.k = Math.max(0, k);
     s.phase = 'play';
     clearTimeout(s.timer);
     compact(false);
     loadForListening(s.k);
     const n = num(s.k);
-    win.title.textContent = `PRESET ${s.k + 1} OF ${PRESETS.length} · ${PRESETS[s.k].cat}`;
+    win.title.textContent = `PRESET ${s.k + 1} OF ${PRESETS.length} · ${PRESETS[s.k].cat} · SET ${num(setRange(s.k)[0])}–${num(setRange(s.k)[1])}`;
     win.name.textContent = PRESETS[s.k].name;
     win.desc.textContent = 'Playing… ' + (DESC[PRESETS[s.k].name] || '');
     showStars('off', data.votes[n]);
@@ -271,12 +310,12 @@ function WSEvaluate(api) {
     const t1 = performance.now();
     const tick = () => {
       if (!s || s.phase !== 'play') return;
-      const x = Math.min(1, (performance.now() - t1) / ((LEAD + LEN) * 1000));
+      const x = Math.min(1, (performance.now() - t1) / ((LEAD + TOTAL) * 1000));
       win.bar.style.width = (100 * x) + '%';
       if (x < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-    s.timer = setTimeout(askVote, (LEAD + LEN) * 1000);
+    s.timer = setTimeout(askVote, (LEAD + TOTAL) * 1000);
   }
   function askVote() {
     if (!s) return;
@@ -345,14 +384,15 @@ function WSEvaluate(api) {
     play(s.k + 1);
   }
   function finish() {
+    if (s.k0 !== undefined) sendSet(setRange(s.k));
     s.phase = 'end';
     clearTimeout(s.timer);
     compact(false);
     api.post({ t: 'seqstop' });
     win.title.textContent = 'LISTEN AND RATE · FINISHED';
     win.name.textContent = `${nVotes()} of ${PRESETS.length} presets rated — thank you!`;
-    const top = PRESETS.filter(p => voted(p.name.slice(0, 3))).sort((a, b) => data.votes[b.name.slice(0, 3)] - data.votes[a.name.slice(0, 3)]).slice(0, 5);
-    win.desc.textContent = (top.length ? 'Your top 5: ' + top.map(p => `${p.name.slice(0, 3)} (${data.votes[p.name.slice(0, 3)]})`).join(', ') + '. ' : '') +
+    const top = PRESETS.filter(p => voted(KEY(p))).sort((a, b) => data.votes[KEY(b)] - data.votes[KEY(a)]).slice(0, 5);
+    win.desc.textContent = (top.length ? 'Your top 5: ' + top.map(p => `${KEY(p)} (${data.votes[KEY(p)]})`).join(', ') + '. ' : '') +
       `${Object.keys(data.changes).length} preset change(s) recorded.`;
     win.bar.style.width = '100%';
     showStars('off');
@@ -361,6 +401,7 @@ function WSEvaluate(api) {
   }
   function stop() {
     if (!s) return;
+    if (s.k0 !== undefined && s.phase !== 'start') sendSet(setRange(s.k));   // a finished set is not lost
     clearTimeout(s.timer);
     stopSound();
     const saved = s.saved;

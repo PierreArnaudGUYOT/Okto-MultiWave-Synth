@@ -74,8 +74,8 @@ console.log('2. the destinations move the sound');
     const d = diff(r, ref), peak = r.L.reduce((m, x) => Math.max(m, Math.abs(x)), 0);
     check(d > 0.01 && isFinite(peak) && peak <= 1, name + ' changes the sound', `max difference ${d.toFixed(3)}, peak ${peak.toFixed(2)}`);
   }
-  // additive controls on B1 + B2
-  const add = { a1_lvl: 0, b1_lvl: 0.6, b2_lvl: 0.5, b_pattern: 0, b2_pattern: 2, b_tilt: -3, b_bar1: 1, b_bar2: 0.5, b_bar3: 0.5, b_bar4: 0.5, b_bar5: 0.5, b_bar6: 0.5, b_body: 3, b_bright: 3, b_sus: 0.5, amp_s: 1 };
+  // additive controls on B1 (beta 0.3: B2 is gone)
+  const add = { a1_lvl: 0, a2_lvl: 0.3, b1_lvl: 0.6, b_pattern: 0, b_tilt: -3, b_bar1: 1, b_bar2: 0.5, b_bar3: 0.5, b_bar4: 0.5, b_bar5: 0.5, b_bar6: 0.5, b_body: 3, b_bright: 3, b_sus: 0.5, amp_s: 1 };
   const ra = render(make(add).eng, 1.5, notes);
   for (const [name, t] of [['TILT', 12], ['ODD BARS', 13], ['EVEN BARS', 14], ['SCALE SUSTAIN', 15]]) {
     const r = render(make(Object.assign({}, add, { lfo2_target: t, lfo2_amt: 0.9, lfo2_rate: 3 })).eng, 1.5, notes);

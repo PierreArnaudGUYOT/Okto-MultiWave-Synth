@@ -11,7 +11,7 @@
 // Parameter order defines the VST3 ParamIDs: append only, never reorder.
 'use strict';
 
-const DEVICE = { w: 1100, h: 860 };   // the panel; CHORD MODE adds CHORD_H below the keyboard row (the chord card)
+const DEVICE = { w: 1100, h: 1050 };   // the panel; CHORD MODE adds CHORD_H below the keyboard row (the chord card)
 const APP = {
   name: 'Okto MultiWave Synth',
   author: 'Pierre Arnaud GUYOT',
@@ -19,8 +19,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: 'beta 0.2',
-  versionNum: '0.2.0',
+  version: 'beta 0.3',
+  versionNum: '0.3.0',
   date: '2026-10-19',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -32,9 +32,10 @@ const P = [];
 // preset modified; the plug-in's state and the web app's saved state keep it (like the keyboard, it is not a sound).
 function add(key, name, short, o) { P.push(Object.assign({ key, name, short, curve: 'lin', fmt: 'pct', hidden: false, structural: false, perf: false }, o)); }
 
-// the oscillator shown on the panel (A1 A2 | B1 B2); not a sound: switching it never marks a preset as modified
-add('osc_view', 'Oscillator Shown', 'OSC', { curve: 'choice', fmt: 'choice', min: 0, max: 3, def: 0, structural: true,
-  choices: ['A1 · Subtractive', 'A2 · Subtractive', 'B1 · Additive', 'B2 · Additive'], choiceShort: ['A1', 'A2', 'B1', 'B2'] });
+// the oscillator shown on the panel (A1 A2 | B1); not a sound: switching it never marks a preset as modified
+// (beta 0.3: B2 is gone; the three folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1 above the cards choose it)
+add('osc_view', 'Oscillator Shown', 'OSC', { curve: 'choice', fmt: 'choice', min: 0, max: 2, def: 0, structural: true,
+  choices: ['A1 · Subtractive', 'A2 · Subtractive', 'B1 · Additive'], choiceShort: ['A1', 'A2', 'B1'] });
 add('wavelet', 'Wavelet', 'WAVELET', { curve: 'choice', fmt: 'choice', min: 0, max: 6, def: 2, structural: true,
   choices: ['Haar', 'Daubechies 2', 'Daubechies 4', 'Daubechies 8', 'Symlet 8', 'Coiflet 3', 'Daubechies 20'],
   choiceShort: ['HAAR', 'DB2', 'DB4', 'DB8', 'SYM8', 'COIF3', 'DB20'] });
@@ -130,11 +131,11 @@ add('lfo2_amt', 'LFO 2 Amount', 'AMOUNT', { fmt: 'bipct', min: -1, max: 1, def: 
 // appended): SPARSITY and SOURCE WIDTH (the subtractive oscillators' tables are then built at several values and each voice
 // crossfades between the two nearest, like SOURCE PHASE), TILT, ODD BARS, EVEN BARS and SCALE SUSTAIN (the additive ones), and the
 // WAVELET MORPH position. LFO 1 gains three more amounts: SPARSITY, RESO and ENV>WAV (the envelope's reach on the morph).
-add('lfo2_target', 'LFO 2 Target', 'TARGET', { curve: 'choice', fmt: 'choice', min: 0, max: 16, def: 0,
+add('lfo2_target', 'LFO 2 Target', 'TARGET', { curve: 'choice', fmt: 'choice', min: 0, max: 18, def: 0,
   choices: ['Cutoff', 'Slope', 'Resonance', 'Key Tracking', 'Envelope Amount', 'Velocity Amount', 'Position', 'Window Width', 'Window Depth',
-    'Source Phase', 'Sparsity', 'Source Width', 'Tilt', 'Odd Bars', 'Even Bars', 'Scale Sustain', 'Wavelet Morph'],
+    'Source Phase', 'Sparsity', 'Source Width', 'Tilt', 'Odd Bars', 'Even Bars', 'Scale Sustain', 'Wavelet Morph', 'Filter Cutoff', 'Filter Resonance'],
   choiceShort: ['CUTOFF', 'SLOPE', 'RESO', 'KEY TRK', 'ENV AMT', 'VEL AMT', 'POSITION', 'WIDTH', 'DEPTH', 'PHASE', 'SPARSITY', 'SRC WIDTH',
-    'TILT', 'ODD BARS', 'EVEN BARS', 'SCALE SUS', 'MORPH'] });
+    'TILT', 'ODD BARS', 'EVEN BARS', 'SCALE SUS', 'MORPH', 'FLT CUT', 'FLT RESO'] });
 // beta 0.4: SOURCE PHASE (engine A). The source wave is moved inside the cycle before the wavelet transform: sample i is
 // the wave at frac(i/N + phase) (the noise cycle is shifted by round(phase·N) samples). The transform is shift-variant, so
 // the scale filter, the sparsity and the position window meet other atoms and the timbre changes: strongly with Haar and
@@ -217,7 +218,7 @@ const WAVELET_KEYS = { A: { wavelet: 'wavelet', wave: 'a_wave', width: 'a_width'
 for (let b = 1; b <= 11; b++) WAVELET_KEYS.B['bar' + b] = 'b_bar' + b;
 const FILTER_KEYS = { ftype: 'f_type', fcut: 'f_cutoff', fslope: 'f_slope', fres: 'f_res', fkey: 'f_keytrk', fenv: 'f_env', fvel: 'f_vel',
   pcen: 'p_center', pwid: 'p_width', pdep: 'p_depth' };
-const SLOT_IDS = ['a1', 'a2', 'b1', 'b2'];
+const SLOT_IDS = ['a1', 'a2', 'b1'];   // beta 0.3: the second additive oscillator (B2) was removed
 const SLOTS = [];
 const paramByKey = k => P.find(p => p.key === k);
 // clones the parameter `base` (a template from the Wavelet Synthesizer's list) as key `key` of slot `name`
@@ -285,6 +286,35 @@ add('mt_scale', 'Oriental Scale', 'MAQAM', { curve: 'choice', fmt: 'choice', min
   choices: MICRO_SCALES.map(s => s.name), choiceShort: MICRO_SCALES.map(s => s.short) });
 add('mt_tonic', 'Oriental Tonic', 'TONIC', { curve: 'choice', fmt: 'choice', min: 0, max: 11, def: 0, perf: true, choices: NOTE_LETTERS, choiceShort: NOTE_LETTERS });
 
+// beta 0.3: LFO 3, a second LFO like LFO 2: the same shapes, TARGET choices and roles (it moves that control in every oscillator that has it, and its move adds to
+// LFO 2's when both aim at the same control), its own phase, rate, amount, tempo sync and sample & hold sequence; amount 0 (the default) leaves every sound as it was.
+// LFO 1 is unchanged. The two share one card: LFO CARD (a playing setting, not a sound) is the sub-tab that shows LFO 2 or LFO 3.
+for (const f of ['shape', 'rate', 'amt', 'target']) {
+  const t = paramByKey('lfo2_' + f), o = Object.assign({}, t);
+  delete o.key; delete o.name; delete o.short;
+  add('lfo3_' + f, t.name.replace('LFO 2', 'LFO 3'), t.short, o);
+}
+add('lfo3_sync', 'LFO 3 Sync', 'SYNC', syncChoice);
+add('lfo3_div', 'LFO 3 Rate (sync)', 'RATE', notes(LFO_NOTES, '1/4'));
+add('lfo_view', 'LFO Card Shown', 'LFO', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 0, perf: true, choices: ['LFO 2', 'LFO 3'], choiceShort: ['2', '3'] });
+
+// beta 0.3: FILTER, a classic resonant low-pass filter in every voice, before the amp envelope (the oscillators' sum is filtered, then shaped by the AMP ENVELOPE):
+// four poles (24 dB per octave), a resonance that can sing on its own, DRIVE that saturates its input, key tracking and its own ADSR (ENV AMT sweeps the cutoff
+// by up to +-8 octaves). Two characters on one switch: LADDER (the transistor ladder: dark, resonance thins the low end) and OTA (the four-pole of the polyphonic
+// analog synthesizers of the late 1970s: rounder, the low end stays). Open by default (cutoff at 20 kHz, no resonance, no drive, no envelope): the filter is then
+// bypassed and every sound made without it is bit-identical.
+add('vf_type', 'Filter Type', 'TYPE', { curve: 'choice', fmt: 'choice', min: 0, max: 1, def: 0, choices: ['Ladder 24 dB', 'OTA 24 dB'], choiceShort: ['LADDER', 'OTA'] });
+add('vf_cut', 'Filter Cutoff', 'CUTOFF', { curve: 'exp', fmt: 'hz', min: 20, max: 20000, def: 20000 });
+add('vf_res', 'Filter Resonance', 'RESO', { min: 0, max: 1, def: 0 });
+add('vf_drive', 'Filter Drive', 'DRIVE', { min: 0, max: 1, def: 0 });
+add('vf_key', 'Filter Key Tracking', 'KEY TRK', { min: 0, max: 1, def: 0 });
+add('vf_env', 'Filter Envelope Amount', 'ENV AMT', { fmt: 'bipct', min: -1, max: 1, def: 0 });
+// the four envelope parameters stay consecutive (the ADSR display reads param .. param + 3)
+add('vf_a', 'Filter Env Attack', 'ATTACK', { curve: 'exp', fmt: 'sec', min: 0.001, max: 10, def: 0.005 });
+add('vf_d', 'Filter Env Decay', 'DECAY', { curve: 'exp', fmt: 'sec', min: 0.001, max: 10, def: 0.3 });
+add('vf_s', 'Filter Env Sustain', 'SUSTAIN', { min: 0, max: 1, def: 0.5 });
+add('vf_r', 'Filter Env Release', 'RELEASE', { curve: 'exp', fmt: 'sec', min: 0.001, max: 10, def: 0.3 });
+
 const DELAY_BEATS = DELAY_NOTES.map(noteBeats), LFO_BEATS = LFO_NOTES.map(noteBeats);
 for (const b of [DELAY_BEATS, LFO_BEATS]) for (let i = 1; i < b.length; i++)
   if ((b === DELAY_BEATS) !== (b[i] > b[i - 1])) throw new Error('note values must be listed by length');
@@ -296,14 +326,16 @@ for (const b of [DELAY_BEATS, LFO_BEATS]) for (let i = 1; i < b.length; i++)
 // that has the role; ODD BARS / EVEN BARS: a drawbar; MORPH: the global WAVELET MORPH) and ROLES[i] the role: the field of an oscillator
 // it moves ("odd", "even" and "morph" have no single field: the engine moves the drawbars of odd / even bands and the morph itself).
 const LFO2_TARGETS = ['f_cutoff', 'f_slope', 'f_res', 'f_keytrk', 'f_env', 'f_vel', 'p_center', 'p_width', 'p_depth', 'a_phase',
-  'a_sparsity', 'a_width', 'b_tilt', 'b_bar1', 'b_bar2', 'b_sus', 'wmorph'];
-const ROLES = ['fcut', 'fslope', 'fres', 'fkey', 'fenv', 'fvel', 'pcen', 'pwid', 'pdep', 'phase', 'sparsity', 'width', 'tilt', 'odd', 'even', 'sus', 'morph'];
+  'a_sparsity', 'a_width', 'b_tilt', 'b_bar1', 'b_bar2', 'b_sus', 'wmorph', 'vf_cut', 'vf_res'];
+// beta 0.3: the last two roles belong to the FILTER (one per voice, not per oscillator): no slot field (like morph); the cutoff is an exponential parameter: its move
+// is in octaves (± half of log2(max / min) at full amount), the resonance's in plain units
+const ROLES = ['fcut', 'fslope', 'fres', 'fkey', 'fenv', 'fvel', 'pcen', 'pwid', 'pdep', 'phase', 'sparsity', 'width', 'tilt', 'odd', 'even', 'sus', 'morph', 'vfcut', 'vfres'];
 const LFO2_ROLE = ROLES.slice();   // target i moves role i
 
 const idx = Object.fromEntries(P.map((p, i) => [p.key, i]));
 if (LFO2_TARGETS.length !== P[idx.lfo2_target].choices.length || LFO2_TARGETS.length !== ROLES.length || P[idx.lfo2_target].max !== ROLES.length - 1 ||
-    LFO2_TARGETS.some(k => !(k in idx) || (P[idx[k]].curve || 'lin') !== 'lin'))
-  throw new Error('LFO2_TARGETS must match the lfo2_target choices and be linear parameters');
+    LFO2_TARGETS.some(k => !(k in idx) || ((P[idx[k]].curve || 'lin') !== 'lin' && k !== 'vf_cut')))
+  throw new Error('LFO2_TARGETS must match the lfo2_target choices and be linear parameters (but the filter cutoff, which is exponential)');
 for (const r of ROLES) {   // a role has the same range in every oscillator that has it (LFO 2 moves them by the same amount)
   const first = SLOTS.find(s => s.k[r]);
   for (const s of SLOTS) {
@@ -318,15 +350,19 @@ for (const s of SLOTS) if (s.mode === 1) for (let b = 0; b < 11; b++) if (idx[s.
   throw new Error('drawbars of ' + s.id + ' must be consecutive');
 
 // ---------------------------------------------------------------- layout
-// Sections are cards; widget coordinates are relative to their section. A section with `view` n (0..3 = A1 A2 B1 B2) is shown
+// Sections are cards; widget coordinates are relative to their section. A section with `view` n (0..2 = A1 A2 B1) is shown
 // while that oscillator is the one shown on the panel (the osc_view parameter); -1 = always. `vis` (a parameter) + `visOn`:
 // the section is shown only while that parameter is on / off (the chord card).
 // widget types: knobL knobM knobS knobT seg step drawbar scope scalogram atom source
 //               window adsr leds fxheads keyboard wheels logo presets manual download meter zoom credit menu toggle label
-//               chordpads chordname strumplate evaluate (Okto MultiWave Synth)
+//               chordpads chordname strumplate evaluate (Okto MultiWave Synth) osctabs (beta 0.3: the folder tabs of the oscillators)
 // widget fields: only 'web' / 'vst' (shown in one of them), vis + visOn (shown while that parameter is on / off,
 // the plug-in's SYNC), style 'value' (a knob labelled with its value: note values), text (toggle, label, menu caption)
 const S = [];
+// beta 0.3: the panel was reorganised (the owner's choice among six proposals): all coordinates are absolute panel coordinates, in this order from the top:
+// the header; the folder tabs of the oscillators and the plate behind the cards of the one shown (section 'oscframe'); OSC MIX and the SCOPE at the top right,
+// outside the plate (common to every oscillator); the filter row of the oscillator; FILTER, AMP and MOD ENVELOPEs; LFO 1, LFO 2/3, VOICE; EFFECTS and PLAY;
+// the keyboard.
 function section(id, title, x, y, w, h, view, widgets, opts) { S.push(Object.assign({ id, title, x, y, w, h, view, widgets }, opts || {})); }
 const kn = (key, x, y, t) => ({ type: t || 'knobM', param: key, x, y, w: t === 'knobL' ? 80 : 52, h: t === 'knobL' ? 92 : 60 });
 const row = (keys, x0, y) => keys.map((k, i) => kn(k, x0 + i * 52, y));
@@ -335,8 +371,7 @@ const CHORD_H = 120;   // the chord card (shown by CHORD MODE) adds this much to
 section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'logo', x: 16, y: 8, w: 200, h: 32 },
   { type: 'zoom', x: 222, y: 14, w: 50, h: 20 },
-  { type: 'seg', param: 'osc_view', style: 'engine', x: 296, y: 9, w: 224, h: 30 },   // the four oscillators: A1 A2 | B1 B2
-  { type: 'presets', x: 526, y: 9, w: 220, h: 30 },
+  { type: 'presets', x: 384, y: 9, w: 296, h: 30 },   // beta 0.3: narrower (the oscillator tabs left the header: they are the folder tabs under it)
   { type: 'evaluate', x: 752, y: 9, w: 104, h: 30 },
   { type: 'download', only: 'web', x: 862, y: 9, w: 68, h: 30 },   // the plug-in has SAVE PRESET there
   { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
@@ -344,12 +379,19 @@ section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'meter', x: 1072, y: 9, w: 14, h: 30 },
 ]);
 
+// ---- the folder tabs of the oscillators (OSC1 A1 · SUBTRACTIVE | OSC2 A2 · SUBTRACTIVE | OSC3 B1 · ADDITIVE: 176 x 40 px every 182) and the plate behind the cards of
+// the one shown, in its colour (A1 A2 yellow, B1 blue). OSC MIX and the SCOPE are common to every oscillator: they sit outside the plate, at the top right, so the plate
+// is an L (the section draws it itself: x 6 to 1094, from y 88 to y 511, with the notch from x 564 down to y 360, half way between the cards)
+section('oscframe', '', 6, 50, 1088, 462, -1, [
+  { type: 'osctabs', param: 'osc_view', x: 0, y: 0, w: 546, h: 40 },
+]);
+
 // ---- the oscillator shown (one card of each kind per oscillator, all at the same place)
 const bars = (s) => { const o = []; for (let b = 1; b <= 11; b++) o.push({ type: 'drawbar', param: s.k.bar1.replace('1', String(b)), x: 12 + (b - 1) * 30, y: 70, w: 24, h: 98 }); return o; };
 SLOTS.forEach((s, v) => {
   const K = s.k;
   if (s.mode === 0) {
-    section('tone_' + s.id, `OSC ${s.name} · WAVELET SUBTRACTIVE`, 12, 56, 544, 260, v, [
+    section('tone_' + s.id, 'WAVELET · SUBTRACTIVE', 12, 98, 544, 260, v, [
       { type: 'seg', param: K.wave, x: 12, y: 32, w: 520, h: 28 },
       { type: 'atom', x: 12, y: 70, w: 250, h: 104 },
       { type: 'step', param: K.wavelet, x: 12, y: 180, w: 250, h: 28 },
@@ -362,7 +404,7 @@ SLOTS.forEach((s, v) => {
       kn(K.lvl, 470, 180),
     ]);
   } else {
-    section('tone_' + s.id, `OSC ${s.name} · WAVELET ADDITIVE`, 12, 56, 544, 260, v, [
+    section('tone_' + s.id, 'WAVELET · ADDITIVE', 12, 98, 544, 260, v, [
       { type: 'seg', param: K.pattern, x: 12, y: 32, w: 520, h: 28 },
       ...bars(s),
       { type: 'atom', x: 356, y: 70, w: 176, h: 64 },
@@ -371,16 +413,16 @@ SLOTS.forEach((s, v) => {
       ...row([K.atk, K.spread, K.body, K.bright, K.sus], 12, 198),
     ]);
   }
-  section('filter_' + s.id, 'SCALE FILTER', 12, 324, 336, 140, v, [
+  section('filter_' + s.id, 'SCALE FILTER', 12, 366, 336, 140, v, [
     { type: 'seg', param: K.ftype, x: 12, y: 30, w: 312, h: 24 },
     ...row([K.fcut, K.fslope, K.fres, K.fkey, K.fenv, K.fvel], 12, 64),
   ]);
-  section('position_' + s.id, 'POSITION', 356, 324, 180, 140, v, [
+  section('position_' + s.id, 'POSITION', 356, 366, 180, 140, v, [
     { type: 'window', x: 12, y: 30, w: 156, h: 24 },
     ...row([K.pcen, K.pwid, K.pdep], 12, 64),
   ]);
   // tuning, the oscillator's own envelope (on top of the AMP ENVELOPE) and its pitch envelope
-  section('osc_' + s.id, `OSC ${s.name} · TUNE · OWN ENVELOPE · PITCH ENVELOPE`, 544, 324, 544, 140, v, [
+  section('osc_' + s.id, 'TUNE · OWN ENVELOPE · PITCH ENVELOPE', 544, 366, 544, 140, v, [
     { type: 'label', text: 'TUNE', x: 12, y: 32, w: 80, h: 14 },
     kn(K.oct, 12, 64), kn(K.semi, 64, 64), kn(K.fine, 116, 64),
     { type: 'toggle', param: K.eon, text: 'OWN ENVELOPE', x: 184, y: 28, w: 104, h: 22 },
@@ -391,78 +433,97 @@ SLOTS.forEach((s, v) => {
   ]);
 });
 
-// ---- always shown: the mixer of the four oscillators with the sub oscillator, the scope, envelopes, LFOs, effects, voice, keys
-section('mix', 'OSC MIX', 564, 56, 124, 260, -1, [
-  kn('a1_lvl', 4, 30), kn('a2_lvl', 64, 30), kn('b1_lvl', 4, 98), kn('b2_lvl', 64, 98),
-  { type: 'label', text: 'SUB OSC', x: 8, y: 170, w: 100, h: 14 },
-  { type: 'knobT', param: 'sub_level', x: 2, y: 192, w: 40, h: 46 },
-  { type: 'knobT', param: 'sub_oct', x: 42, y: 192, w: 40, h: 46 },
-  { type: 'knobT', param: 'sub_shape', x: 82, y: 192, w: 40, h: 46 },
+// ---- always shown. At the top right, outside the plate: OSC MIX (the three levels, the sub oscillator) and the SCOPE, which show the whole sound (every oscillator
+// that plays and the sub oscillator, at the reference note C4), not the oscillator shown; they start under the header, level with the tabs
+section('mix', 'OSC MIX', 572, 56, 124, 298, -1, [
+  kn('a1_lvl', 4, 34), kn('a2_lvl', 64, 34), kn('b1_lvl', 4, 104),
+  { type: 'label', text: 'SUB OSC', x: 8, y: 198, w: 100, h: 14 },
+  { type: 'knobT', param: 'sub_level', x: 2, y: 220, w: 40, h: 46 },
+  { type: 'knobT', param: 'sub_oct', x: 42, y: 220, w: 40, h: 46 },
+  { type: 'knobT', param: 'sub_shape', x: 82, y: 220, w: 40, h: 46 },
 ]);
-// beta 0.2: the oriental tuning's MAQAM and TONIC sit under the scalogram and show while TUNING (next to the keyboard) is not Western
-section('display', 'SCOPE', 696, 56, 392, 260, -1, [
-  { type: 'scope', x: 12, y: 30, w: 368, h: 80 },
-  { type: 'label', text: 'SCALOGRAM', x: 12, y: 114, w: 368, h: 14 },
-  { type: 'scalogram', x: 12, y: 130, w: 368, h: 72 },
-  { type: 'menu', param: 'mt_scale', text: 'MAQAM', x: 12, y: 228, w: 176, h: 24, vis: 'mt_mode', visOn: true },
-  { type: 'label', text: 'TONIC', x: 200, y: 212, w: 100, h: 14, vis: 'mt_mode', visOn: true },
-  { type: 'step', param: 'mt_tonic', x: 200, y: 226, w: 100, h: 26, vis: 'mt_mode', visOn: true },
+section('display', 'SCOPE · ALL OSCILLATORS', 704, 56, 384, 298, -1, [
+  { type: 'scope', x: 12, y: 30, w: 360, h: 108 },
+  { type: 'label', text: 'SCALOGRAM', x: 12, y: 146, w: 360, h: 14 },
+  { type: 'scalogram', x: 12, y: 162, w: 360, h: 126 },
 ]);
-section('ampenv', 'AMP ENVELOPE', 12, 472, 284, 128, -1, [
+// the FILTER (one per voice, before the amp envelope) with its ADSR, then the AMP and MOD ENVELOPEs
+section('flt', 'FILTER', 12, 520, 504, 128, -1, [
+  { type: 'seg', param: 'vf_type', x: 70, y: 5, w: 120, h: 20 },
+  { type: 'adsr', env: 'own', param: 'vf_a', x: 284, y: 30, w: 208, h: 26 },
+  ...row(['vf_cut', 'vf_res', 'vf_drive', 'vf_key', 'vf_env'], 12, 62),
+  ...row(['vf_a', 'vf_d', 'vf_s', 'vf_r'], 284, 62),
+]);
+section('ampenv', 'AMP ENVELOPE', 524, 520, 284, 128, -1, [
   { type: 'adsr', env: 'amp', x: 12, y: 30, w: 260, h: 26 },
   ...row(['amp_a', 'amp_d', 'amp_s', 'amp_r', 'amp_vel'], 12, 62),
 ]);
-section('modenv', 'MOD ENVELOPE', 304, 472, 284, 128, -1, [
-  { type: 'adsr', env: 'mod', x: 12, y: 30, w: 260, h: 26 },
-  ...row(['mod_a', 'mod_d', 'mod_s', 'mod_r'], 38, 62),
+section('modenv', 'MOD ENVELOPE', 816, 520, 272, 128, -1, [
+  { type: 'adsr', env: 'mod', x: 12, y: 30, w: 248, h: 26 },
+  ...row(['mod_a', 'mod_d', 'mod_s', 'mod_r'], 32, 62),
 ]);
 // the effects in the order of the sound: saturation, chorus, ping-pong delay, reverb; the plug-in's SYNC buttons swap RATE / TIME
 // for a note value
 const synced = (key, div, sync, x, y) => [Object.assign(kn(key, x, y), { vis: sync, visOn: false }),
   Object.assign(kn(div, x, y), { vis: sync, visOn: true, only: 'vst', style: 'value' })];
 const syncBtn = (key, x, y) => ({ type: 'toggle', param: key, text: 'SYNC', only: 'vst', x, y, w: 42, h: 17 });
-section('fx', 'EFFECTS', 596, 472, 492, 128, -1, [
+section('lfo', 'LFO 1', 12, 656, 440, 128, -1, [
+  { type: 'seg', param: 'lfo_shape', x: 12, y: 28, w: 260, h: 24 },
+  syncBtn('lfo_sync', 386, 6),
+  ...synced('lfo_rate', 'lfo_div', 'lfo_sync', 12, 58),
+  ...row(['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew'], 64, 58),
+]);
+// beta 0.3: the LFO 2/3 card has two sub-tabs, LFO 2 and LFO 3 (the small 2 | 3 switch next to the title: the playing setting LFO CARD); each LFO has its own
+// section at the same place, shown while LFO CARD says so
+section('lfo2', 'LFO 2/3', 460, 656, 246, 128, -1, [
+  { type: 'seg', param: 'lfo_view', x: 78, y: 5, w: 54, h: 20 },
+  { type: 'seg', param: 'lfo2_shape', x: 12, y: 28, w: 222, h: 24 },
+  syncBtn('lfo2_sync', 192, 6),
+  ...synced('lfo2_rate', 'lfo2_div', 'lfo2_sync', 12, 58),
+  kn('lfo2_amt', 64, 58),
+  { type: 'menu', param: 'lfo2_target', text: 'TARGET', x: 120, y: 78, w: 116, h: 24 },
+], { vis: 'lfo_view', visOn: false });
+section('lfo3', 'LFO 2/3', 460, 656, 246, 128, -1, [
+  { type: 'seg', param: 'lfo_view', x: 78, y: 5, w: 54, h: 20 },
+  { type: 'seg', param: 'lfo3_shape', x: 12, y: 28, w: 222, h: 24 },
+  syncBtn('lfo3_sync', 192, 6),
+  ...synced('lfo3_rate', 'lfo3_div', 'lfo3_sync', 12, 58),
+  kn('lfo3_amt', 64, 58),
+  { type: 'menu', param: 'lfo3_target', text: 'TARGET', x: 120, y: 78, w: 116, h: 24 },
+], { vis: 'lfo_view', visOn: true });
+section('voice', 'VOICE', 714, 656, 374, 128, -1, [
+  { type: 'seg', param: 'v_porta', x: 76, y: 6, w: 150, h: 18 },
+  { type: 'leds', x: 236, y: 6, w: 128, h: 18 },
+  ...['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'].map((k, i) => kn(k, 10 + i * 51, 40)),
+]);
+section('fx', 'EFFECTS', 12, 792, 492, 128, -1, [
   { type: 'fxheads', x: 0, y: 30, w: 492, h: 18 },
   syncBtn('fx_dsync', 332, 27),
   ...row(['fx_drive', 'ch_mix', 'ch_rate', 'ch_depth'], 12, 58),
   ...synced('fx_dtime', 'fx_ddiv', 'fx_dsync', 220, 58),
   ...row(['fx_dfb', 'fx_dmix', 'fx_rsize', 'fx_rmix'], 272, 58),
 ]);
-// beta 0.2: LFO 1 has seven amounts (PITCH CUTOFF POSITION WAVELET SPARSITY RESO ENV>WAV), so its card is wider; LFO 2 and VOICE are narrower
-section('lfo', 'LFO 1', 12, 608, 440, 128, -1, [
-  { type: 'seg', param: 'lfo_shape', x: 12, y: 28, w: 260, h: 24 },
-  syncBtn('lfo_sync', 386, 6),
-  ...synced('lfo_rate', 'lfo_div', 'lfo_sync', 12, 58),
-  ...row(['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew'], 64, 58),
+// beta 0.3: PLAY, the keyboard's settings: CHORD MODE (it switches the chord card on) and BASS (shown with it), the three-position TUNING switch (Western | Arabic |
+// Turkish) and, while it is not Western, the scale (MAQAM) and the TONIC of the oriental tuning
+section('play', 'PLAY · CHORD MODE · TUNING', 512, 792, 576, 128, -1, [
+  { type: 'toggle', param: 'chord_mode', text: 'CHORD MODE', x: 14, y: 36, w: 100, h: 34 },
+  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 14, y: 78, w: 100, h: 26, vis: 'chord_mode', visOn: true },
+  { type: 'seg', param: 'mt_mode', x: 146, y: 36, w: 150, h: 24 },
+  { type: 'menu', param: 'mt_scale', text: 'MAQAM', x: 146, y: 88, w: 176, h: 24, vis: 'mt_mode', visOn: true },
+  { type: 'label', text: 'TONIC', x: 340, y: 70, w: 100, h: 14, vis: 'mt_mode', visOn: true },
+  { type: 'step', param: 'mt_tonic', x: 340, y: 86, w: 110, h: 26, vis: 'mt_mode', visOn: true },
 ]);
-section('lfo2', 'LFO 2', 460, 608, 246, 128, -1, [
-  { type: 'seg', param: 'lfo2_shape', x: 12, y: 28, w: 222, h: 24 },
-  syncBtn('lfo2_sync', 192, 6),
-  ...synced('lfo2_rate', 'lfo2_div', 'lfo2_sync', 12, 58),
-  kn('lfo2_amt', 64, 58),
-  { type: 'menu', param: 'lfo2_target', text: 'TARGET', x: 120, y: 78, w: 116, h: 24 },
-]);
-section('voice', 'VOICE', 714, 608, 374, 128, -1, [
-  { type: 'seg', param: 'v_porta', x: 76, y: 6, w: 150, h: 18 },
-  { type: 'leds', x: 236, y: 6, w: 128, h: 18 },
-  ...['v_oct', 'v_fine', 'v_voices', 'v_glide', 'v_unison', 'v_detune', 'v_width'].map((k, i) => kn(k, 10 + i * 51, 40)),
-]);
-// the keyboard row: CHORD MODE (switches the chord card on), the wheels, the keyboard (C2-C7, 36 white keys)
-section('keys', '', 0, 744, 1100, 112, -1, [
-  { type: 'toggle', param: 'chord_mode', text: 'CHORD MODE', x: 12, y: 6, w: 100, h: 34 },
-  // beta 0.2: BASS (on by default) sits under CHORD MODE and shows with it: a bass note two octaves below the root, a little louder
-  { type: 'toggle', param: 'chord_bass', text: 'BASS', x: 12, y: 40, w: 100, h: 26, vis: 'chord_mode', visOn: true },
-  // beta 0.2: the three-position TUNING switch (Western | Arabic | Turkish): the oriental keyboard with quarter tones
-  { type: 'seg', param: 'mt_mode', x: 12, y: 72, w: 100, h: 20 },
-  { type: 'wheels', x: 122, y: 0, w: 60, h: 100 },
-  { type: 'keyboard', x: 190, y: 0, w: 898, h: 100 },
+// the keyboard row: the wheels and the keyboard (C2-C7, 36 white keys)
+section('keys', '', 0, 928, 1100, 112, -1, [
+  { type: 'wheels', x: 12, y: 0, w: 60, h: 100 },
+  { type: 'keyboard', x: 82, y: 0, w: 1006, h: 100 },
   { type: 'credit', x: 14, y: 97, w: 170, h: 15 },
 ]);
 // Okto MultiWave Synth: the CHORD KEYBOARD card, shown below the keyboard while CHORD MODE is on (the panel grows by CHORD_H):
 // the twelve chord pads (the white-key family above, the black-key family below, as on the selector octave); the chord
 // shown (name and notes); KEYS OCT, VOICING, BASS, STRUM; and the strum plate: drag across it to strum the chord, as on an
 // electronic chord harp.
-section('chord', 'CHORD KEYBOARD', 12, 864, 1076, 104, -1, [
+section('chord', 'CHORD KEYBOARD', 12, 1054, 1076, 104, -1, [
   { type: 'chordpads', x: 12, y: 26, w: 364, h: 70 },
   { type: 'chordname', x: 388, y: 26, w: 170, h: 70 },
   { type: 'label', text: 'KEYS OCT', x: 570, y: 8, w: 110, h: 14 },
@@ -490,11 +551,23 @@ function convertLegacy(v0) {
 }
 // The new presets (tools/presets_new.js, written with tools/make_presets.js): { name, cat, v } in this version's parameters,
 // numbered in their names ("012 A1A2 · Glass Bell": the oscillators they use) for the listening test (EVALUATE SOUNDS).
-let OLD_RAW = [], SUPER_RAW = [];
+let OLD_RAW = [], SUPER_RAW = [], LFO3_RAW = [];
 try { OLD_RAW = require('./presets_new.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }   // the 200 presets of beta 0.1 (001-200), unchanged
 // beta 0.2: 300 more (201-500, tools/supermod/build.js); MW_NO_SUPER=1 leaves them out (the builder measures the others)
 if (!process.env.MW_NO_SUPER) try { SUPER_RAW = require('./presets_super.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
-const NEW_RAW = [...SUPER_RAW, ...OLD_RAW];   // the presets EVALUATE SOUNDS rates: the new 300 first, then the 200 of beta 0.1
+// beta 0.3: 600 more (501-1100, tools/supermod/build.js: 50 in each category, LFO 2 / LFO 3 and the FILTER); MW_NO_LFO3=1 leaves them out (the builder measures the others)
+if (!process.env.MW_NO_LFO3) try { LFO3_RAW = require('./presets_lfo3.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+// beta 0.3: the second additive oscillator (B2) is gone. A preset that played it (b2_lvl > 0: 192 of the 500) is left out, with its number (the
+// ratings of the others stay valid); the others only lose their b2_* values (an unused oscillator: the sound does not change) and a view of B2.
+const usesB2 = r => (r.v.b2_lvl || 0) > 0;
+const withoutB2 = r => {
+  const v = {};
+  for (const [k, x] of Object.entries(r.v)) if (!k.startsWith('b2_')) v[k] = x;
+  if (v.osc_view > 2) delete v.osc_view;
+  return Object.assign({}, r, { v });
+};
+// the presets EVALUATE SOUNDS rates, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones)
+const NEW_RAW = [...LFO3_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).map(withoutB2);
 const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
@@ -518,12 +591,13 @@ if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('
 const DEFAULT_PRESET = 'A · Warm Pad';   // sound loaded when the app / a new plugin instance opens
 // The preset tour of the demo (the default piece, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard):
 // the TOP Sounds mixed one by one with new presets that show the oscillators at work (a TOP Sound by its name, a new preset as
-// "new:<title>": the number of its name may change). 29 presets are heard.
+// "new:<title>": the number of its name may change). 29 presets are heard. (Beta 0.3: four picks played B2, which is gone: Crystal Choir, Harp,
+// Marimba and Full Drawbar Organ became Cloud Choir, Harp Pluck, Celeste Bell and Chapel Organ.)
 const TOUR_PICKS = ['A · Warm Pad', 'A · Wavelet Lead',
   'A · Noise Wash Pad', 'new:Velvet Pad', 'B · Mirror Sub Bass', 'B · Theatre Organ', 'new:Tine E-Piano', 'B · Space Choir',
-  'new:Crystal Choir', 'A · Wavelet Lead', 'new:Classic Saw Lead', 'B · Flute Lead', 'new:Ensemble Strings', 'B · Choir Pad',
-  'new:Harp', 'A · Wave Brass', 'new:Silk Cloud', 'A · Wave Attack Lead', 'new:Marimba', 'A · Warm Pad', 'new:Rhodes Warm',
-  'AB · Glass Choir', 'new:Full Drawbar Organ', 'A · Dub Echo Lead', 'new:Solo Violin', 'A · Wave Pulse Lead', 'new:Brass Section',
+  'new:Cloud Choir', 'A · Wavelet Lead', 'new:Classic Saw Lead', 'B · Flute Lead', 'new:Ensemble Strings', 'B · Choir Pad',
+  'new:Harp Pluck', 'A · Wave Brass', 'new:Silk Cloud', 'A · Wave Attack Lead', 'new:Celeste Bell', 'A · Warm Pad', 'new:Rhodes Warm',
+  'AB · Glass Choir', 'new:Chapel Organ', 'A · Dub Echo Lead', 'new:Solo Violin', 'A · Wave Pulse Lead', 'new:Brass Section',
   'A · Cello Section', 'new:Dream Keys', 'AB · Silk Strings', 'new:Orchestra Swell'];
 const TOUR = TOUR_PICKS.map(n => {
   const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.slice(4).split(' · ')[1] === n.slice(4)) : PRESETS.find(q => q.name === n);

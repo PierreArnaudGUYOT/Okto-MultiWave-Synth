@@ -1,7 +1,7 @@
 ﻿// Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The cases of the C++ <-> JS cross-check: every factory preset, then variants of the engine's features (LFO 2 on each
-// target, SOURCE PHASE, WAVELET MORPH, the four oscillators with their own envelopes and pitch envelopes, tempo sync, the
+// target, SOURCE PHASE, WAVELET MORPH, the three oscillators with their own envelopes and pitch envelopes, tempo sync, the
 // chord keyboard). tools/dsp_compare.js writes them to a file (--list), vst/devtest/dsp_render.cpp renders them with the C++
 // engine, tools/dsp_compare.js compares the JS render with the C++ one. kind 'note': one note, then a chord; 'chord': the
 // chord keyboard played through keyOn / keyOff and the strum plate (CHORD_SCRIPT).
@@ -29,21 +29,21 @@ module.exports = function cases(SPEC, C) {
   variant('LFO 2 -> phase + morph', { wavelet: 0, wav2: 2, wmorph: 0.4, a_phase: 0.1, lfo2_target: PHT, lfo2_amt: 0.7, lfo2_rate: 2.5, lfo2_shape: 0 });
   variant('LFO 2 -> phase on A1 + A2 + morph', { a1_lvl: 0.6, a2_lvl: 0.6, a2_wave: 1, a2_phase: 0.35, a2_wavelet: 2, wav2: 1, wmorph: 0.5,
     a_phase: 0.62, lfo2_target: PHT, lfo2_amt: -0.6, lfo2_rate: 4, lfo2_shape: 1 });
-  // the four oscillators
+  // the three oscillators (beta 0.3: B2 is gone; its variants now use B1)
   variant('A1 + A2: octave, own envelope, pitch envelope', { a1_lvl: 0.6, a2_lvl: 0.8, a2_oct: 1, a2_wave: 1, a2_eon: 1, a2_ea: 0.002, a2_ed: 0.12, a2_es: 0.1,
     a2_er: 0.3, a2_pamt: 12, a2_ptime: 0.06, a2_fcut: 7, a2_fres: 6 });
   variant('A2 click: noise burst, mono legato', { a1_lvl: 0.7, a2_lvl: 1, a2_wave: 5, a2_eon: 1, a2_ed: 0.04, a2_es: 0, a2_ftype: 1, a2_fcut: 6, v_voices: 1, v_glide: 0.05,
     amp_s: 0.9 });
-  variant('B1 + B2: fifth, detuned partials, own envelope', { a1_lvl: 0, b1_lvl: 0.7, b2_lvl: 0.6, b2_semi: 7, b2_fine: -8, b2_pattern: 3, b2_bar2: 0.4, b2_bar3: 0.7,
-    b2_atk: 0.01, b2_body: 1.2, b2_bright: 0.3, b2_eon: 1, b2_ed: 0.8, b2_es: 0.3, b2_tilt: -3, b_pattern: 1, b1_fcut: 8 });
-  variant('A1 + B2: filters, window, key tracking', { a1_lvl: 0.5, b2_lvl: 0.7, b2_fcut: 5, b2_fres: 8, b2_fenv: 3, b2_pdep: 0.6, b2_pwid: 0.3, b2_fkey: 0.3, f_cutoff: 6,
+  variant('A2 + B1: fifth, detuned partials, own envelope', { a1_lvl: 0, a2_lvl: 0.5, b1_lvl: 0.7, b1_semi: 7, b1_fine: -8, b_pattern: 3, b_bar2: 0.4, b_bar3: 0.7,
+    b_atk: 0.01, b_body: 1.2, b_bright: 0.3, b1_eon: 1, b1_ed: 0.8, b1_es: 0.3, b_tilt: -3, b1_fcut: 8 });
+  variant('A1 + B1: filters, window, key tracking', { a1_lvl: 0.5, b1_lvl: 0.7, b1_fcut: 5, b1_fres: 8, b1_fenv: 3, b1_pdep: 0.6, b1_pwid: 0.3, b1_fkey: 0.3, f_cutoff: 6,
     f_keytrk: 0.2, mod_d: 0.4 });
-  variant('four oscillators, unison 3, morph, sub', { a1_lvl: 0.5, a2_lvl: 0.4, b1_lvl: 0.5, b2_lvl: 0.4, a2_oct: -1, b2_oct: 1, v_unison: 3, v_detune: 15, wav2: 1, wmorph: 0.5,
-    lfo_wav: 0.3, a2_wavelet: 4, b2_wavelet: 5, sub_level: 0.4, ch_mix: 0.5 });
-  variant('LFO 2 -> cutoff on four oscillators', { a1_lvl: 0.5, a2_lvl: 0.5, b1_lvl: 0.5, b2_lvl: 0.5, a2_fcut: 6, b1_fcut: 7, b2_fcut: 5, f_cutoff: 8,
+  variant('three oscillators, unison 3, morph, sub', { a1_lvl: 0.5, a2_lvl: 0.4, b1_lvl: 0.5, a2_oct: -1, b1_oct: 1, v_unison: 3, v_detune: 15, wav2: 1, wmorph: 0.5,
+    lfo_wav: 0.3, a2_wavelet: 4, b1_wavelet: 5, sub_level: 0.4, ch_mix: 0.5 });
+  variant('LFO 2 -> cutoff on three oscillators', { a1_lvl: 0.5, a2_lvl: 0.5, b1_lvl: 0.5, a2_fcut: 6, b1_fcut: 7, f_cutoff: 8,
     lfo2_target: 0, lfo2_amt: 0.7, lfo2_rate: 2, lfo2_shape: 1 });
-  variant('pitch envelope down on B2, own envelope off', { a1_lvl: 0, b1_lvl: 0, b2_lvl: 1, b2_pamt: -24, b2_ptime: 0.2, b2_pattern: 0, b2_tilt: -9 });
-  variant('LFO 1 and mod wheel on four oscillators', { a1_lvl: 0.4, a2_lvl: 0.4, b1_lvl: 0.4, b2_lvl: 0.4, lfo_pitch: 30, lfo_cut: 2, lfo_pos: 0.3, a2_pdep: 0.8, v_unison: 2 });
+  variant('pitch envelope down on B1, own envelope off', { a1_lvl: 0, b1_lvl: 1, b1_pamt: -24, b1_ptime: 0.2, b_pattern: 0, b_tilt: -9 });
+  variant('LFO 1 and mod wheel on three oscillators', { a1_lvl: 0.4, a2_lvl: 0.4, b1_lvl: 0.4, lfo_pitch: 30, lfo_cut: 2, lfo_pos: 0.3, a2_pdep: 0.8, v_unison: 2 });
   // TEMPO SYNC of the delay and both LFOs at a tempo
   variant('sync delay 1/8 D @120', { fx_dsync: 1, fx_ddiv: 7, fx_dmix: 0.4, fx_dfb: 0.5 }, { tempo: 120 });
   variant('sync LFO 1 1/16 @97', { lfo_sync: 1, lfo_div: 13, lfo_cut: 3, lfo_pitch: 30 }, { tempo: 97 });
@@ -71,9 +71,26 @@ module.exports = function cases(SPEC, C) {
   va('LFO 1 -> ENV>WAV with morph', { wav2: 4, wavelet: 0, wmorph: 0.2, env_wav: 0.4, lfo_ew: 0.5, lfo_rate: 2.5, mod_a: 0.3, mod_d: 0.6, mod_s: 0.5 });
   va('LFO 2 -> morph', { wav2: 5, wavelet: 1, wmorph: 0.3, lfo2_target: T('morph'), lfo2_amt: 0.9, lfo2_rate: 2 });
   for (const role of ['tilt', 'odd', 'even', 'sus']) {
-    variant('LFO 2 -> ' + role + ' on B1 + B2', { a1_lvl: 0, b1_lvl: 0.6, b2_lvl: 0.5, b2_pattern: 2, b2_oct: 1, b_tilt: -4, b_bar3: 0.5, b_bar4: 0.5, b2_bar1: 0.5, b2_bar2: 0.5, b2_bar5: 0.4,
-      b_body: 2, b_bright: 0.6, b_sus: 0.5, b2_sus: 0.4, lfo2_target: T(role), lfo2_amt: 0.8, lfo2_rate: 2.2 });
+    variant('LFO 2 -> ' + role + ' on B1 (+ A2)', { a1_lvl: 0, a2_lvl: 0.3, b1_lvl: 0.6, b_pattern: 2, b_tilt: -4, b_bar3: 0.5, b_bar4: 0.5, b_bar1: 0.5, b_bar2: 0.5, b_bar5: 0.4,
+      b_body: 2, b_bright: 0.6, b_sus: 0.5, lfo2_target: T(role), lfo2_amt: 0.8, lfo2_rate: 2.2 });
   }
+  // beta 0.3 (Okto MultiWave Synth): LFO 3, a second LFO like LFO 2 (its move adds to LFO 2's when both aim at the same control)
+  va('LFO 3 -> cutoff', { f_cutoff: 7, lfo3_target: T('fcut'), lfo3_amt: 0.7, lfo3_rate: 2.4 });
+  va('LFO 2 + LFO 3 -> cutoff (the moves add up)', { f_cutoff: 7, lfo2_target: T('fcut'), lfo2_amt: 0.4, lfo2_rate: 1.3, lfo3_target: T('fcut'), lfo3_amt: -0.5, lfo3_rate: 2.9, lfo3_shape: 1 });
+  va('LFO 3 -> sparsity on A1 + A2, LFO 2 -> phase', { a1_lvl: 0.6, a2_lvl: 0.5, a2_wave: 2, a2_width: 0.4, a2_wavelet: 3, a_sparsity: 0.2, lfo3_target: T('sparsity'), lfo3_amt: 0.7, lfo3_rate: 1.7,
+    lfo2_target: PHT, lfo2_amt: 0.5, lfo2_rate: 0.9 });
+  va('LFO 2 -> source width + LFO 3 -> source width (pulse)', { wavelet: 1, a_wave: 2, a_width: 0.4, lfo2_target: T('width'), lfo2_amt: 0.5, lfo2_rate: 1.1, lfo3_target: T('width'), lfo3_amt: 0.4, lfo3_rate: 3.1, lfo3_shape: 2 });
+  va('LFO 3 -> morph, sample & hold', { wav2: 4, wavelet: 1, wmorph: 0.3, lfo3_target: T('morph'), lfo3_amt: 0.9, lfo3_rate: 3, lfo3_shape: 4 });
+  variant('LFO 3 -> ' + 'tilt and LFO 2 -> odd bars on B1', { a1_lvl: 0, b1_lvl: 0.7, b_pattern: 2, b_tilt: -4, b_bar3: 0.5, b_bar4: 0.5, b_body: 2, b_bright: 0.6, b_sus: 0.5,
+    lfo3_target: T('tilt'), lfo3_amt: 0.8, lfo3_rate: 2.2, lfo2_target: T('odd'), lfo2_amt: 0.6, lfo2_rate: 1.4 });
+  variant('sync LFO 3 1/8 T @133', { lfo3_sync: 1, lfo3_div: 12, lfo3_amt: 0.7, lfo3_target: 0, f_cutoff: 8 }, { tempo: 133 });
+  // beta 0.3: the FILTER (a four-pole ladder per voice, before the amp envelope) and the two LFOs aimed at it
+  va('filter LADDER: cutoff, resonance, envelope, key tracking', { vf_type: 0, vf_cut: 700, vf_res: 0.55, vf_drive: 0, vf_key: 0.6, vf_env: 0.5, vf_a: 0.01, vf_d: 0.3, vf_s: 0.4, vf_r: 0.4 });
+  va('filter OTA: drive, high resonance, closing envelope', { vf_type: 1, vf_cut: 3500, vf_res: 0.9, vf_drive: 0.6, vf_key: 0, vf_env: -0.6, vf_a: 0.005, vf_d: 0.5, vf_s: 0.2, vf_r: 0.2 });
+  va('filter on A1 + A2 + B1 with unison 3 and the sub oscillator', { a1_lvl: 0.5, a2_lvl: 0.4, a2_oct: -1, b1_lvl: 0.4, v_unison: 3, v_detune: 18, sub_level: 0.4, vf_cut: 900, vf_res: 0.4, vf_env: 0.7, vf_a: 0.02, vf_d: 0.4, vf_s: 0.5 });
+  va('LFO 2 -> filter cutoff, LFO 3 -> filter resonance', { vf_cut: 1200, vf_res: 0.3, lfo2_target: T('vfcut'), lfo2_amt: 0.7, lfo2_rate: 2.2, lfo3_target: T('vfres'), lfo3_amt: 0.8, lfo3_rate: 1.3, lfo3_shape: 1 });
+  va('open filter with LFO 2 on its cutoff (square)', { vf_cut: 20000, lfo2_target: T('vfcut'), lfo2_amt: 1, lfo2_rate: 1.5, lfo2_shape: 3 });
+  va('filter, chord with bass', { chord_mode: 1, chord_bass: 1, vf_type: 0, vf_cut: 600, vf_res: 0.5, vf_env: 0.6, vf_key: 0.5 }, { kind: 'chord' });
   // the chord keyboard with BASS two octaves down and louder, and changing while the root is held
   variant('chord live changes (BASS, VOICING switched live)', { chord_mode: 1, chord_bass: 1, chord_voicing: 1, amp_r: 1.5, v_voices: 8 }, { kind: 'chordlive' });
   variant('chord live changes, 4 voices, strum', { chord_mode: 1, chord_bass: 1, chord_voicing: 0, v_voices: 4, chord_strum: 0.03, amp_r: 0.4 }, { kind: 'chordlive' });

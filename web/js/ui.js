@@ -9,8 +9,8 @@ const noteName = n => NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
 const KB_LO = 36, KB_HI = 96;
 const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-// A preset name: an optional number (the new presets, "012 "), the letters of its engine(s) or oscillators ("A", "AB", "A1B1"), " · ", its title
-const splitName = (name) => { const m = /^(\d{3} )?((?:[AB][12]?)+) · (.*)$/.exec(name); return m ? { num: m[1] || '', eng: m[2], title: m[3] } : null; };
+// A preset name: an optional number (the new presets, "012 ", "1000 "), the letters of its engine(s) or oscillators ("A", "AB", "A1B1"), " · ", its title
+const splitName = (name) => { const m = /^(\d{3,4} )?((?:[AB][12]?)+) · (.*)$/.exec(name); return m ? { num: m[1] || '', eng: m[2], title: m[3] } : null; };
 // the letters in their colours: A teal, B orange (the digits stay dim)
 const engHTML = (eng) => eng.replace(/[AB]/g, c => `<span class="${c.toLowerCase()}">${c}</span>`).replace(/[12]/g, d => `<span class="d">${d}</span>`);
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -63,7 +63,7 @@ class SynthUI {
     this.canvases = [];
     this.sections = [];
     this.scale = 1;
-    this.mode = 0; this.view = 0;   // the oscillator shown (A1 A2 B1 B2) and its engine
+    this.mode = 0; this.view = 0;   // the oscillator shown (A1 A2 B1) and its engine
     this.chordOn = false;           // CHORD MODE: the chord card is shown and the panel is taller
     this.live = null;
     this.tip = el('div', 'tip', document.body, { display: 'none' });
@@ -93,6 +93,7 @@ class SynthUI {
         const parts = s.title.split(' · ');
         t.innerHTML = parts.length > 1 ? `<b>${parts[0]}</b> · ${parts.slice(1).join(' · ')}` : s.title;
       }
+      se.dataset.sid = s.id;   // beta 0.3: addressable by the layout mock-ups (tools of the owner's review)
       this.sections.push({ spec: s, el: se });
       for (const w of s.widgets) this.makeWidget(w, se, s);
       this.sections[this.sections.length - 1].canvases = this.canvases.filter(c => c.sec === s);
@@ -132,6 +133,7 @@ class SynthUI {
     switch (w.type) {
       case 'knobL': case 'knobM': case 'knobS': case 'knobT': return this.knob(w, box);
       case 'seg': return this.seg(w, box);
+      case 'osctabs': return this.oscTabs(w, box, parent);   // beta 0.3: the folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1 and the frame of the oscillator cards
       case 'step': return this.step(w, box);
       case 'menu': return this.menu(w, box);
       case 'drawbar': return this.drawbar(w, box);
@@ -292,6 +294,51 @@ class SynthUI {
     const widget = { w, p, i, el: box, update: () => { const v = Math.round(this.host.get(i)); btns.forEach((b, k) => b.classList.toggle('on', k === v)); } };
     this.reg(w.param, widget);
     widget.update();
+  }
+
+  showOsc(v) { const i = this.P.osc_view; this.host.begin(i); this.host.set(i, v); this.host.end(i); }
+
+  // beta 0.3: the three folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1 above the cards of the oscillator shown, and the frame round those cards in the colour of its
+  // engine. The frame is an L: OSC MIX and the SCOPE are common to every oscillator and sit outside it, at the top right. A lit dot says the oscillator is
+  // heard (its level is above 0).
+  oscTabs(w, box, sec) {
+    const i = this.P[w.param], SL = this.SPEC.SLOTS, S = this.SPEC.SECTIONS, g = id => S.find(q => q.id === id);
+    box.classList.add('osctabs');
+    const me = g('oscframe'), tone = g('tone_' + SL[0].id), mix = g('mix'), flt = g('filter_' + SL[0].id);
+    // the notch: half way between the tone card and OSC MIX, half way between the bottom of OSC MIX / SCOPE and the second row (section coordinates)
+    const W = me.w, H = me.h, r = 12, x0 = 0.5, x1 = W - 0.5, y0 = 38.5, y1 = H - 0.5;
+    const xn = (tone.x + tone.w + mix.x) / 2 - me.x, yn = (mix.y + mix.h + flt.y) / 2 - me.y;
+    const NSVG = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NSVG, 'svg');
+    svg.setAttribute('class', 'oscframe'); svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    const path = document.createElementNS(NSVG, 'path');
+    path.setAttribute('d', `M${x0},${y0} H${xn - r} Q${xn},${y0} ${xn},${y0 + r} V${yn - r} Q${xn},${yn} ${xn + r},${yn} H${x1 - r} Q${x1},${yn} ${x1},${yn + r} ` +
+      `V${y1 - r} Q${x1},${y1} ${x1 - r},${y1} H${x0 + r} Q${x0},${y1} ${x0},${y1 - r} Z`);
+    svg.appendChild(path);
+    sec.insertBefore(svg, sec.firstChild);
+    const tabs = SL.map((sl, s) => {
+      const b = el('button', 'otab ' + (sl.mode === 0 ? 'ea' : 'eb'), box);
+      b.style.left = (s * 182) + 'px';
+      el('span', 'dot', b);
+      el('span', 'tx', b).innerHTML = '<span class="t1">OSC' + (s + 1) + ' ' + sl.name + '</span><span class="t2">' + (sl.mode === 0 ? 'SUBTRACTIVE' : 'ADDITIVE') + '</span>';
+      b.title = 'Show the oscillator ' + sl.name + ' (a lit dot: it is heard, its level in OSC MIX is above 0)';
+      b.onclick = () => this.showOsc(s);
+      return { b, s, sl };
+    });
+    const update = () => {
+      const v = Math.round(this.host.get(i));
+      for (const t of tabs) {
+        t.b.classList.toggle('on', t.s === v);
+        t.b.classList.toggle('heard', this.host.get(t.sl.k.lvl) > 0);
+      }
+    };
+    const widget = { w, p: this.params[i], i, el: box, update };
+    this.reg(w.param, widget);
+    for (const sl of SL) {   // the dots follow the levels
+      if (!this.byParam.has(sl.k.lvl)) this.byParam.set(sl.k.lvl, []);
+      this.byParam.get(sl.k.lvl).push({ update });
+    }
+    update();
   }
 
   step(w, box) {
@@ -619,6 +666,7 @@ class SynthUI {
     const ws = this.byParam.get(i);
     if (ws) for (const w of ws) w.update();
     if (i === this.P.osc_view) this.setView(Math.round(this.host.get(i)));
+    if (i === this.P.lfo_view) for (const sc of this.sections) sc.el.classList.toggle('hidden', this.secHidden(sc.spec));   // beta 0.3: LFO 2 | LFO 3
     if (i === this.P.chord_mode) { this.chordOn = this.host.get(i) >= 0.5; this.setView(this.view); this.fit(); }
     this.applyWidgetVis(i);
     this.updateEnables();
@@ -637,14 +685,14 @@ class SynthUI {
   applyWidgetVis(i) {
     for (const x of this.visWidgets || []) if (i === undefined || x.i === i) x.box.style.display = (this.host.get(x.i) >= 0.5) === x.on ? '' : 'none';
   }
-  // the oscillator shown (0..3 = A1 A2 B1 B2): the cards of the other oscillators and a hidden chord card are not shown
+  // the oscillator shown (0..2 = A1 A2 B1): the cards of the other oscillators and a hidden chord card are not shown
   setView(v) {
     const m = this.SPEC.SLOTS[v].mode;
     this.view = v; this.mode = m;
     this.dev.classList.toggle('mode-a', m === 0);
     this.dev.classList.toggle('mode-b', m === 1);
     if (this.browser) this.browser.classList.toggle('mode-b', m === 1);
-    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'User manual B — the additive oscillators B1 · B2 (an additive oscillator is shown)' : 'User manual A — the subtractive oscillators A1 · A2 (a subtractive oscillator is shown)';
+    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'User manual B — the additive oscillator B1 (an additive oscillator is shown)' : 'User manual A — the subtractive oscillators A1 · A2 (a subtractive oscillator is shown)';
     for (const s of this.sections) s.el.classList.toggle('hidden', this.secHidden(s.spec));
   }
   secHidden(spec) {
@@ -719,7 +767,8 @@ class SynthUI {
     this.demoBtn.classList.toggle('running', on);
     this.demoBtn.innerHTML = on ? '&#9632; STOP' : '&#9654; DEMO';
   }
-  setTables(tb) { this.tables = tb; for (const c of this.canvases) c.dirty = true; }
+  // beta 0.3: the tables of the oscillator shown (atom, source, window displays) and the raw layers of every oscillator that plays (the scope and the scalogram)
+  setTables(tb) { this.tables = tb; this.scope = this.C.buildScopeSets(this.host.values(), tb); for (const c of this.canvases) c.dirty = true; }
 
   // ------------------------------------------------------------------ drawing
   frame() {
@@ -741,8 +790,8 @@ class SynthUI {
     }
   }
 
-  accent() { return this.mode === 0 ? '#2fd4c6' : '#ffae42'; }
-  accentRGB() { return this.mode === 0 ? [47, 212, 198] : [255, 174, 66]; }
+  accent() { return this.mode === 0 ? '#ffcf3d' : '#4aa8ff'; }   // beta 0.3: A1 A2 yellow, B1 blue
+  accentRGB() { return this.mode === 0 ? [255, 207, 61] : [74, 168, 255]; }
 
   currentGains() {
     const C = this.C, live = this.live;
@@ -752,45 +801,36 @@ class SynthUI {
     return { g, center: vals[k.pcen], width: vals[k.pwid], depth: vals[k.pdep], note: -1 };
   }
 
+  // beta 0.3: the whole sound: one cycle of the mix of every oscillator that plays (and the sub oscillator) at the reference note C4
   draw_scope(ctx, W, H) {
-    const C = this.C, tb = this.tables;
+    const C = this.C, sets = this.scope;
     ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
     for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(W * k / 4 + 0.5, 4); ctx.lineTo(W * k / 4 + 0.5, H - 4); ctx.stroke(); }
     ctx.strokeStyle = 'rgba(255,255,255,0.09)';
     ctx.beginPath(); ctx.moveTo(0, H / 2 + 0.5); ctx.lineTo(W, H / 2 + 0.5); ctx.stroke();
-    if (!tb || tb.mode !== this.mode) return;
-    const st = this.currentGains();
-    const y = C.displayCycle(tb, st.g, st.center, st.width, st.depth, this.cycle);
-    const ghost = tb.mode === 0 ? tb.layers[C.DRY] : null;
+    if (!sets) return;
+    const vals = this.host.values();
+    const names = this.SPEC.SLOTS.filter((sl, k) => sets[k]).map(sl => sl.name);
+    if (vals[this.P.sub_level] > 0) names.push('SUB');
+    const y = C.globalCycle(vals, sets, this.cycle);
     let peak = 0.25;
-    for (let i = 0; i < C.N; i++) { peak = Math.max(peak, Math.abs(y[i])); if (ghost) peak = Math.max(peak, Math.abs(ghost[i])); }
+    for (let i = 0; i < C.N; i++) peak = Math.max(peak, Math.abs(y[i]));
     const sy = (H / 2 - 8) / peak;
-    if (st.depth > 0) {
-      const [r, g, b] = this.accentRGB();
-      for (let x = 0; x < W; x += 2) {
-        const wv = C.windowValue(x / W, st.center, st.width, 1);
-        if (wv > 0.01) { ctx.fillStyle = `rgba(${r},${g},${b},${0.10 * wv * st.depth})`; ctx.fillRect(x, 0, 2, H); }
-      }
+    ctx.beginPath();
+    for (let x = 0; x <= W; x++) {
+      const i = Math.min(C.N - 1, Math.floor(x / W * C.N));
+      const v = H / 2 - y[i] * sy;
+      if (x === 0) ctx.moveTo(x, v); else ctx.lineTo(x, v);
     }
-    const path = (arr) => {
-      ctx.beginPath();
-      for (let x = 0; x <= W; x++) {
-        const i = Math.min(C.N - 1, Math.floor(x / W * C.N));
-        const v = H / 2 - arr[i] * sy;
-        if (x === 0) ctx.moveTo(x, v); else ctx.lineTo(x, v);
-      }
-      ctx.stroke();
-    };
-    if (ghost) { ctx.strokeStyle = 'rgba(200,210,225,0.18)'; ctx.lineWidth = 1.2; path(ghost); }
     ctx.strokeStyle = this.accent(); ctx.lineWidth = 2; ctx.shadowColor = this.accent(); ctx.shadowBlur = 8;
-    path(y);
+    ctx.stroke();
     ctx.shadowBlur = 0;
-    pill(ctx, tb.mode === 0 ? 'ONE CYCLE · DRY (GREY) vs FILTERED' : 'ONE CYCLE · SUM OF ATOM BANDS', 8, 14, 'left', 'rgba(200,210,225,0.6)');
-    if (st.note >= 0) pill(ctx, noteName(st.note) + ' · LIVE', W - 8, 14, 'right', this.accent());
+    pill(ctx, (names.length ? names.join(' + ') : 'NO OSCILLATOR') + ' · ONE CYCLE OF THE MIX', 8, 14, 'left', 'rgba(200,210,225,0.6)');
   }
 
+  // beta 0.3: the whole sound: the atoms of every oscillator that plays (root of the sum of the squares of what each shows)
   draw_scalogram(ctx, W, H) {
-    const C = this.C, tb = this.tables;
+    const C = this.C, sets = this.scope;
     const lm = 26, pw = W - lm - 4, rh = (H - 6) / C.NB, top = 3;
     ctx.font = '600 8.5px Segoe UI, system-ui, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     for (let b = 1; b <= C.NB; b++) {
@@ -799,8 +839,8 @@ class SynthUI {
       ctx.fillText('B' + b, lm - 5, yy + rh / 2);
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    if (!tb || tb.mode !== this.mode) return;
-    const st = this.currentGains();
+    if (!sets) return;
+    const bands = C.scopeBands(this.host.values(), sets);
     const [r0, g0, b0] = this.accentRGB();
     const col = (t) => {
       if (t <= 0) return null;
@@ -808,12 +848,12 @@ class SynthUI {
       const k = (t - 0.75) / 0.25;
       return `rgb(${Math.round(r0 + (255 - r0) * k)},${Math.round(g0 + (255 - g0) * k)},${Math.round(b0 + (255 - b0) * k)})`;
     };
-    const sq = 1 / Math.sqrt(C.N);
     for (let b = 1; b <= C.NB; b++) {
       const n = 1 << (b - 1), yy = top + (C.NB - b) * rh;
-      const scale = tb.bandScale[b - 1] * Math.pow(2, (b - 1) / 2) * sq * Math.abs(st.g[b - 1]);
       const val = k => {
-        const v = Math.abs(tb.coeffs[n + k]) * scale;
+        let e = 0;
+        for (const o of bands) { const v = Math.abs(o.coeffs[n + k]) * o.sc[b - 1]; e += v * v; }
+        const v = Math.sqrt(e);
         return v > 0 ? clamp((20 * Math.log10(v) + 60) / 60, 0, 1) : 0;
       };
       if (n <= pw) {
@@ -830,16 +870,6 @@ class SynthUI {
           ctx.fillStyle = c; ctx.fillRect(lm + x, yy + 0.5, 1, rh - 1);
         }
       }
-    }
-    if (st.depth > 0) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      for (let x = 0; x <= pw; x++) {
-        const wv = C.windowValue(x / pw, st.center, st.width, st.depth);
-        const yy = top + (1 - wv) * (H - 6);
-        if (x === 0) ctx.moveTo(lm + x, yy); else ctx.lineTo(lm + x, yy);
-      }
-      ctx.stroke(); ctx.setLineDash([]);
     }
   }
 

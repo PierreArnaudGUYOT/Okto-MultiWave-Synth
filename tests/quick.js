@@ -124,12 +124,15 @@ async function web() {
     if (label !== SPEC.PRESETS[SPEC.DEFAULT_PRESET].name) bad.push(`opens on '${label}' instead of '${SPEC.PRESETS[SPEC.DEFAULT_PRESET].name}'`);
     await B.evaluate('WS_TEST.start()', 10000);
     if (await B.evaluate('WS_TEST.audioState()') !== 'running') bad.push('audio did not start');
-    for (const k of [0, SPEC.DEFAULT_PRESET, SPEC.PRESETS.length - 1]) {
+    // (beta 0.3: the last preset of the list is a tambourine, a transient a few tens of ms long that the 150 ms polling missed in about one run in three:
+    // the last sustained sound is played instead, and the level is read every 50 ms)
+    const sustained = SPEC.PRESETS.map((p, i) => i).filter(i => !/Drums|Pluck|Bells/.test(SPEC.PRESETS[i].cat)).pop();
+    for (const k of [0, SPEC.DEFAULT_PRESET, sustained]) {
       await B.evaluate(`WS_TEST.loadPreset(${k})`);
       await B.evaluate('WS_TEST.noteOn(60, 0.9)');
       let peak = 0;   // pads have slow attacks: listen up to 2 s
-      for (let w = 0; w < 2000 && !(peak > 1e-3); w += 150) {
-        await sleep(150);
+      for (let w = 0; w < 2000 && !(peak > 1e-3); w += 50) {
+        await sleep(50);
         const lv = await B.evaluate('WS_TEST.getLevel()');
         peak = Math.max(peak, lv.peakL, lv.peakR);
       }
@@ -160,6 +163,7 @@ function dspCompare() {
   const exe = path.join(dir, 'dsp_render.exe');
   let r = cp.spawnSync(bin, ['-std=c++17', '-O2', '-static', '-Wno-format', '-DNOMINMAX', '-I', R('vst', 'external'), '-I', R('vst', 'src'), R('vst', 'devtest', 'dsp_render.cpp'), '-o', exe], { encoding: 'utf8' });
   if (r.status !== 0) return report('C++ vs JS', false, 'compile failed: ' + (r.stderr || r.error || '').toString().slice(0, 300), t);
+  r = cp.spawnSync(process.execPath, [R('tools', 'dsp_compare.js'), '--list', dir], { encoding: 'utf8' });   // the cases (cases.txt) the C++ engine renders
   r = cp.spawnSync(exe, [dir], { encoding: 'utf8' });
   r = cp.spawnSync(process.execPath, [R('tools', 'dsp_compare.js'), dir], { encoding: 'utf8' });
   const last = (r.stdout || '').trim().split('\n').pop();

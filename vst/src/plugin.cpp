@@ -46,6 +46,9 @@ namespace ws {
 static const FUID kProcessorUID(0xAD0A5967, 0x9F4B4D8F, 0x98779E69, 0x04E4F2D0);
 static const FUID kControllerUID(0x7E02B916, 0x86914A57, 0xBCBCA737, 0xA4F08A21);
 static constexpr uint32_t kStateMagic = 0x31595357;  // "WSY1"
+// beta 0.3: version 2. B2's 41 parameters were removed, so the ParamIDs after them moved: the state of a beta 0.1 / 0.2 session (version 1) would put its
+// values on the wrong controls, so it is not read at all (the instance keeps its default sound)
+static constexpr uint32_t kStateVersion = 2;
 static constexpr uint32_t kCtlMagic2 = 0x32435357;   // "WSC2": zoom, modified flag, preset name
 // ------------------------------------------------------------------ helpers
 #ifdef _WIN32
@@ -209,7 +212,7 @@ static bool writeAll(IBStream* s, const void* d, int32 n) { int32 put = 0; retur
 static bool readState(IBStream* s, double* plain) {
   uint32_t magic = 0, version = 0, count = 0;
   if (!readAll(s, &magic, 4) || magic != kStateMagic) return false;
-  if (!readAll(s, &version, 4) || !readAll(s, &count, 4) || count > 4096) return false;
+  if (!readAll(s, &version, 4) || version != kStateVersion || !readAll(s, &count, 4) || count > 4096) return false;
   for (uint32_t k = 0; k < count; k++) {
     uint32_t id; double v;
     if (!readAll(s, &id, 4) || !readAll(s, &v, 8)) return false;
@@ -324,7 +327,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
   tresult PLUGIN_API getState(IBStream* state) override {
     if (!state) return kInvalidArgument;
     uint32_t count = 0; for (int i = 0; i < kNumParams; i++) if (!kParams[i].hidden) count++;
-    uint32_t head[3] = {kStateMagic, 1, count};
+    uint32_t head[3] = {kStateMagic, kStateVersion, count};
     if (!writeAll(state, head, 12)) return kResultFalse;
     for (uint32_t i = 0; i < (uint32_t)kNumParams; i++) {
       if (kParams[i].hidden) continue;

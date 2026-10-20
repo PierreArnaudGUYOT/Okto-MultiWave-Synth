@@ -50,7 +50,7 @@ const TOUR_START = TOUR[2];   // first preset heard on the default song
 // the sentences the demo window shows during the first presets of the tour (one each, web/js/demo.js TOUR_INTRO), before the summary
 const TOUR_INTRO = [
   'Welcome to OKTOMULTIWAVE. Every sound you hear is built from wavelets: tiny waves, like bricks of sound.',
-  'This synth has four oscillators: two that shape a classic waveform (A1, A2) and two that build the sound brick by brick (B1, B2).',
+  'This synth has three oscillators: two that shape a classic waveform (A1, A2) and one that builds the sound brick by brick (B1).',
   'Most presets use two of them: a body that sings, and a second oscillator that adds a colour, a shimmer or the attack.',
   'An oscillator can live for a few milliseconds only: a click, a pluck, a breath. It gives the sound its attack.',
   'CHORD MODE turns the keyboard into a chord harp: one key plays a whole chord. Try it under the keyboard.',
@@ -85,7 +85,7 @@ function diffVals(a, b) {
 async function deviceRect() {
   return ev(`(() => { const d = document.getElementById('device'); if (!d) return null; const r = d.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })()`);
 }
-const P = (x, y) => [DEV.x + (x * DEV.w) / 1100, DEV.y + (y * DEV.h) / 860];
+const P = (x, y) => [DEV.x + (x * DEV.w) / 1100, DEV.y + (y * DEV.h) / SPEC.DEVICE.h];
 async function rectOf(sel, index = 0) {
   return ev(`(() => { const e = document.querySelectorAll(${JSON.stringify(sel)})[${index}]; if (!e) return null; const r = e.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, text: e.textContent.trim(),

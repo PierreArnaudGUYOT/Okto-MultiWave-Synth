@@ -3,6 +3,52 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth beta 0.3 — 2026-10-19 (B2 removed, three folder tabs, LFO 3, FILTER, 600 new presets, evaluation in sets of 40)
+
+A **test version**, asked for by OktoPierre after beta 0.2: the second additive oscillator (B2) is removed, the panel is reorganised around three folder tabs, a third LFO and a
+real filter are added, 600 new presets use them, and EVALUATE SOUNDS rates sounds in sets with a long chord at the end of the passage. The sound engine, the chord keyboard
+and the oriental keyboard are those of beta 0.2; the 22 TOP Sounds and the presets that stay are **unchanged**.
+
+**In short**
+- **B2 is gone.** Three oscillators are left: **A1, A2** (subtractive) and **B1** (additive). B2's 41 parameters left the specification, so the parameters after them are numbered 41 lower,
+  and the new ones are appended (**175 parameters**). The plug-in's state has a new version: a session saved by beta 0.1 or 0.2 is not read (it would have put its values on the wrong
+  controls), the instance keeps its default sound; the web app's saved state and the user presets file are read by name and keep working (B2's values are ignored).
+- **The presets that played B2 left the list**: 192 of the 500 (67 of the 200 of beta 0.1, 125 of the 300 of beta 0.2). **Their numbers are not used again**, so the ratings already given
+  to the others stay valid: 308 presets of the earlier betas are left to rate (133 of beta 0.1, `001`–`200`, and 175 of beta 0.2, `202`–`500`), plus the 22 TOP Sounds. The presets that stay
+  were not touched (only their unused B2 values are dropped: an oscillator at level 0 does not change the sound). Four sounds of the demo's tour played B2 and were replaced
+  (Crystal Choir → Cloud Choir, Harp → Harp Pluck, Marimba → Celeste Bell, Full Drawbar Organ → Chapel Organ).
+- **A new panel.** One strip of three **folder tabs** under the header — **OSC1 A1 · SUBTRACTIVE**, **OSC2 A2 · SUBTRACTIVE** (yellow) and **OSC3 B1 · ADDITIVE** (blue) — chooses the oscillator whose
+  cards are shown on a soft tinted plate; a lit dot says it is heard. The ENGINE tabs are gone. **OSC MIX** and the **SCOPE** are common to every oscillator and sit at the top right, outside the
+  plate; the scope and the scalogram draw the **whole sound** (one cycle of every oscillator that plays, and the sub oscillator, at C4). The card titles lost their "OSC A2 ·" prefix, the LFO 2 / LFO 3
+  card has a small **2 | 3** switch, a **PLAY** card holds CHORD MODE, BASS, TUNING, MAQAM and TONIC, the preset box is narrower and the DEMO arrow bigger. The panel is 1050 px tall (860 in beta 0.2).
+- **LFO 3**: a second LFO of the LFO 2 kind (the same 17 targets, in a second sub-tab of the same card). LFO 1 did not change. LFO 2 and LFO 3 each move one control in every oscillator that has it
+  and add up when they aim at the same one; the table "variants" (SPARSITY, PHASE, WIDTH) look at both.
+- **FILTER**: a four-pole (24 dB per octave) resonant low-pass in every voice, after the oscillators are mixed and before the amp envelope; two characters, **LADDER** (every stage saturates) and **OTA**
+  (only the input of the feedback loop saturates; part of the low end kept); CUTOFF (20 Hz – 20 kHz), RESO (just above self-oscillation at 100 %), DRIVE, KEY TRK, ENV AMT (± 8 octaves) and an ADSR of its own;
+  LFO 2 and LFO 3 get two new targets, **Filter Cutoff** and **Filter Resonance**. It is **open by default** and an open filter is not computed (`fltOn`): **every older sound is bit-identical**
+  (the 22 TOP Sounds still match beta 0.7 within 1.5e-7). Brand names are not used for the two characters (the classic circuits they recall are trademarks).
+- **600 new presets**, `501`–`1100`, 50 in each of the 12 categories (Drums & Perc included, with a new composer of drums). The composer of beta 0.2 (`tools/supermod/`) was ported to three oscillators:
+  every preset has **LFO 2 and / or LFO 3 on wavelet controls** (the SuperModulation ones both, with LFO 1 on two or three more; the weights favour the controls only the subtractive oscillators have: SPARSITY, SOURCE
+  PHASE, SOURCE WIDTH — and the window, the scale cutoff and resonance, the morph …), at most one LFO per control, and about **two in three use the FILTER** with an envelope fitted to the kind of sound
+  (a bass snaps open, a pad opens slowly, a pluck snaps shut, an organ hardly moves it) and, in some, an LFO on its cutoff or resonance. The same measures as in beta 0.2 apply (limiter share, bursts of high
+  frequency, drop-outs, motion with and without the LFOs, contrast between oscillators, the onset difference of decaying sounds), and the selection is farthest-first, also against the 330 presets that existed
+  without them; loudness = the TOP Sounds' median minus 1 dB. **Nobody has heard them yet.**
+- **EVALUATE SOUNDS**: the passage is now the 5 s of Beethoven **and a long C minor chord** (C3 G3 C4 Eb4 G4, 4 s) so that a sustained sound can be judged; the sounds come in **sets of 40**, each with
+  **its own file** (`sound 501 to sound 540.txt`: the web app downloads it when the set is finished, the plug-in writes it next to the ratings file after every rating); **Start at…** asks for the number of the first
+  sound (web: a prompt; plug-in: a small window); the list is the 600 of beta 0.3 first, then the 175 of beta 0.2, then the 133 of beta 0.1 (**908** sounds). Preset numbers have 3 or 4 digits.
+- Manuals, screenshots and numbered callouts follow the new panel; a FILTER chapter and LFO 3 are described.
+
+**Checked**: the C++ engine against the JavaScript reference on **1000** cases (all 930 presets and 70 variants of every feature: LFO 3, the filter in both characters, the live chord scenarios, the tunings; worst 3.6e-7 of full scale); the 22 TOP Sounds against the published beta 0.7 engine (worst 1.43e-7); `tests/filter.js`, `tests/supermod.js`, the idle rule and the engine self-test; the plug-in in its own window (`vote_session`: the three tabs, "Start at…", the set file, a recorded change, CHORD MODE: 39 checks), the presets file (`library_test`, 930 presets) and the VST2 entry point (41 checks); the web suites {{WEB}}.
+
+**Known limits**
+- The 600 new presets were **measured, not listened to**; the owner's ratings are what tells which are good. The measures cannot hear a preset that is thin or odd in a way they do not see.
+- The plug-in's state of beta 0.1 / 0.2 is not read (the parameters moved); the web app's own saved state and the user presets file are read by name.
+- The filter's two characters are models of the classic circuits, not copies; LADDER at high RESO and DRIVE is loud: the master and the limiter keep it under 0 dBFS, but turn VOLUME down first.
+- The composer cannot run the old recipes any more (`tools/make_presets.js`, `recipes_*.js` write B2); they are the record of the 200 presets of beta 0.1.
+- macOS: no build is made or tested (the shared code stays portable; `editor_mac.mm` was only adapted by reading).
+
+---
+
 ## Okto MultiWave Synth beta 0.2 — 2026-10-19 (SuperModulation, 300 new presets, oriental keyboard, a chord that follows the left hand)
 
 A **test version**, asked for one night by OktoPierre: the LFOs reach the wavelet itself, the chord keyboard gets a bass and follows the left

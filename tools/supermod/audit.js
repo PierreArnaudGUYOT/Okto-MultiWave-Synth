@@ -12,7 +12,7 @@
 'use strict';
 const lab = require('../preset_lab.js');
 const { C, SPEC, P, sr } = lab;
-const SLOT_LVL = ['a1_lvl', 'a2_lvl', 'b1_lvl', 'b2_lvl'];
+const SLOT_LVL = ['a1_lvl', 'a2_lvl', 'b1_lvl'];   // beta 0.3: B2 is gone
 
 function fullValues(v) { return SPEC.PARAMS.map(p => (v[p.key] !== undefined ? v[p.key] : p.def)); }
 
@@ -107,7 +107,7 @@ function dropout(r) {   // the largest sudden fall of the level (dB) between a 2
 // the values of the sound with every modulation switched off (static)
 function staticValues(values) {
   const v = values.slice();
-  for (const k of ['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew', 'lfo2_amt']) v[P[k]] = 0;
+  for (const k of ['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew', 'lfo2_amt', 'lfo3_amt']) v[P[k]] = 0;
   return v;
 }
 function soloValues(values, slot) {
@@ -115,7 +115,7 @@ function soloValues(values, slot) {
   SLOT_LVL.forEach((k, s) => { if (s !== slot) v[P[k]] = 0; });
   return v;
 }
-const SLOT_IDS = ['A1', 'A2', 'B1', 'B2'];
+const SLOT_IDS = ['A1', 'A2', 'B1'];
 function meanSpectrum(r, t0, t1) {
   const fr = bandFrames(r, t0, t1), m = new Float64Array(BANDS.length);
   for (const f of fr) for (let b = 0; b < BANDS.length; b++) m[b] += f[b] / fr.length;
@@ -139,8 +139,8 @@ function layerDistance(values, s1, s2) {
 // at another point of its cycle, so the notes differ. The same chord played at two moments half an LFO cycle apart (the LFOs run freely):
 // how much does the spectrum shape of the first 0.4 s differ (the four bands that differ most, dB)?
 function onsetDiff(values) {
-  const rate = Math.max(0.3, Math.min(values[P.lfo_rate], 6)), rate2 = Math.max(0.3, Math.min(values[P.lfo2_rate], 6));
-  const delays = [0.5 / rate, 0.5 / rate2, 0.25 / rate, 0.25 / rate2].map(d => Math.min(1.6, Math.max(0.12, d)));
+  const rate = Math.max(0.3, Math.min(values[P.lfo_rate], 6)), rate2 = Math.max(0.3, Math.min(values[P.lfo2_rate], 6)), rate3 = Math.max(0.3, Math.min(values[P.lfo3_rate], 6));
+  const delays = [0.5 / rate, 0.5 / rate2, 0.5 / rate3, 0.25 / rate, 0.25 / rate2, 0.25 / rate3].map(d => Math.min(1.6, Math.max(0.12, d)));
   const shape = (r, t0) => {
     const m = meanSpectrum(r, t0 + 0.02, t0 + 0.42);
     let t = 0; for (const v of m) t += Math.pow(10, v / 10);
@@ -185,7 +185,7 @@ function audit(values, o = {}) {
   // the motion is judged with the LFOs not slower than 0.45 Hz (a pad's 0.06 Hz needs a quarter of a minute to show what it does, the
   // depth is the same): the same sound with its LFOs sped up, against the same with every amount at 0
   const quick = values.slice();
-  for (const [kr, ka] of [['lfo_rate', null], ['lfo2_rate', 'lfo2_amt']]) {
+  for (const [kr, ka] of [['lfo_rate', null], ['lfo2_rate', 'lfo2_amt'], ['lfo3_rate', 'lfo3_amt']]) {
     const on = ka ? quick[P[ka]] !== 0 : ['lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew'].some(k => quick[P[k]] > 0);
     if (on && quick[P[kr]] < 0.45) quick[P[kr]] = 0.45;
   }
@@ -217,14 +217,14 @@ function audit(values, o = {}) {
 // ---- the verdicts (the worker stops early, the selection checks again). Each returns the reason of a refusal, or null.
 const SUSTAINED = new Set(['pad', 'strings', 'organ', 'lead', 'bass', 'brass']);
 function judgeSound(a, kind) {
-  const sus = SUSTAINED.has(kind);
+  const sus = SUSTAINED.has(kind), perc = kind === 'perc';   // drums are made of noise and clicks, and fall silent: only the real defects count
   if (!isFinite(a.peak) || a.peak < 0.25) return 'quiet or silent';
   if (a.peak > 0.97) return 'peak';
   if (a.limDist > 0.004) return 'limiter share';
-  if (a.hfBurst > (sus ? 7 : kind === 'fx' ? 60 : 30)) return 'hf bursts';
-  if (a.hf > (kind === 'fx' ? 1.5 : sus ? 0.9 : 1.1)) return 'too much high frequency';
-  if (a.dropout > (kind === 'fx' ? 30 : sus ? 9 : 16)) return 'drop-outs';
-  if (a.flat > (kind === 'fx' ? 0.6 : 0.25)) return 'noise-like';
+  if (a.hfBurst > (perc ? 200 : sus ? 7 : kind === 'fx' ? 60 : 30)) return 'hf bursts';
+  if (a.hf > (perc ? 2.5 : kind === 'fx' ? 1.5 : sus ? 0.9 : 1.1)) return 'too much high frequency';
+  if (a.dropout > (perc ? 1000 : kind === 'fx' ? 30 : sus ? 9 : 16)) return 'drop-outs';
+  if (a.flat > (perc ? 0.97 : kind === 'fx' ? 0.6 : 0.25)) return 'noise-like';
   return null;
 }
 // the four bands that move most move by more than 3 dB (standard deviation) more than they do without the modulation: SuperModulation

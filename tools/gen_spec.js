@@ -47,7 +47,7 @@ const CURVES = ['lin', 'exp', 'pow2', 'int', 'choice'];
 const FMTS = ['pct', 'db', 'sec', 'hz', 'cents', 'band', 'dbband', 'int', 'choice', 'deg', 'cyc', 'semi', 'bipct', 'bandamt'];
 const WTYPES = ['knobL', 'knobM', 'knobS', 'knobT', 'seg', 'step', 'drawbar', 'scope', 'scalogram', 'atom', 'source', 'window',
   'adsr', 'leds', 'fxheads', 'keyboard', 'wheels', 'logo', 'presets', 'manual', 'download', 'meter', 'zoom', 'credit', 'menu',
-  'toggle', 'label', 'chordpads', 'chordname', 'strumplate', 'evaluate'];
+  'toggle', 'label', 'chordpads', 'chordname', 'strumplate', 'evaluate', 'osctabs'];   // beta 0.3: the folder tabs of the oscillators
 const q = s => JSON.stringify(s); // UTF-8 string literal (JSON escaping is valid C for our content)
 const num = v => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 const enumName = k => 'P_' + k.toUpperCase();
@@ -74,7 +74,7 @@ h += `struct ParamDef {
 // (visOn: shown while it is on, else while it is off; -1: always); only: 0 both, 1 web app only, 2 plug-in only;
 // text: a toggle's or label's text, a menu's caption (beta 0.6)
 struct WidgetDef { int type; int param; float x, y, w, h; int style; int env; int vis; bool visOn; int only; const char* text; };
-// view: the oscillator (0..3) whose panel shows it, -1 always; vis / visOn: shown only while that parameter is on / off (-1: always)
+// view: the oscillator (0..2) whose panel shows it, -1 always; vis / visOn: shown only while that parameter is on / off (-1: always)
 struct SectionDef { const char* id; const char* title; float x, y, w, h; int view; int vis; bool visOn; int firstWidget, numWidgets; };
 struct PresetDef { const char* name; const char* cat; double v[kNumParams]; };
 
@@ -140,13 +140,14 @@ h += `inline constexpr int kChordKeys[12] = { ${CHORD_KEYS.join(', ')} };   // t
 h += `// beta 0.3: the parameters LFO 2 can move, in the order of the lfo2_target choices (the parameters of A1; kLfo2Role: the role of\n// each target, a column of kSlotRole)\n`;
 h += `inline constexpr int kLfo2Targets[] = { ${LFO2_TARGETS.map(k => `P_${k.toUpperCase()}`).join(', ')} };\n`;
 h += `inline constexpr int kLfo2Role[] = { ${LFO2_ROLE.map(r => ROLES.indexOf(r)).join(', ')} };\n`;
-h += `// Okto MultiWave Synth: the four oscillators A1 A2 B1 B2 (mode 0 subtractive, 1 additive) and the parameter of each field (-1: none);\n// kSlotRole[slot][role]: the parameter of an oscillator that LFO 2 moves for each role (cutoff, slope, resonance, key tracking,\n// envelope amount, velocity amount, position, window width, window depth, source phase)\n`;
+h += `// Okto MultiWave Synth: the oscillators A1 A2 B1 (beta 0.3: three; mode 0 subtractive, 1 additive) and the parameter of each field (-1: none);\n// kSlotRole[slot][role]: the parameter of an oscillator that LFO 2 moves for each role (cutoff, slope, resonance, key tracking,\n// envelope amount, velocity amount, position, window width, window depth, source phase)\n`;
 h += `struct SlotDef { int mode; ${SLOT_FIELDS.map(f => 'int ' + f).join('; ')}; };\n`;
-h += 'inline constexpr SlotDef kSlots[4] = {\n' + SLOTS.map(s => `  { ${s.mode}, ${SLOT_FIELDS.map(f => (s.k[f] ? 'P_' + s.k[f].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n';
+h += `inline constexpr int kNumSlots = ${SLOTS.length};\n`;
+h += `inline constexpr SlotDef kSlots[${SLOTS.length}] = {\n` + SLOTS.map(s => `  { ${s.mode}, ${SLOT_FIELDS.map(f => (s.k[f] ? 'P_' + s.k[f].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n';
 h += `// the roles (ROLES): the column of kSlotRole that each LFO 2 target moves; ODD / EVEN bars and MORPH have no single field (-1)\n`;
 h += `inline constexpr int ${ROLES.map((r, i) => 'ROLE_' + r.toUpperCase() + ' = ' + i).join(', ')};\n`;
 h += `inline constexpr int kNumRoles = ${ROLES.length};\n`;
-h += `inline constexpr int kSlotRole[4][${ROLES.length}] = {\n` + SLOTS.map(s => `  { ${ROLES.map(r => (s.k[r] ? 'P_' + s.k[r].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n\n';
+h += `inline constexpr int kSlotRole[${SLOTS.length}][${ROLES.length}] = {\n` + SLOTS.map(s => `  { ${ROLES.map(r => (s.k[r] ? 'P_' + s.k[r].toUpperCase() : '-1')).join(', ')} },`).join('\n') + '\n};\n\n';
 
 h += `// beta 0.2: the oriental tunings: kMicro[tuning (0 Arabic, 1 Turkish)][scale][semitones above the tonic] = cents from the equal-tempered key\n`;
 h += `inline constexpr int kNumMicroScales = ${MICRO_TABLES[0].length};\n`;
@@ -178,6 +179,8 @@ fs.writeFileSync(path.join(root, 'vst', 'src', 'generated', 'spec.h'), h);
   }
   const t0 = notes[0][0], ev = [];
   for (const [t, d, n, v] of notes) ev.push([t - t0, n, v], [t - t0 + d, n, 0]);
+  // beta 0.3: then a long chord, C minor (C3 G3 C4 Eb4 G4), 4 s after a pause of 0.4 s (web/js/evaluate.js plays the same)
+  for (const n of [48, 55, 60, 63, 67]) ev.push([LEN + 0.4, n, 0.7], [LEN + 0.4 + 4, n, 0]);
   ev.sort((a, b) => a[0] - b[0] || (a[2] > 0) - (b[2] > 0));   // note-offs before note-ons at the same time
   let v = '// Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)\n// SPDX-License-Identifier: GPL-3.0-or-later\n' +
     '// GENERATED by tools/gen_spec.js — do not edit.\n// EVALUATE SOUNDS: the listening passage (Beethoven, Appassionata III, ' +

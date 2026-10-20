@@ -1,16 +1,18 @@
 # CLAUDE.md — Okto MultiWave Synth: architecture and maintenance guide
 
-**Okto MultiWave Synth** (beta 0.2, 2026-10-19, a test version; beta 0.1 was 2026-10-18) is the Wavelet Synthesizer beta 0.7 (commit f16b46a of
-https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST, whose history this repository keeps) with **four
-oscillators** instead of two engines (§3.3), the **chord keyboard** of the WaveChord work (§3.3f, shown by a CHORD MODE
-button), 500 new presets (200 of beta 0.1 + 300 of beta 0.2), the **EVALUATE SOUNDS** listening test (§4, §5) and the CPU remarks of the load study (§3.5, §3.6).
+**Okto MultiWave Synth** (beta 0.3, 2026-10-19, a test version; beta 0.2 was the same day, beta 0.1 2026-10-18) is the Wavelet Synthesizer beta 0.7 (commit f16b46a of
+https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST, whose history this repository keeps) with **three
+oscillators** (A1 A2 B1; beta 0.3 removed B2) instead of two engines (§3.3, §3.3i), the **chord keyboard** of the WaveChord work (§3.3f, shown by a CHORD MODE
+button), 908 presets to rate (600 of beta 0.3, 175 of beta 0.2 and 133 of beta 0.1: the 192 older ones that played B2 were left out in beta 0.3), the **EVALUATE SOUNDS** listening test (§4, §5) and the CPU remarks of the load study (§3.5, §3.6).
+Beta 0.3 also adds **LFO 3** (a second LFO of the LFO 2 kind), the voice **FILTER** (4-pole, LADDER / OTA, §3.3i), three folder tabs with a plate and a global scope, 600 more presets (composed by
+`tools/supermod/`, §9) and EVALUATE SOUNDS in sets of 40 sounds with a long chord at the end of the passage (§3.3i).
 Beta 0.2 adds **SuperModulation** (LFO 1 on SPARSITY / RESO / ENV>WAV, LFO 2 on every wavelet control, §3.3g), the chord keyboard's **BASS** (two
 octaves down, louder, on by default), the chord that **follows the left hand** (§3.3f), the **oriental tunings** (Arabic / Turkish quarter tones, §3.3h),
 the preset browser that follows the preset box (§4, §5) and 300 more presets, composed and measured by `tools/supermod/` (§9).
 Everything else in this guide is the synthesizer's and still applies; "beta 0.x" below are the Wavelet Synthesizer's versions
 unless it says Okto MultiWave Synth. Identity: bundle `OktoMultiWaveSynth.vst3`, VST3 class IDs, VST2 ID 'OkMW', window / view
 class names, presets file `OKTOMULTIWAVE presets.txt`, web storage keys `mw.*` / `ws.*`, so it installs next to the
-Wavelet Synthesizer. The panel is 1100 × **860** (+ 120 while CHORD MODE is on, `CHORD_H`); `APP.version` restarts at beta 0.1
+Wavelet Synthesizer. The panel is 1100 × **1050** (+ 120 while CHORD MODE is on, `CHORD_H`); `APP.version` restarts at beta 0.1
 (`APP.base` names the synthesizer). Platforms: web and Windows (VST3 / VST2); the macOS files of the Wavelet Synthesizer are
 still in the tree (the shared code stays portable) but no Mac build is made or tested: `mac.yml` only runs by hand.
 
@@ -36,10 +38,10 @@ products identical. Read it before changing the DSP, the parameters or the prese
 | `vst/build_mac.sh`, `vst/INSTALL-mac.txt` | macOS build (Xcode command line tools, universal arm64 + x86_64, ad-hoc signature) → `build/mac/`; the Mac zip's install guide. |
 | `.github/workflows/mac.yml`, `tests/machost/` | The Mac plug-in built and tested on GitHub's Macs at every push (artifacts: release zip, test output). |
 | `vst/devtest/` | Developer checks: `dsp_render.cpp` (C++ renders for the JS cross-check), `vst2_smoke.cpp` (VST2 host-like test). |
-| `tools/dsp_compare.js`, `tools/dsp_cases.js`, `tools/dsp_selftest.js` | C++ ↔ JS comparison (251 cases, limit 2e-6); JS engine self-test (`dsp_selftest.js` still describes the Wavelet Synthesizer's two engines: not run for beta 0.1). |
-| `tools/presets_top.js`, `tools/presets_new.js`, `tools/presets_super.js` | The 22 TOP Sounds (beta 0.7 parameters, converted by `convertLegacy`), the 200 presets of beta 0.1 (001-200, **unchanged since**) and the 300 of beta 0.2 (201-500, **generated** by `tools/supermod/build.js`): do not edit. |
-| `tools/supermod/` | The composer of the 300 presets: `layers.js` (oscillator building blocks), `mods.js` (modulation recipes), `compose.js`, `audit.js` (renders every candidate the way a player plays it and measures it: limiter share, bursts of high frequency, motion, contrast between oscillators), `build.js` (parallel run, filters, farthest-point selection, loudness), `calib.js` (the same measures of the existing presets). |
-| `tools/make_presets.js`, `preset_dsl.js`, `preset_lab.js`, `recipes_*.js` | The new presets: one recipe file per group (`P(category, title, description, {A1, A2, B1, B2, g, win})`), the loudness / distinctness / contact-sheet tooling. `node tools/make_presets.js [--sheets] [-v]`. |
+| `tools/dsp_compare.js`, `tools/dsp_cases.js`, `tools/dsp_selftest.js` | C++ ↔ JS comparison (1000 cases in beta 0.3, limit 2e-6); JS engine self-test (`dsp_selftest.js` still describes the Wavelet Synthesizer's two engines: not run for beta 0.1). |
+| `tools/presets_top.js`, `tools/presets_new.js`, `tools/presets_super.js`, `tools/presets_lfo3.js` | The 22 TOP Sounds (beta 0.7 parameters, converted by `convertLegacy`), the 200 presets of beta 0.1 (001-200, **unchanged since**), the 300 of beta 0.2 (201-500) and the 600 of beta 0.3 (501-1100), the last two **generated** by `tools/supermod/build.js`: do not edit. |
+| `tools/supermod/` | The composer of the 300 presets of beta 0.2 and the 600 of beta 0.3: `layers.js` (oscillator building blocks), `mods.js` (modulation recipes: LFO 1, LFO 2 and its LFO 3 twins, the filter), `perc.js` (the drums), `compose.js`, `audit.js` (renders every candidate the way a player plays it and measures it: limiter share, bursts of high frequency, motion, contrast between oscillators), `build.js` (parallel run, filters, farthest-point selection, loudness), `calib.js` (the same measures of the existing presets). |
+| `tools/make_presets.js`, `preset_dsl.js`, `preset_lab.js`, `recipes_*.js` | The presets of beta 0.1 and the language the composer writes: one recipe file per group (`P(category, title, description, {A1, A2, B1, g, win})`; the recipes of beta 0.1 wrote B2 and can no longer run), the loudness / distinctness / contact-sheet tooling. |
 | `web/js/evaluate.js`, `vst/devtest/vote_session.cpp` | EVALUATE SOUNDS in the web app; the plug-in's is in `editor.cpp` (`vote*`), tested by `vote_session.cpp`. |
 | `tools/make_demo.js`, `tools/midi.js`, `tools/demo/` | Demo songs: MIDI files (+ `SOURCE.md` licences) → `web/js/demo_data.js`. |
 | `tools/manual/` | Manual generator: `mw.js` (the text of both manuals; tables from the spec), `lib.js` (helpers, page shell), `figs.js` (SVG figures computed with `core.js`), `shots.js` (screenshots), `top_desc.js` (the TOP Sounds' descriptions), `build.js`. |
@@ -55,22 +57,23 @@ products identical. Read it before changing the DSP, the parameters or the prese
 - **Curves** `lin | exp | pow2 | int | choice` map normalized 0..1 ↔ plain values (`toPlain` / `toNorm`, identical in
   JS and C++). **Formats** (`fmt`) give the display text; adding a format means updating `FMTS` in `gen_spec.js`,
   `format`/`parse` in `core.js` and `formatValue`/`parseValue` in `dsp.h`.
-- **Layout**: sections (cards) with widgets in panel coordinates (1100 × 860). Both GUIs (`web/js/ui.js` and
-  `vst/src/editor.cpp`) are generated from it. `section(id, title, x, y, w, h, view, widgets, opts)`: `view` 0..3 = the card is
-  shown only while that oscillator's tab is (A1 A2 B1 B2), −1 = always; `opts.vis` (+ `visOn`) = shown only while that parameter is on
+- **Layout**: sections (cards) with widgets in panel coordinates (1100 × 1050). Both GUIs (`web/js/ui.js` and
+  `vst/src/editor.cpp`) are generated from it. `section(id, title, x, y, w, h, view, widgets, opts)`: `view` 0..2 = the card is
+  shown only while that oscillator's tab is (A1 A2 B1), −1 = always; `opts.vis` (+ `visOn`) = shown only while that parameter is on
   / off (the chord card: `chord_mode`). Widget fields (generated into `WidgetDef` too): `only: 'web' | 'vst'` (C++ `only` 1 / 2: the
   other GUI skips the widget), `vis` + `visOn` (the SYNC'd RATE / TIME knobs share their place with the free ones), `style`
-  (`'engine'`: the four oscillator tabs, coloured A teal / B amber; `'value'`: a knob labelled with its value), `text`, `env`
+  (`'value'`: a knob labelled with its value), `text`, `env`
   (an ADSR display: 0 amp, 1 mod, 2 an oscillator's own envelope, whose `param` is its `eon` + 1 .. + 4). Types include `manual`
   (the manual of the oscillator shown), `download` (web only, the GitHub releases page), `toggle`, `label`, `evaluate` (the
   EVALUATE SOUNDS button), `chordpads`, `chordname`, `strumplate`.
-  Panel (beta 0.1): header y 0 (logo, zoom, **osc_view** tabs 296 w 224, preset box 526 w 220, EVALUATE 752, SAVE PRESET 862 (plug-in)
-  / DOWNLOAD VST (web), MANUAL 936, master, meter); row 1 y 56: the tone card of the oscillator shown (544 × 260) | **OSC MIX**
-  (564, 124 wide: four level knobs + SUB OSC) | SCOPE (696, 392); row 2 y 324: SCALE FILTER, POSITION, the oscillator card (TUNE |
-  OWN ENVELOPE | PITCH ENVELOPE); row 3 y 472: AMP ENVELOPE, MOD ENVELOPE, EFFECTS; row 4 y 608: LFO 1, LFO 2, VOICE; keys section
-  y 744 (CHORD MODE button, wheels, keyboard 898 wide); the chord card y 864, shown only while CHORD MODE is on (the plug-in
+  Panel (beta 0.3, §3.3i): header y 0 (logo, zoom, preset box x 384 w 296, EVALUATE 752, SAVE PRESET 862 (plug-in)
+  / DOWNLOAD VST (web), MANUAL 936, master, meter); section `oscframe` y 50 (the three folder tabs `osctabs` and the plate drawn by the section); at y 98 the tone card of the oscillator
+  shown (544 × 260) inside the plate, and at its right, outside the plate, **OSC MIX** (572, 56; 124 wide: three level knobs + SUB OSC) and the SCOPE · ALL OSCILLATORS (704, 56; 384 wide); y 366:
+  SCALE FILTER, POSITION, the oscillator card (TUNE | OWN ENVELOPE | PITCH ENVELOPE); y 520: the voice FILTER, AMP ENVELOPE, MOD ENVELOPE; y 656: LFO 1, LFO 2/3 (two sections, one shown by `lfo_view`),
+  VOICE; y 792: EFFECTS and PLAY (CHORD MODE, BASS, TUNING, MAQAM, TONIC); keys section y 928 (wheels, keyboard 1006 wide); the chord card y 1054, shown only while CHORD MODE is on (the plug-in
   window and the web `fit()` grow by `CHORD_H`). The credit `APP.panelCredit` is at the bottom left.
-- **Oscillators** (§3.3): `SLOTS[s] = {id, mode, name, k: {field → parameter key}}` for A1 A2 B1 B2. The generated tables
+
+- **Oscillators** (§3.3): `SLOTS[s] = {id, mode, name, k: {field → parameter key}}` for A1 A2 B1 (beta 0.3: B2 removed). The generated tables
   `kSlots` / `kSlotRole` (C++) and `SPEC.SLOTS` / `ROLES` / `LFO2_ROLE` (web) let the engine and both panels be written once for
   any oscillator. Validation at generation time: a LFO 2 role has the same range in every oscillator, the four envelope
   parameters of an oscillator are consecutive, the eleven bars are consecutive.
@@ -78,10 +81,10 @@ products identical. Read it before changing the DSP, the parameters or the prese
   `ab_mix` / `engine` into `a1_lvl` / `b1_lvl` and gives B1 copies of the shared wavelet, filter and window) then
   `tools/presets_new.js` (200 presets in this version's parameters, names `"NNN A1A2 · Title"` where the letters say the
   oscillators used, `desc` = their one-line description, category one of `CATEGORIES` = SuperModulation, Bass, Lead, Keys, Organ, Pad,
-  Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc). `PRESETS` = TOP, then the 300 of beta 0.2 (201-500, `presets_super.js`),
-  then the 200 of beta 0.1 (001-200, `presets_new.js`, untouched: the owner asked that the old presets never change); `MW_NO_SUPER=1` leaves
-  the 300 out (the builder compares its candidates with the other 222). `TOP` = 22, `NEW_FIRST` = 22 / `NEW_COUNT` = 500 (C++ `kFirstNew` /
-  `kNumNew`) = the presets EVALUATE SOUNDS rates, in that order (the ratings file is keyed by the 3-digit number, so ratings of 001-200 stay
+  Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc). `PRESETS` = TOP, then the 600 of beta 0.3 (501-1100, `presets_lfo3.js`), the 300 of beta 0.2 (201-500, `presets_super.js`),
+  then the 200 of beta 0.1 (001-200, `presets_new.js`, untouched: the owner asked that the old presets never change); `MW_NO_SUPER=1` and `MW_NO_LFO3=1` leave
+  the 300 / the 600 out (the builder compares its candidates with the other 330). `TOP` = 22, `NEW_FIRST` = 22 / `NEW_COUNT` = 908 (beta 0.3: 600 + the 500 of the earlier betas minus the 192 that played B2, §3.3i; C++ `kFirstNew` /
+  `kNumNew`) = the presets EVALUATE SOUNDS rates, in that order (the ratings file is keyed by the number, 3 or 4 digits, so ratings of 001-500 stay
   valid). `rank` = the factory order, which is every category's list order, except that "Wobble Bass" is the first of Bass (it takes the
   rank right after the TOP Sounds; its number does not change). `TOUR` = the demo's preset sequence (`TOUR_PICKS`: a TOP Sound by name, a new preset as `new:<title>`; the first
   two are not heard). `DESCRIPTIONS` (name → text) is generated into `vote_data.h` (`kPresetDesc`) and the web spec. Values
@@ -127,26 +130,26 @@ products identical. Read it before changing the DSP, the parameters or the prese
   and its note off. The key leaves the mono list first; the mono legato branch is taken only when voice 0 plays that
   note and another key is held; otherwise every gated voice playing that note is released (a stuck note before).
 
-### 3.3 The four oscillators (Okto MultiWave Synth beta 0.1; replaces beta 0.2's A/B MIX)
-- Oscillators **A1 A2** (mode 0, subtractive) and **B1 B2** (mode 1, additive). Fields of one oscillator (`SLOTS[s].k`): `lvl`;
+### 3.3 The three oscillators (Okto MultiWave Synth beta 0.1, four oscillators until beta 0.2; replaces the Wavelet Synthesizer's A/B MIX)
+- Oscillators **A1 A2** (mode 0, subtractive) and **B1** (mode 1, additive; **B2 was removed in beta 0.3**, §3.3i). Fields of one oscillator (`SLOTS[s].k`): `lvl`;
   `wavelet`; the source (`wave width sparsity phase` | `pattern seed tilt bar1..bar11 atk spread body bright sus`); the scale
   filter (`ftype fcut fslope fres fkey fenv fvel`); the window (`pcen pwid pdep`); the tuning (`oct semi fine`); the own envelope
   (`eon ea ed es er`); the pitch envelope (`pamt` semitones at the start, `ptime` s to fall to 0; the pitch is
   `semis + tune + pamt · pe`, `pe` decaying per block like an envelope). **A1 and B1 keep the Wavelet Synthesizer's parameter
   names** (`a_wave`, `f_cutoff`, `b_bar1` …; A1 also `wavelet` and the filter / window; B1 has its own `b1_wavelet` and
-  `b1_f*` / `b1_p*`); the others are clones named `a2_*`, `b1_*`, `b2_*` (`cloneParam`). `osc_view` (0..3) replaces `engine`: it is
+  `b1_f*` / `b1_p*`); the others are clones named `a2_*`, `b1_*` (`cloneParam`). `osc_view` (0..2) replaces `engine`: it is
   only the panel shown (structural so that the displays rebuild, but neither the processor nor the web app rebuild the sound's
   tables for it). `ab_mix` is gone.
 - **Levels**: `lvlSm[s]` follows `p[lvl]` with a 20 ms time constant per block and is ramped per sample inside it; before the
   first block it simply takes the value (a sound loaded into a new engine never fades in: `E.setParam` / `setParam` snap it
   while `!started`). An oscillator whose smoothed level is < `LVL_EPS` is not rendered (`live[s] = 0`), and its tables are not
-  built: `buildTables(params, true)` → `{needs, slots: [{mode, mips, rms, ph?, w2?} | null × 4]}` (C++ `Tables::slot[NS]`,
+  built: `buildTables(params, true)` → `{needs, slots: [{mode, mips, rms, ph?, w2?} | null × 3]}` (C++ `Tables::slot[NS]`,
   `TableRef`, `SlotRef`). `buildTables(params, false)` builds the raw layers of the oscillator **shown** for the displays.
   Rebuild only when an oscillator's level reaches or leaves 0 (`levelEnds`: web `setParam`, VST `process`).
 - **Own envelope**: when `eon` is on, the oscillator's output is multiplied by its own ADSR (`ownPass`, advanced even while the
   oscillator is not rendered, so it is in step when it re-enters); it multiplies the AMP ENVELOPE, so it can only shorten.
   A re-entering additive oscillator restarts its band envelopes. **Pitch envelope**: `sl.pe` starts at 1 on every note.
-- **LFO 2** targets are *roles* (`ROLES`, `LFO2_ROLE`, `kSlotRole[4][10]`): each role is applied to every oscillator that has it
+- **LFO 2** targets are *roles* (`ROLES`, `LFO2_ROLE`, `kSlotRole[3][19]`): each role is applied to every oscillator that has it
   (SOURCE PHASE only to the subtractive ones) by the same amount. WAVELET MORPH (`wav2`, `wmorph`, `lfo_wav`, `env_wav`) and
   SOURCE PHASE moved by LFO 2 act on each oscillator (`w2` sets, `ph` sets, §3.3b / d).
 - **Compatibility**: the 22 TOP Sounds are the beta 0.7 sounds (`tests/regress_v07.js`: ≤ 1.5e-7 of the peak against the published
@@ -290,6 +293,49 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
 - Panel: the `mt_mode` seg under CHORD MODE (keys section); `mt_scale` menu and `mt_tonic` step under the scalogram (SCOPE card, `vis: mt_mode`: widget-level `vis`
   works in the web app for `perf` parameters, in the plug-in for any).
 
+### 3.3i THREE OSCILLATORS, FOLDER TABS, LFO 3 AND THE FILTER (Okto MultiWave Synth beta 0.3)
+- **B2 is gone** (the owner's request): `SLOT_IDS = ['a1', 'a2', 'b1']`, so the 41 parameters of B2 left `tools/spec.js` and **every ParamID after them
+  moved down by 41** (a deliberate break of the "append only" rule: Live Sets and user presets saved by beta 0.1 / 0.2 are not read
+  correctly; the plug-in's state has a version, `kStateVersion = 2`, and `readState` refuses the others). The new parameters are **appended**: `lfo3_shape`, `lfo3_rate`,
+  `lfo3_amt`, `lfo3_target`, `lfo3_sync`, `lfo3_div` (158–163), `lfo_view` (164, a perf parameter: the LFO 2 | LFO 3 sub-tab) and the ten `vf_*` of the filter (165–174): **175 parameters**.
+  `osc_view` is 0..2; `NS` = `kNumSlots` (generated), `kSlots[3]`, `kSlotRole[3][19]`.
+- **Presets.** `spec.js` leaves out every preset of `presets_new.js` / `presets_super.js` that plays B2 (`usesB2`: `b2_lvl > 0`; 67 of the 200 of beta 0.1, 125 of
+  the 300 of beta 0.2) and strips the unused `b2_*` values of the others (`withoutB2`; a view of B2 is dropped). The files themselves are **not edited**
+  (the 200 of beta 0.1 stay untouched); the numbers of the left-out presets are not reused, so the ratings file (keyed by the number) of the others
+  stays valid. `PRESETS` = TOP, then the **600 of beta 0.3** (`presets_lfo3.js`, 501–1100, **generated** by `tools/supermod/build.js`), the 175 of beta 0.2, the 133 of beta 0.1:
+  `NEW_COUNT` = 908 (`MW_NO_LFO3=1` leaves the 600 out: the builder compares its candidates with the other 330). Four demo-tour picks played B2 and were replaced (`TOUR_PICKS`).
+  The recipes (`tools/make_presets.js`, `recipes_*.js`) still write B2 oscillators and cannot run on this spec any more (`P()` refuses a `B2` key): they are the record of how
+  the 200 presets of beta 0.1 were made. The composer **was ported** (below).
+- **LFO 3** is a second LFO of the LFO 2 kind: `lfo3_*` have the LFO 2's shape / rate / amount / target / sync (`E.lfo3Tick`, `lfo3Role`), the same `ROLES` (a role has
+  the same range in every oscillator), and `roleVal` sums the moves of the two LFOs aimed at the same role (`d2 + d3`); the table "variants" (SPARSITY, PHASE, WIDTH, §3.3g)
+  look at both. LFO 1 is untouched. The card (`lfo2` / `lfo3` sections, both titled "LFO 2/3", at the same place) shows one of them by the perf parameter `lfo_view`
+  (the small 2 | 3 `seg`; `vis: 'lfo_view'`).
+- **FILTER** (`vf_*`; `E.fltPrep` / `E.fltProcess`, `Engine::fltPrep` / `fltProcess`): per voice, **after the oscillators are mixed (rendered with a unit envelope into `vtL` / `vtR`) and
+  before the amp envelope**, a four-pole low-pass: TPT stages with the feedback solved without delay for the linear ladder (`y4 = (G⁴u + S)/(1 + kG⁴)`), `G = g/(1+g)`, `g = tan(π fc / sr)`,
+  `k = FLT_K · reso` (`FLT_K = 4.05`, just above the 4 where a four-pole ladder sings); a rational `tnh` (no library call) saturates: **LADDER** (`vf_type` 0) every stage, **OTA** (1) the input
+  of the loop only, with `comp = 1 + 0.6k` for part of the low end. DRIVE saturates the input (`gin = 1 + 7 drive`, level-compensated). Cutoff in octaves = `vf_env · 8 · filter envelope`
+  (an `Env` per voice, `fe`, gated with the amp and mod envelopes) `+ vf_key · (note − 60)/12 + LFO 2/3 FILTER CUTOFF` (the exponential target moves by `0.5 · amt · log2(max/min)` octaves,
+  `roleSpan`); the coefficient `G` is interpolated per sample over the 32-sample block; a note starts with a cold filter. `fltOn` = **not** (`vf_cut >= 20000` and `vf_res = 0`, `vf_drive = 0`,
+  `vf_env = 0` and no LFO aimed at it): the path is **bypassed** when open, so every older sound is bit-identical. LFO 2 / LFO 3 targets 17 / 18 = "Filter Cutoff" / "Filter Resonance"
+  (`ROLES` `vfcut`, `vfres`). `tests/filter.js` checks it (spectra, resonance, saturation, key tracking, the envelope, the LFO targets, bypass), `tools/dsp_cases.js` has JS / C++ cases.
+- **Panel.** `DEVICE.h` = 1050 (860 + the folder tabs, the plate, the FILTER row and the PLAY card). **Three folder tabs** `osctabs` (section `oscframe`, x 6 y 50: OSC1 A1 · SUBTRACTIVE |
+  OSC2 A2 · SUBTRACTIVE | OSC3 B1 · ADDITIVE, 176 × 40 every 182 px; the header's ENGINE tabs are gone) choose the oscillator shown; the section also draws the **plate**, a soft tinted
+  L-shaped frame (x 6 to 1094, y 88 to 511, notch from x 564 down to y 360) in the oscillator's colour (`kAccentA` yellow `#ffcf3d` for A1 and A2, `kAccentB` blue `#4aa8ff` for B1; the page's own
+  chrome stays teal). A lit dot on a tab: the oscillator's level is above 0. **OSC MIX** (572, 56) and the **SCOPE · ALL OSCILLATORS** (704, 56) are common: outside the plate. Web: `oscTabs`
+  in `ui.js`, `.otab` / `.oscframe` in `synth.css`; plug-in: `drawOscFrame`, `drawOscTabs` and the click in `editor.cpp`. Below the plate: FILTER (12, 520), AMP ENVELOPE, MOD ENVELOPE; LFO 1,
+  LFO 2/3, VOICE (y 656); EFFECTS and the **PLAY** card (CHORD MODE, BASS, TUNING, MAQAM, TONIC; y 792); the keyboard (y 928). The preset browser is as tall as the panel.
+- **Global scope and scalogram**: they show the sound, not the oscillator shown: `buildScopeSets` / `globalCycle` / `scopeBands` (JS) and `ScopeSets` / `globalCycle` / `scopeBands` (C++) add one cycle of
+  every oscillator that plays (levels from `staticGains`, at C4) and the sub oscillator; static (no live per-oscillator animation).
+- **EVALUATE SOUNDS** (`web/js/evaluate.js`, `editor.cpp` `vote*`): the passage is the 5 s of Beethoven and, 0.4 s after it, a **long C minor chord** (C3 G3 C4 Eb4 G4, 4 s, velocity 0.7; `gen_spec.js`
+  adds its events to `vote_data.h`, `kVotePassageLen` = 9.4 s). The sounds come in **sets of 40**: `Start at…` asks for the number of the first sound (web `window.prompt`; plug-in: `SaveDlg` with
+  `label` / `ok` / `maxLen`, or the environment variable `MW_START_AT` in tests), the first set starts there, the next ones every 40; every set has its file `sound xxx to sound yyy.txt` (web: downloaded
+  when the set is finished; plug-in: written next to the ratings file after every rating, `voteSetPath`). Ratings are keyed by the preset number (3 or 4 digits: `presetNum`, the text before the
+  first space). The list is the factory order of the new presets: the 600 of beta 0.3 first.
+- **The composer** (`tools/supermod/`) now writes three oscillators (A1 A2 B1; `CONFIGS` A1A2 40, A1B1 32, A1A2B1 24, A2B1 4): `mods.js` has an LFO 2 recipe set with a twin for LFO 3
+  (`withLfo`, ids ending `_3`), two filter-LFO recipes (`l2FltCut`, `l2FltRes`) and `FLT` per kind of sound (`fltSetup`); `compose.js` `modulate()` gives **every preset** LFO 2 and / or LFO 3 on a
+  wavelet control (both for SuperModulation; weights `w` favour the subtractive-only controls), at most one LFO per control (`canon`), the filter with `FLT_PROB` (about two thirds), and
+  `perc.js` (new) draws the drums of the Drums & Perc category from 14 archetypes. `build.js` writes `tools/presets_lfo3.js` (50 per category, numbers 501–1100).
+
 ### 3.4 Table rebuilds
 - Structural changes rebuild tables **off the audio thread** and switch with a 512-sample crossfade (`setTables`).
 - Web: `app.js` builds the tables in a **Worker** (`startWorker` / `scheduleBuild` / `deliver`; a `data:` URL made of
@@ -342,7 +388,7 @@ scale** (it was 1e-5 in the earlier code, 400 times looser than the real 2.4e-7;
   escaped / set with `textContent`, values clamped.
 - Demo: songs from `demo_data.js`; every song plays the **preset tour** `WS_SPEC.TOUR` (`tools/spec.js` `TOUR_PICKS`, written out so
   that new presets never change the demo), one preset about every 4 s snapped to chord onsets (`tourScenes`); the window shows
-  `TOUR_INTRO` (the idea of four oscillators in plain words) during the first presets, then `presetSummary` (the oscillators that
+  `TOUR_INTRO` (the idea of three oscillators in plain words) during the first presets, then `presetSummary` (the oscillators that
   play, their waves / patterns, tuning, own and pitch envelopes, effects). The old animated-scene demos were removed.
   (The paragraph below is the Wavelet Synthesizer's.) `make_demo.js` `start` cuts the opening chords; the song keeps `origin` (7.84 s) and
   `tourScenes(..., origin)` computes the grid on the whole piece, then starts with the preset playing at the cut, so the
@@ -493,12 +539,20 @@ runs from `file://`); GitHub Actions pinned by tag.
   The text is generated from the spec (ranges, defaults) and from `core.js` (figures).
 
 ## 8. Tests
+Beta 0.3 (B2 removed, folder tabs, LFO 3, FILTER, 600 presets, evaluation sets): the cases of the cross-check are 1000 (930 presets + 70 variants of `tools/dsp_cases.js`: B2 variants use B1 and A2, LFO 3 on
+its targets and with LFO 2, the filter in both characters with resonance, drive, key tracking, the envelope and the LFO targets; worst 3.6e-7), `tests/filter.js` (new: the voice filter's spectra, resonance, saturation, key tracking,
+envelope, LFO targets, bypass when open, stability under random settings), `tests/web/smoke.js` checks the three folder tabs, the cards of each view (one wavelet card, SCALE FILTER, POSITION and TUNE, OSC MIX, the SCOPE, FILTER, LFO 1 always
+there) and the LFO 2 | LFO 3 sub-tab, `tests/web/test_web.js` clicks the tabs and maps the 1050 px panel (`DEV_H`), `tests/web/test_evaluate.js` answers the "Start at…" prompt, checks the long chord (the passage lasts more than 7 s), a refused number, and
+the **sets of 40** (39 sounds already rated, the 40th rating downloads `sound xxx to sound yyy.txt`, which it reads), `vst/devtest/vote_session.cpp` does the same in the plug-in (`MW_START_AT`, the set file next to the ratings file) and
+clicks the three tabs, `vst/devtest/library_test.cpp` reads 3- and 4-digit numbers, `tests/quick.js` plays the last sustained sound instead of the last preset (a tambourine of a few tens of ms was missed by the 150 ms polling in about
+one run in three; the level is read every 50 ms) and `--dsp` writes the list of cases first. After a change of the factory order run `node tests/vst3host/make_presets.js`.
+
 Beta 0.2 adds `tests/supermod.js` (the variants' tables, the destinations moving the sound, BASS and the chord that follows the left hand, the oriental tunings measured by
 the frequency they play) and 26 cross-check cases (577 in all, with the 522 presets: LFO 1 / LFO 2 on every new destination, the live chord scenarios, the tunings with a glide and a chord).
 Okto MultiWave Synth beta 0.1 status. **Maintained and passing**: `tests/quick.js` (20 s: syntax, generated files up to date, JS engine
 on the 222 presets + chord layer + hostile MIDI, the VST3 host's `params,audio,offline,attrlist` sections, the web app's first
-checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (four oscillator views, CHORD MODE, no console error), `tests/web/test_evaluate.js` (a web EVALUATE SOUNDS session end to end),
-`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp` (251 cases), `vst/devtest/vote_session.cpp` (the plug-in's EVALUATE SOUNDS
+checks), `tests/regress_v07.js`, `tests/idle_skip.js`, `tests/web/smoke.js` (three oscillator views with their folder tabs, CHORD MODE, no console error), `tests/web/test_evaluate.js` (a web EVALUATE SOUNDS session end to end),
+`tools/dsp_compare.js` + `vst/devtest/dsp_render.cpp` (1000 cases), `vst/devtest/vote_session.cpp` (the plug-in's EVALUATE SOUNDS
 window and CHORD MODE in an off-screen window: the host-side parameters, the audio, the ratings file, screenshots; build line at its
 top; it needs `MW_VOTES_DIR`, which it sets itself, so it never touches the player's file), `tests/web/test_web.js` (adapted: the
 oscillator tabs, 860 px panel, no Source Phase, a neutral patch made of the spec defaults — there is no Init preset; the full run plays all
@@ -556,9 +610,11 @@ the controller-state and editor sections of `tests/vst3host` (the editor one han
 - **New parameter**: append in `tools/spec.js` (never insert), choose `structural`, place a widget in the layout, run
   `gen_spec`, implement in `core.js` **and** `dsp.h`, add the manual control text (`shared.js`/`engX.js`, `PLABEL`),
   think about compatibility of old states (default must reproduce the old sound), run the cross-check and the suites.
-- **New preset, beta 0.2 and later**: the 300 of `presets_super.js` come from `MW_NO_SUPER=1 node tools/gen_spec.js` then `node tools/supermod/calib.js tools/out/calib.json` (the
-  measures of the existing presets) then `node tools/supermod/build.js --per 6 --procs 22 --pool` (several seeds add up in `tools/out/super_pool.json`; `--select-only` re-selects) and
-  `node tools/gen_spec.js`. The old presets (001-200) are never regenerated.
+- **New preset, beta 0.2 and later**: the 300 of `presets_super.js` (beta 0.2) and the 600 of `presets_lfo3.js` (beta 0.3) are generated: `MW_NO_LFO3=1 node tools/gen_spec.js` (the builder compares its candidates
+  with the 330 presets that exist without them), `node tools/supermod/calib.js tools/out/calib03.json` (their measures), then `node tools/supermod/build.js --per 5 --procs 22 --pool --keep [--cats "Bass,Pad"]`
+  (several runs add up in `tools/out/lfo3_pool.json`; `--select-only` re-selects; `--report` shows what was written) and `node tools/gen_spec.js` without the variable. The generated
+  files are never edited by hand; the old presets (001-200) are never regenerated. A candidate costs about 10 s of one core (22 processes: 800 candidates in 11 minutes); about half of them pass.
+
 - **New preset** (the 200 of beta 0.1 were generated this way; the recipes stay as the record): add a `P(...)` line to the right `tools/recipes_*.js`, run `node tools/make_presets.js -v`
   (it numbers the presets, matches the loudness to the TOP Sounds' median ≈ −13.9 dB — a short sound is measured over 50 ms and
   3 dB lower —, raises oscillator levels before it would need more than +3 dB of master, limits the peak to 0.98, flags QUIET /

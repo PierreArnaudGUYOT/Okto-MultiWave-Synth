@@ -11,9 +11,10 @@ const SPEC = require('../preset_lab.js').SPEC;
 const POOL = path.join(__dirname, '..', 'out', 'super_pool.json');
 const rows = JSON.parse(fs.readFileSync(POOL, 'utf8'));
 const byId = Object.fromEntries([...LAY.A, ...LAY.B].map(l => [l.id, l]));
-const SLOT_IDS = ['A1', 'A2', 'B1', 'B2'];
+const SLOT_IDS = ['A1', 'A2', 'B1'];
 let n = 0;
 for (const c of rows) {
+  if (c.meta.kind === 'perc') continue;   // a drum keeps its own description (perc.js)
   const slots = c.meta.cfg.match(/[AB]\d/g), body = slots[c.meta.roles.indexOf('body')];
   const order = [body, ...slots.filter(s => s !== body)];
   const layers = order.map(s => byId[c.meta.layers[slots.indexOf(s)]]);

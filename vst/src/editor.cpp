@@ -10,7 +10,9 @@
 #include <chrono>
 #include <cmath>
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
+#include <cwchar>
 #include <functional>
 #include <map>
 #include <string>
@@ -29,7 +31,7 @@ namespace ws {
 
 // ------------------------------------------------------------------ palette
 static const uint32_t kText = 0xd5dce6, kDim = 0x8792a1, kFaint = 0x566070, kInset = 0x101317, kInsetEdge = 0x262c35;
-static const uint32_t kAccentA = 0x2fd4c6, kAccentB = 0xffae42;
+static const uint32_t kAccentA = 0xffcf3d, kAccentB = 0x4aa8ff;   // beta 0.3: A1 A2 yellow, B1 blue
 
 struct Item { const WidgetDef* w; int section; R r; };
 
@@ -146,9 +148,10 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // state
   double lastPlain[kNumParams];
   uint32_t lastVersion = 0;
-  int view = 0, mode = 0;   // the oscillator shown (A1 A2 B1 B2) and its engine
+  int view = 0, mode = 0;   // the oscillator shown (A1 A2 B1) and its engine
   bool chordOn = false;     // CHORD MODE: the chord card is shown and the panel is taller
   Tables disp; uint64_t dispSig = ~0ull;
+  ScopeSets scopeSets;   // beta 0.3: the raw layers of every oscillator that plays (the scope and the scalogram show the whole sound)
   std::map<int, Atom> atoms;
   // live data
   float liveGains[NB] = {}; float liveC = 0, liveW = 1, liveD = 0; int liveNote = -1, liveView = 0; bool liveSlot = false; uint32_t liveVoices = 0;
@@ -195,7 +198,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     for (int i = 0; i < kNumParams; i++) if (kParams[i].structural) {
       uint64_t bits; double d = v[i]; std::memcpy(&bits, &d, 8); sig = (sig ^ bits) * 1099511628211ull;
     }
-    if (force || sig != dispSig) { buildTables(v, false, disp); dispSig = sig; }
+    sig = (sig ^ (uint64_t)tableNeeds(v)) * 1099511628211ull;   // beta 0.3: also when an oscillator starts or stops playing
+    if (force || sig != dispSig) { buildTables(v, false, disp); buildScopeSets(v, disp, scopeSets); dispSig = sig; }
     view = std::max(0, std::min(NS - 1, (int)jsRound(v[P_OSC_VIEW]))); mode = kSlots[view].mode;
     chordOn = v[P_CHORD_MODE] >= 0.5;
   }
@@ -232,21 +236,23 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (ver != lastVersion) {
       lastVersion = ver;
       const int oldView = view; const bool oldChord = chordOn;
-      bool any = false, structural = false;
+      bool any = false, structural = false, lfoCard = false;
       for (int i = 0; i < kNumParams; i++) {
         double v = host->getPlain(i);
         if (v == lastPlain[i]) continue;
         lastPlain[i] = v; any = true;
         if (kParams[i].structural) structural = true;
+        if (i == P_LFO_VIEW) lfoCard = true;   // beta 0.3: the LFO 2 | LFO 3 sub-tab shows another card
         for (size_t k = 0; k < items.size(); k++) if (items[k].w->param == i || items[k].w->vis == i) invalidateItem((int)k);
         // Okto MultiWave Synth: the pads, the chord shown, the strum plate and the keyboard's selector octave follow these
         if (i == P_CHORD_MODE || i == P_CHORD_TYPE || i == P_CHORD_OCT) for (int t : {W_CHORDPADS, W_CHORDNAME, W_STRUMPLATE, W_KEYBOARD}) invalidateType(t);
         if (i == P_MT_MODE || i == P_MT_SCALE || i == P_MT_TONIC) invalidateType(W_KEYBOARD);   // the keys the oriental tuning moves are marked
+        for (int s = 0; s < NS; s++) if (i == kSlots[s].lvl) invalidateType(W_OSCTABS);   // beta 0.3: a lit dot = the oscillator is heard
       }
       if (any) {
         rebuildDisplay(false);
         if (chordOn != oldChord) requestResize();   // CHORD MODE: the panel grows or shrinks
-        if (structural || view != oldView || chordOn != oldChord) invalidateAll();
+        if (structural || view != oldView || chordOn != oldChord || lfoCard) invalidateAll();
         else for (int t : {W_SCOPE, W_SCALOGRAM, W_WINDOW, W_ADSR, W_LEDS, W_WHEELS, W_PRESETS}) invalidateType(t);
       }
       invalidateType(W_PRESETS);
@@ -319,7 +325,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       const SectionDef& sd = kSections[si];
       if (!sectionShown(sd)) continue;
       R r{sd.x, sd.y, sd.w, sd.h};
-      if (!r.hits(dirty) || sd.title[0] == 0) continue;
+      if (!r.hits(dirty)) continue;
+      if (sd.title[0] == 0) { if (std::strcmp(sd.id, "oscframe") == 0) drawOscFrame(g, r); continue; }   // beta 0.3: the frame round the oscillator cards
       fillRR(g, r, 10, Brush(Pt{0, r.y}, Pt{0, r.y + r.h}, rgb(0x1f242c), rgb(0x1a1e25)));
       strokeRR(g, R{r.x + 0.5f, r.y + 0.5f, r.w - 1, r.h - 1}, 10, rgb(0x2b313b));
       std::string t = sd.title; size_t dot = t.find(" \xC2\xB7 ");
@@ -358,6 +365,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     switch (it.w->type) {
       case W_KNOBL: case W_KNOBM: case W_KNOBS: case W_KNOBT: drawKnob(g, idx); break;
       case W_SEG: drawSeg(g, it); break;
+      case W_OSCTABS: drawOscTabs(g, it); break;
       case W_STEP: drawStep(g, it); break;
       case W_DRAWBAR: drawDrawbar(g, idx); break;
       case W_SCOPE: screen(g, it.r); drawScope(g, it.r); break;
@@ -440,10 +448,70 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       R b{it.r.x + pad + k * (bw + gap), it.r.y + pad, bw, it.r.h - 2 * pad};
       bool on = k == cur;
       if (on) {
-        uint32_t c = engine ? (k < 2 ? kAccentA : kAccentB) : accent();   // the oscillator tabs: A1 A2 teal, B1 B2 orange
+        uint32_t c = engine ? (k < 2 ? kAccentA : kAccentB) : accent();   // the old oscillator tabs (beta 0.3: ENGINE A / B and the folder tabs replaced them): teal then orange
         fillRR(g, b, 5, rgb(c));
       }
       text(g, toW(p.choiceShort[k]), b, engine ? 11.f : 10.f, true, on ? rgb(0x0d1014) : rgb(kDim));
+    }
+  }
+
+  // beta 0.3: the plate behind the cards of the oscillator shown, in its colour: an L (OSC MIX and the SCOPE, common to every oscillator, sit outside it, at the top
+  // right). The corners are rounded (a quarter circle is drawn as a short polyline), the top-left one is square: the first folder tab joins it.
+  const SectionDef* secById(const char* id) const { for (int i = 0; i < kNumSections; i++) if (std::strcmp(kSections[i].id, id) == 0) return &kSections[i]; return nullptr; }
+  static void roundedPoly(const std::vector<Pt>& p, const std::vector<float>& rad, std::vector<Pt>& out) {
+    const int n = (int)p.size();
+    for (int i = 0; i < n; i++) {
+      const Pt p0 = p[(i + n - 1) % n], p1 = p[i], p2 = p[(i + 1) % n];
+      const float l1 = std::hypot(p0.x - p1.x, p0.y - p1.y), l2 = std::hypot(p2.x - p1.x, p2.y - p1.y), r = std::min(rad[i], std::min(l1, l2) / 2);
+      const Pt a{p1.x + (p0.x - p1.x) / l1 * r, p1.y + (p0.y - p1.y) / l1 * r}, b{p1.x + (p2.x - p1.x) / l2 * r, p1.y + (p2.y - p1.y) / l2 * r};
+      if (r <= 0) { out.push_back(p1); continue; }
+      for (int k = 0; k <= 8; k++) {
+        const float t = k / 8.f, u = 1 - t;
+        out.push_back(Pt{u * u * a.x + 2 * u * t * p1.x + t * t * b.x, u * u * a.y + 2 * u * t * p1.y + t * t * b.y});
+      }
+    }
+  }
+  void drawOscFrame(Canvas& g, R s) {
+    const SectionDef *tone = secById("tone_a1"), *mix = secById("mix"), *flt = secById("filter_a1");
+    if (!tone || !mix || !flt) return;
+    // the notch: half way between the tone card and OSC MIX, half way between the bottom of OSC MIX / SCOPE and the second row
+    const float xl = s.x + 0.5f, xr = s.x + s.w - 0.5f, yt = s.y + 38.5f, yb = s.y + s.h - 0.5f;
+    const float xn = (tone->x + tone->w + mix->x) / 2, yn = (mix->y + mix->h + flt->y) / 2;
+    const std::vector<Pt> corners{Pt{xl, yt}, Pt{xn, yt}, Pt{xn, yn}, Pt{xr, yn}, Pt{xr, yb}, Pt{xl, yb}};
+    const std::vector<float> rad{0, 12, 12, 12, 12, 12};
+    std::vector<Pt> poly; roundedPoly(corners, rad, poly);
+    g.fillPolygon(poly.data(), (int)poly.size(), rgb(accent(), 18));
+    poly.push_back(poly.front());
+    g.lines(poly.data(), (int)poly.size(), Pen(rgb(accent(), 56), 1.f).join());
+  }
+
+  // beta 0.3: the three folder tabs OSC1 A1 · SUBTRACTIVE | OSC2 A2 · SUBTRACTIVE | OSC3 B1 · ADDITIVE (176 x 40 px every 182): the colour of the engine (A1 A2 yellow,
+  // B1 blue); the tab of the oscillator shown is filled and joins the plate. A lit dot says the oscillator is heard (its level is above 0).
+  void drawOscTabs(Canvas& g, const Item& it) {
+    int nA = 0, nB = 0;
+    for (int s = 0; s < NS; s++) {
+      const R t{it.r.x + s * 182.f, it.r.y, 176.f, 40.f};
+      const int mode_s = kSlots[s].mode, ord = mode_s == 0 ? ++nA : ++nB;
+      const bool on = s == view, heard = plainOf(kSlots[s].lvl) > 0;
+      const float rad = 10;
+      const Col ac = rgb(mode_s == 0 ? kAccentA : kAccentB), dark = rgb(0x0c1117);
+      const float th = on ? 40.f : 38.f;
+      const Brush fill = on ? Brush(ac) : Brush(rgb(0x1a1f27));
+      fillRR(g, R{t.x, t.y, t.w, 2 * rad + 2}, rad, fill);   // rounded on top, square below
+      g.fillRect(R{t.x, t.y + rad, t.w, th - rad}, fill);
+      if (!on) {
+        Pen pen(rgb(0x3a4452), 2.f);
+        const float x0 = t.x + 1, y0 = t.y + 1, x1 = t.x + t.w - 1, y1 = t.y + th;
+        g.arc(R{x0, y0, 2 * rad, 2 * rad}, 180, 90, pen);
+        g.line(Pt{x0 + rad, y0}, Pt{x1 - rad, y0}, pen);
+        g.arc(R{x1 - 2 * rad, y0, 2 * rad, 2 * rad}, 270, 90, pen);
+        g.line(Pt{x0, y0 + rad}, Pt{x0, y1}, pen);
+        g.line(Pt{x1, y0 + rad}, Pt{x1, y1}, pen);
+      }
+      g.fillEllipse(R{t.x + 14, t.y + 15, 8.f, 8.f}, heard ? (on ? dark : ac) : (on ? rgb(0x0c1117, 90) : rgb(0x3a4452)));
+      const Col c1 = on ? dark : rgb(kDim), c2 = on ? rgb(0x0c1117, 190) : rgb(kFaint);
+      text(g, std::wstring(L"OSC") + std::to_wstring(s + 1) + L" " + (mode_s == 0 ? L"A" : L"B") + std::to_wstring(ord), R{t.x + 32, t.y + 5, t.w - 38, 16}, 12.f, true, c1, 0);
+      text(g, mode_s == 0 ? L"SUBTRACTIVE" : L"ADDITIVE", R{t.x + 32, t.y + 21, t.w - 38, 13}, 8.5f, true, c2, 0);
     }
   }
 
@@ -467,7 +535,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     fillRR(g, tr, 5, rgb(kInset));
     float fh = (float)(v * tr.h);
     if (fh > 0.5f)
-      g.fillRect(R{tr.x + 1, tr.y + tr.h - fh, tr.w - 2, fh}, Brush(Pt{0, tr.y + tr.h - fh - 1}, Pt{0, tr.y + tr.h + 1}, rgb(accent(), 220), rgb(0xffae42, 90)));
+      g.fillRect(R{tr.x + 1, tr.y + tr.h - fh, tr.w - 2, fh}, Brush(Pt{0, tr.y + tr.h - fh - 1}, Pt{0, tr.y + tr.h + 1}, rgb(accent(), 220), rgb(accent(), 90)));
     strokeRR(g, tr, 5, rgb(kInsetEdge));
     float cy = it.r.y + (float)((1 - v) * (it.r.h - 10));
     fillRR(g, R{it.r.x, cy, it.r.w, 10}, 3, Brush(Pt{0, cy}, Pt{0, cy + 10}, rgb(0xf1f4f8), rgb(0xb9c1cc)));
@@ -496,52 +564,49 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     g.lines(pts.data(), (int)pts.size(), Pen(c, width).join());
   }
 
+  // beta 0.3: the whole sound: one cycle of the mix of every oscillator that plays (and the sub oscillator) at the reference note C4
   void drawScope(Canvas& g, R r) {
     const Pen grid(argb(13, 255, 255, 255), 1);
     for (int k = 1; k < 4; k++) g.line(Pt{r.x + r.w * k / 4, r.y + 4}, Pt{r.x + r.w * k / 4, r.y + r.h - 4}, grid);
     g.line(Pt{r.x, r.y + r.h / 2}, Pt{r.x + r.w, r.y + r.h / 2}, Pen(argb(23, 255, 255, 255), 1));
-    if (disp.mode != mode) return;
-    double gains[NB], c, w, d; int note;
-    gainsForDisplay(gains, c, w, d, note);
+    double v[kNumParams]; currentParams(v);
     std::vector<double> y(N);
-    displayCycle(disp, gains, c, w, d, y.data());
-    const double* ghost = disp.mode == 0 ? disp.layer(DRY) : nullptr;
+    globalCycle(v, scopeSets, y.data());
     double peak = 0.25;
-    for (int i = 0; i < N; i++) { peak = std::max(peak, std::fabs(y[i])); if (ghost) peak = std::max(peak, std::fabs(ghost[i])); }
-    double sy = (r.h / 2 - 8) / peak;
-    if (d > 0) {
-      for (int x = 0; x < (int)r.w; x += 2) {
-        double wv = windowValue(x / r.w, c, w, 1);
-        if (wv > 0.01) g.fillRect(R{r.x + x, r.y + 1, 2.f, r.h - 2}, rgb(accent(), (int)(26 * wv * d)));
-      }
-    }
-    if (ghost) polyline(g, ghost, r, sy, argb(46, 200, 210, 225), 1.2f, false);
+    for (int i = 0; i < N; i++) peak = std::max(peak, std::fabs(y[i]));
+    const double sy = (r.h / 2 - 8) / peak;
     polyline(g, y.data(), r, sy, rgb(accent()), 2, true);
-    pill(g, disp.mode == 0 ? L"ONE CYCLE · DRY (GREY) vs FILTERED" : L"ONE CYCLE · SUM OF ATOM BANDS", r.x + 8, r.y + 14, false, rgb(0xc8d2e1, 160));
-    if (note >= 0) pill(g, noteName(note) + L" · LIVE", r.x + r.w - 8, r.y + 14, true, rgb(accent()));
+    std::wstring names; int nA = 0, nB = 0;
+    for (int s = 0; s < NS; s++) {
+      const int ord = kSlots[s].mode == 0 ? ++nA : ++nB;
+      if (scopeSets.mask & (1 << s)) names += (names.empty() ? L"" : L" + ") + std::wstring(kSlots[s].mode == 0 ? L"A" : L"B") + std::to_wstring(ord);
+    }
+    if (v[P_SUB_LEVEL] > 0) names += (names.empty() ? L"" : L" + ") + std::wstring(L"SUB");
+    if (names.empty()) names = L"NO OSCILLATOR";
+    pill(g, names + L" · ONE CYCLE OF THE MIX", r.x + 8, r.y + 14, false, rgb(0xc8d2e1, 160));
   }
 
+  // beta 0.3: the whole sound: the atoms of every oscillator that plays (root of the sum of the squares of what each one shows)
   void drawScalogram(Canvas& g, R r) {
     const float lm = 26, pw = r.w - lm - 4, rh = (r.h - 6) / NB, top = r.y + 3;
     for (int b = 1; b <= NB; b++)
       text(g, L"B" + std::to_wstring(b), R{r.x, top + (NB - b) * rh, lm - 4, rh}, 8.5f, true, argb(102, 200, 210, 225), 2);
-    if (disp.mode != mode) return;
-    double gains[NB], c, w, d; int note;
-    gainsForDisplay(gains, c, w, d, note);
+    double v[kNumParams]; currentParams(v);
+    ScopeBand bands[NS]; const int nb = scopeBands(v, scopeSets, bands);
     int PW = (int)pw;
     std::vector<uint32_t> img((size_t)PW * NB);
     uint32_t ac = accent(); int ar = (ac >> 16) & 255, ag = (ac >> 8) & 255, ab = ac & 255;
-    const double sq = 1 / std::sqrt((double)N);
     for (int b = 1; b <= NB; b++) {
       int n = 1 << (b - 1);
       uint32_t* row = img.data() + (size_t)(NB - b) * PW;
-      double sc = disp.bandScale[b - 1] * std::pow(2.0, (b - 1) / 2.0) * sq * std::fabs(gains[b - 1]);
       for (int x = 0; x < PW; x++) {
         int k0 = (int)((double)x / PW * n), k1 = std::max(k0 + 1, (int)((double)(x + 1) / PW * n));
         double t = 0;
         for (int k = k0; k < k1 && k < n; k++) {
-          double v = std::fabs(disp.coeffs[n + k]) * sc;
-          if (v > 0) t = std::max(t, std::min(1.0, std::max(0.0, (20 * std::log10(v) + 60) / 60)));
+          double e2 = 0;
+          for (int o = 0; o < nb; o++) { const double c = std::fabs(bands[o].coeffs[n + k]) * bands[o].sc[b - 1]; e2 += c * c; }
+          const double a = std::sqrt(e2);
+          if (a > 0) t = std::max(t, std::min(1.0, std::max(0.0, (20 * std::log10(a) + 60) / 60)));
         }
         bool gapCol = (double)PW / n >= 4 && (int)((double)(x + 1) / PW * n) != k0;
         uint32_t col = 0;
@@ -557,11 +622,6 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     g.pixels(img.data(), PW, NB, R{r.x + lm, top, (float)PW, rh * NB});
     const Pen sep(rgb(0x0c0f13), 1);
     for (int b = 1; b < NB; b++) g.line(Pt{r.x + lm, top + b * rh}, Pt{r.x + lm + PW, top + b * rh}, sep);
-    if (d > 0) {
-      std::vector<Pt> pts;
-      for (int x = 0; x <= PW; x += 2) pts.push_back(Pt{r.x + lm + x, (float)(top + (1 - windowValue((double)x / PW, c, w, d)) * (r.h - 6))});
-      g.lines(pts.data(), (int)pts.size(), Pen(argb(140, 255, 255, 255), 1).dashed());
-    }
   }
 
   void drawAtom(Canvas& g, R r) {
@@ -919,6 +979,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
         gesture(w.param, p.min + k);
         return;
       }
+      case W_OSCTABS: {   // beta 0.3: a folder tab shows its oscillator
+        for (int s = 0; s < NS; s++) {
+          const float tx = it.r.x + s * 182.f;
+          if (x >= tx && x < tx + 176.f) { gesture(P_OSC_VIEW, s); return; }
+        }
+        return;
+      }
       case W_STEP: {
         const ParamDef& p = kParams[w.param];
         int n = (int)(p.max - p.min + 1), cur = (int)jsRound(plainOf(w.param)) - (int)p.min;
@@ -1146,8 +1213,10 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   // ================================================================ EVALUATE SOUNDS: listen-and-rate session
-  // EVALUATE SOUNDS plays each of the new presets (201-500, then 001-200) with the same 5 s of Beethoven as the web app (the plug-in plays it
-  // itself: vote_data.h), then asks a rating from 1 to 10 stars. Above 5 stars it offers to modify the preset: it is loaded
+  // EVALUATE SOUNDS plays each of the new presets (beta 0.3: 501-1100, then 201-500, then 001-200) with the same 5 s of Beethoven as the web app
+  // and a long C minor chord (the plug-in plays it itself: vote_data.h), then asks a rating from 1 to 10 stars. The sounds come in SETS OF 40:
+  // "Start at…" asks for the number of the first sound, every set has its own file next to the ratings file ("sound 502 to sound 541.txt",
+  // rewritten after every rating, so a set is never lost). Above 5 stars it offers to modify the preset: it is loaded
   // exactly as designed, a bar replaces the on-screen keyboard, the player changes the panel with the mouse and plays it on the
   // MIDI keyboard, then keeps the initial settings or records the change (the parameters that differ from the preset). Ratings and
   // changes are rewritten to the ratings file after every rating or change (nothing is lost when the player stops) and read back at
@@ -1156,13 +1225,15 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // the same format as the web app's file.
   enum { V_OFF, V_START, V_PLAY, V_VOTE, V_ASK, V_EDIT, V_END };
   static constexpr int kAskAbove = 5;                       // a rating above this offers to modify the preset
+  static constexpr int kSetSize = 40;                       // sounds per set (one file each)
   static constexpr double kLead = 0.15;                     // seconds between loading a preset and its passage
   static constexpr R kVoteCard{200, 280, 700, 262};         // the rating window
-  static constexpr R kVoteBar{190, 748, 898, 96};           // the bar shown while a preset is modified (over the keyboard)
+  static constexpr R kVoteBar{190, 932, 898, 96};           // the bar shown while a preset is modified (over the keyboard)
   static constexpr uint32_t kStar = 0xffcf4a;
   struct VChange { int param; double from, to; };
   struct VBtn { std::wstring label; std::function<void()> fn; bool main; R r; };
   int vPhase = V_OFF, vK = 0, vHover = -1;                  // vHover: a button's index, 100 + n = star n
+  int vK0 = -1;                                             // the first sound of this session (the first set starts there, the next ones every 40), -1 = not started
   std::vector<int> vList;                                   // preset indices of the new presets
   std::vector<int> vVotes;                                  // per vList entry, 0 = not rated, else 1..10
   std::vector<std::vector<VChange>> vChanges;               // per vList entry, empty = no recorded change
@@ -1172,7 +1243,23 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   std::chrono::steady_clock::time_point vT0{}; uint32_t vSeqId = 0; bool vSent = false; float vProgress = 0;
   std::wstring vPath, vSaveErr;                             // the ratings file; the last save error ('' = saved)
 
-  std::string vNum(int k) const { return std::string(kPresets[vList[k]].name, 3); }
+  // the number of a preset as written in its name ("012", "502", "1000"): the text before the first space; and the rest ("A1A2 · Glass Bell")
+  static std::string presetNum(const char* name) { const std::string s(name); const size_t e = s.find(' '); return e == std::string::npos ? s : s.substr(0, e); }
+  static const char* presetRest(const char* name) { const char* e = name; while (*e && *e != ' ') e++; return *e ? e + 1 : name; }
+  std::string vNum(int k) const { return presetNum(kPresets[vList[k]].name); }
+  // the set (of 40 sounds) that sound k belongs to: its first and last sound
+  void voteSetRange(int k, int& lo, int& hi) const {
+    const int n = (int)vList.size(), b = (int)std::floor((double)(k - vK0) / kSetSize);
+    lo = std::max(0, vK0 + b * kSetSize); hi = std::min(n - 1, vK0 + b * kSetSize + kSetSize - 1);
+  }
+  std::string voteSetName(int lo, int hi) const { return "sound " + vNum(lo) + " to sound " + vNum(hi) + ".txt"; }
+  // the file of the set of sound k, next to the ratings file ("" before the session has started)
+  std::wstring voteSetPath(int k) const {
+    const size_t slash = vPath.find_last_of(L"\\/");
+    if (vK0 < 0 || slash == std::wstring::npos || vList.empty()) return L"";
+    int lo, hi; voteSetRange(k, lo, hi);
+    return vPath.substr(0, slash + 1) + toW(voteSetName(lo, hi));
+  }
   int vVoted() const { int n = 0; for (int v : vVotes) if (v > 0) n++; return n; }
   int vChanged() const { int n = 0; for (auto& c : vChanges) if (!c.empty()) n++; return n; }
   int vNextFree() const { for (size_t k = 0; k < vList.size(); k++) if (vVotes[k] <= 0) return (int)k; return (int)vList.size(); }
@@ -1213,9 +1300,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     bool found = false;
     const std::string all = readTextFile(vPath, found);
     if (!found) return;
-    auto entry = [&](const std::string& line) -> int {   // "NNN..." -> vList entry, or -1
-      if (line.size() < 4 || !isdigit((unsigned char)line[0]) || !isdigit((unsigned char)line[1]) || !isdigit((unsigned char)line[2])) return -1;
-      for (size_t k = 0; k < vList.size(); k++) if (line.compare(0, 3, vNum((int)k)) == 0) return (int)k;
+    auto entry = [&](const std::string& line, size_t* digits = nullptr) -> int {   // "NNN..." or "NNNN..." -> vList entry, or -1
+      size_t d = 0;
+      while (d < line.size() && isdigit((unsigned char)line[d])) d++;
+      if (d < 3 || d > 4 || d >= line.size() || line[d] != ' ') return -1;
+      if (digits) *digits = d;
+      const std::string num = line.substr(0, d);
+      for (size_t k = 0; k < vList.size(); k++) if (num == vNum((int)k)) return (int)k;
       return -1;
     };
     bool inChanges = false; int cur = -1;
@@ -1225,8 +1316,9 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       if (!line.empty() && line.back() == '\r') line.pop_back();
       if (line.rfind("PRESET CHANGES", 0) == 0) { inChanges = true; continue; }
       if (!inChanges) {   // "001 |  7 | yes     | A1A2 · Deep Saw Bass"
-        int k = entry(line), v;
-        if (k >= 0 && line.compare(3, 2, " |") == 0 && std::sscanf(line.c_str() + 5, "%d", &v) == 1 && v >= 1 && v <= 10) vVotes[k] = v;
+        size_t d = 0; int v;
+        const int k = entry(line, &d);
+        if (k >= 0 && line.compare(d, 2, " |") == 0 && std::sscanf(line.c_str() + d + 2, "%d", &v) == 1 && v >= 1 && v <= 10) vVotes[k] = v;
       } else if (line.compare(0, 2, "  ") == 0 && cur >= 0) {   // "  f_cutoff: 7 -> 5.5   (Cutoff: ... -> ...)"
         size_t c = line.find(':');
         double a, b;
@@ -1236,34 +1328,41 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       } else if (line.size() > 4) cur = entry(line);   // "012 A1A2 · Glass Bell   (8 stars)"
     }
   }
-  std::string voteText() const {
+  // the text of the ratings file: every sound, or (lo >= 0) the sounds lo..hi of the list (a set of 40, same format as the web app's set files)
+  std::string voteText(int lo = -1, int hi = -1) const {
     std::string s; char b[512];
     auto put = [&](const std::string& x) { s += x; s += "\r\n"; };
     const LocalTime t = localNow();
+    const int n = (int)vList.size();
+    const bool set = lo >= 0 && !vList.empty();
+    if (!set) { lo = 0; hi = n - 1; }
+    int nVoted = 0, nChanged = 0;
+    for (int k = lo; k <= hi; k++) { if (vVotes[k] > 0) nVoted++; if (!vChanges[k].empty()) nChanged++; }
     put("Okto MultiWave Synth - preset ratings (1 star = poor ... 10 stars = excellent)");
-    put("Listening: Beethoven, Appassionata (III), 5 s from 0:13 of the demo; each preset played polyphonic at its normal octave. Rated in the VST plug-in.");
-    put("Presets: A1 A2 = subtractive oscillators, B1 B2 = additive oscillators; the letters of a name say which oscillators the preset uses.");
+    put("Listening: Beethoven, Appassionata (III), 5 s from 0:13 of the demo, then a long C minor chord (4 s); each preset played polyphonic at its normal octave. Rated in the VST plug-in.");
+    put("Presets: A1 A2 = subtractive oscillators, B1 = the additive oscillator; the letters of a name say which oscillators the preset uses.");
+    if (set) put("Set: sound " + vNum(lo) + " to sound " + vNum(hi) + " (" + std::to_string(hi - lo + 1) + " sounds)");
     std::snprintf(b, sizeof b, "Saved: %04d-%02d-%02d %02d:%02d   Rated: %d / %d   Presets with a recorded change: %d",
-                  t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, vVoted(), (int)vList.size(), vChanged());
+                  t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, nVoted, hi - lo + 1, nChanged);
     put(b);
     put("");
     put("NUMBER | STARS | CHANGED | PRESET");
-    for (size_t k = 0; k < vList.size(); k++) {
+    for (int k = lo; k <= hi; k++) {
       std::string st = vVotes[k] > 0 ? (vVotes[k] < 10 ? " " : "") + std::to_string(vVotes[k]) : " -";
-      put(vNum((int)k) + " | " + st + " | " + (vChanges[k].empty() ? "       " : "yes    ") + " | " + (kPresets[vList[k]].name + 4));
+      put(vNum(k) + " | " + st + " | " + (vChanges[k].empty() ? "       " : "yes    ") + " | " + presetRest(kPresets[vList[k]].name));
     }
     put("");
     put("RANKING (best first)");
     std::vector<int> order;
-    for (size_t k = 0; k < vList.size(); k++) if (vVotes[k] > 0) order.push_back((int)k);
+    for (int k = lo; k <= hi; k++) if (vVotes[k] > 0) order.push_back(k);
     std::stable_sort(order.begin(), order.end(), [&](int a, int c) { return vVotes[a] > vVotes[c]; });
     for (int k : order)
       put((vVotes[k] < 10 ? " " : "") + std::to_string(vVotes[k]) + " | " + kPresets[vList[k]].name + (vChanges[k].empty() ? "" : "   (changed)"));
     put("");
     put("PRESET CHANGES (recorded by the player: apply them to the preset)");
     put("Format: parameter key: value in the preset -> new value   (name: shown value -> new shown value)");
-    if (!vChanged()) put("(none)");
-    for (size_t k = 0; k < vList.size(); k++) {
+    if (!nChanged) put("(none)");
+    for (int k = lo; k <= hi; k++) {
       if (vChanges[k].empty()) continue;
       put("");
       put(std::string(kPresets[vList[k]].name) + "   (" + (vVotes[k] > 0 ? std::to_string(vVotes[k]) + " stars" : std::string("not rated")) + ")");
@@ -1280,6 +1379,13 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     makeFolder(vPath.substr(0, slash));   // Documents\Okto MultiWave Synth, the first time
     const std::wstring e = writeTextFile(vPath, voteText());
     if (!e.empty()) { vStatus = vSaveErr = L"NOT SAVED: could not write " + vPath + L" (" + e + L")"; return false; }
+    // the file of the set being rated, next to it ("sound 502 to sound 541.txt")
+    const std::wstring sp = voteSetPath(vK);
+    if (!sp.empty()) {
+      int lo, hi; voteSetRange(vK, lo, hi);
+      const std::wstring e2 = writeTextFile(sp, voteText(lo, hi));
+      if (!e2.empty()) { vStatus = vSaveErr = L"NOT SAVED: could not write " + sp + L" (" + e2 + L")"; return false; }
+    }
     vSaveErr.clear();
     return true;
   }
@@ -1309,11 +1415,15 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   void voteSaveAs() {
     if (!win) return;
     char b[160]; const LocalTime t = localNow();
-    std::snprintf(b, sizeof b, "okto-multiwave-ratings-%dof%d-%04d-%02d-%02d.txt", vVoted(), (int)vList.size(), t.wYear, t.wMonth, t.wDay);
+    // while a session runs, the copy is the set being rated (its name and its sounds), as in the web app
+    int lo = -1, hi = -1;
+    if (vK0 >= 0 && !vList.empty() && vPhase != V_START && vPhase != V_END) voteSetRange(vK, lo, hi);
+    if (lo >= 0) std::snprintf(b, sizeof b, "%s", voteSetName(lo, hi).c_str());
+    else std::snprintf(b, sizeof b, "okto-multiwave-ratings-%dof%d-%04d-%02d-%02d.txt", vVoted(), (int)vList.size(), t.wYear, t.wMonth, t.wDay);
     const std::wstring forced = envPath(L"MW_SAVEAS_PATH");   // developer tests: no window
     const std::wstring path = !forced.empty() ? forced : win->saveFileDialog(L"Save a copy of the ratings as…", toW(b).c_str());
     if (path.empty()) return;
-    const std::wstring e = writeTextFile(path, voteText());
+    const std::wstring e = writeTextFile(path, voteText(lo, hi));
     vStatus = e.empty() ? L"Copy saved (" + std::to_wstring(vVoted()) + L" rated): " + path : L"NOT SAVED: could not write " + path + L" (" + e + L")";
     voteInvalidate();
   }
@@ -1336,6 +1446,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (vPhase != V_OFF) return;
     if (vList.empty()) for (int k = 0; k < kNumNew; k++) vList.push_back(kFirstNew + k);   // the new presets (the order of the factory list)
     if (vList.empty()) return;
+    vK0 = -1;
     vPath = voteRememberedPath(); vSaveErr.clear();
     voteLoad();
     currentParams(vSaved); vSavedPreset = host->presetIndex(); vSavedDirty = host->presetDirty(); vSavedUser = host->userPresetName();
@@ -1343,14 +1454,15 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
   void voteStartScreen() {
     const int done = vVoted(), next = vNextFree(), n = (int)vList.size();
+    vK0 = -1;
     vTitle = L"LISTEN AND RATE · " + std::to_wstring(n) + L" NEW PRESETS";
     vName = done ? std::to_wstring(done) + L" of " + std::to_wstring(n) + L" presets rated" : std::to_wstring(n) + L" new presets to rate";
-    vDesc = L"Each preset plays 5 s of Beethoven (Appassionata, the busy passage at 0:13), then rate it from 1 (poor) to 10 stars "
-            L"(excellent). Above 5 stars you can modify the preset and record the change. The ratings are saved in a .txt file.";
+    vDesc = L"Each preset plays 5 s of Beethoven and a long C minor chord; rate it from 1 (poor) to 10 stars (excellent). "
+            L"Above 5 stars you can modify it. The sounds come in sets of 40, each with its own .txt file.";
     vProgress = (float)done / n;
     std::vector<VBtn> b;
-    if (next < n) b.push_back({done ? L"Continue at " + toW(vNum(next)) : L"Start at " + toW(vNum(0)), [this, next] { votePlay(next); }, true, {}});
-    if (done) b.push_back({L"Restart at " + toW(vNum(0)), [this] { votePlay(0); }, false, {}});
+    b.push_back({L"Start at…", [this] { voteAskStart(); }, !done || next >= n, {}});
+    if (done && next < n) b.push_back({L"Continue at " + toW(vNum(next)), [this, next] { voteStartAt(next); }, true, {}});
     b.push_back({L"Change file…", [this] { voteChooseFile(); }, false, {}});
     if (done) b.push_back({L"Save as…", [this] { voteSaveAs(); }, false, {}});
     if (fileExists(vPath)) b.push_back({L"Show file", [this] { voteOpenFile(); }, false, {}});
@@ -1363,10 +1475,32 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     vStatus = voteAudio() ? voteFileLabel() : L"The audio part of the plug-in is not connected: the passage cannot play.";
     voteShow(V_START, std::move(b));
   }
+  // "Start at…": the player types the number of the first sound (the first one not rated yet is offered)
+  void voteAskStart() {
+    const int n = (int)vList.size(), next = vNextFree();
+    std::wstring t = envPath(L"MW_START_AT");   // developer tests: no window
+    if (t.empty()) {
+      if (!win) return;
+      SaveDlg d; d.name = toW(vNum(next < n ? next : 0)); d.label = L"Number:"; d.ok = L"Start"; d.maxLen = 6;
+      if (!win->saveDialog(d, L"Start at…", false, (L"Number of the first sound to rate (" + toW(vNum(0)) + L" to " + toW(vNum(n - 1)) + L"):").c_str())) return;
+      t = d.name;
+    }
+    const long v = std::wcstol(t.c_str(), nullptr, 10);
+    int k = -1;
+    for (int i = 0; i < n && v > 0; i++) if (std::atol(vNum(i).c_str()) == v) { k = i; break; }
+    if (k < 0) {
+      vStatus = L"No sound numbered “" + t + L"” in the list (" + toW(vNum(0)) + L" to " + toW(vNum(n - 1)) + L").";
+      voteInvalidate();
+      return;
+    }
+    voteStartAt(k);
+  }
+  void voteStartAt(int k) { vK0 = std::max(0, std::min((int)vList.size() - 1, k)); votePlay(k); }
   // loads preset k with the same playing rules as the demo's preset tour (polyphonic, normal octave, no glide, short
   // attacks, short echoes) and plays the passage once its sound is ready
   void votePlay(int k) {
     if (k >= (int)vList.size()) { voteFinish(); return; }
+    if (vK0 < 0) vK0 = std::max(0, k);
     vK = std::max(0, k);
     const int pk = vList[vK];
     if (auto sh = voteAudio()) sh->seqStop.store(2);   // no tail of the previous preset
@@ -1376,7 +1510,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (plainOf(P_FX_DMIX) > 0.1) host->setPlainGesture(P_FX_DMIX, 0.1);
     if (plainOf(P_FX_DFB) > 0.3) host->setPlainGesture(P_FX_DFB, 0.3);
     vT0 = std::chrono::steady_clock::now(); vSent = false; vProgress = 0;
-    vTitle = L"PRESET " + std::to_wstring(vK + 1) + L" OF " + std::to_wstring(vList.size()) + L" · " + toW(kPresets[pk].cat);
+    int lo, hi; voteSetRange(vK, lo, hi);
+    vTitle = L"PRESET " + std::to_wstring(vK + 1) + L" OF " + std::to_wstring(vList.size()) + L" · " + toW(kPresets[pk].cat) + L" · SET " + toW(vNum(lo)) + L"–" + toW(vNum(hi));
     vName = toW(kPresets[pk].name);
     vDesc = L"Playing… " + toW(kPresetDesc[pk]);
     vStatus = voteNote(vK);

@@ -17,7 +17,7 @@ function WSDemo(api) {
   // describes each preset
   const TOUR_INTRO = [
     'Welcome to OKTOMULTIWAVE. Every sound you hear is built from wavelets: tiny waves, like bricks of sound.',
-    'This synth has four oscillators: two that shape a classic waveform (A1, A2) and two that build the sound brick by brick (B1, B2).',
+    'This synth has three oscillators: two that shape a classic waveform (A1, A2) and one that builds the sound brick by brick (B1).',
     'Most presets use two of them: a body that sings, and a second oscillator that adds a colour, a shimmer or the attack.',
     'An oscillator can live for a few milliseconds only: a click, a pluck, a breath. It gives the sound its attack.',
     'CHORD MODE turns the keyboard into a chord harp: one key plays a whole chord. Try it under the keyboard.',
@@ -69,7 +69,7 @@ function WSDemo(api) {
     return out;
   }
   // what the sound uses (the oscillators that play), not the panel shown
-  const SLOT_NAMES = ['A1', 'A2', 'B1', 'B2'];
+  const SLOT_NAMES = ['A1', 'A2', 'B1'];
   function playing() { const v = api.values(); return SPEC_SLOTS.map((sl, s) => (v[sl.k.lvl] > 0 ? s : -1)).filter(s => s >= 0); }
   function engineLabel() {
     const on = playing();

@@ -49,7 +49,7 @@
     // an oscillator's level rebuilds the tables only when it reaches or leaves 0 (it plays or not); the WAVELET MORPH when it
     // starts or stops needing the WAVELET 2 tables; an LFO when it starts or stops moving the SOURCE PHASE, SPARSITY or SOURCE WIDTH (the variants tables); the
     // OSC tabs only choose the oscillator shown (its display is built again, the sound does not change)
-    if (p.structural) scheduleDisplay();
+    if (p.structural || C.tableNeeds(values) !== needs) scheduleDisplay();   // beta 0.3: also when an oscillator starts or stops playing (the scope shows them all)
     if ((p.structural && i !== P.osc_view) || C.tableNeeds(values) !== needs || C.morphNeeded(values) !== morph ||
         C.variantSig(values) !== vsig) scheduleBuild();
     // the OSC tabs only choose the panel shown: switching them does not modify the sound
@@ -448,7 +448,7 @@
     const url = 'manual/manual-' + w + '.html';
     $('manual-iframe').src = url;
     $('manual-newtab').href = url;
-    $('manual-title').textContent = w === 'a' ? 'Manual A — subtractive oscillators A1 · A2' : 'Manual B — additive oscillators B1 · B2';
+    $('manual-title').textContent = w === 'a' ? 'Manual A — subtractive oscillators A1 · A2' : 'Manual B — additive oscillator B1';
     $('manual-overlay').hidden = false;
   }
   // The manual pages announce themselves (postMessage works across file:// frames),
@@ -457,7 +457,7 @@
     const w = e.data && e.data.wsManual;
     if ((w !== 'a' && w !== 'b') || $('manual-overlay').hidden) return;
     $('manual-newtab').href = 'manual/manual-' + w + '.html';
-    $('manual-title').textContent = w === 'a' ? 'Manual A — subtractive oscillators A1 · A2' : 'Manual B — additive oscillators B1 · B2';
+    $('manual-title').textContent = w === 'a' ? 'Manual A — subtractive oscillators A1 · A2' : 'Manual B — additive oscillator B1';
   });
 
   function closeManual() {

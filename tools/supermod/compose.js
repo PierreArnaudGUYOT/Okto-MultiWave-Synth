@@ -1,14 +1,17 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The composer of the beta 0.2 presets: builds one preset from the layers (tools/supermod/layers.js) and the modulation recipes
+// The composer of the beta 0.2 and 0.3 presets: builds one preset from the layers (tools/supermod/layers.js) and the modulation recipes
 // (tools/supermod/mods.js) with a seeded generator. Two oscillators of the same kind are chosen to be very different (the contrast
 // score: family, role, wavelet class, wave or pattern, brightness, tuning, filter, own envelope), the category sets the envelope, the
 // voices, the effects and the speed of the LFOs, and the recipes make the wavelet-domain controls move in time.
+// Beta 0.3: three oscillators (A1 A2 B1), LFO 2 and LFO 3 (every preset moves wavelet parameters with one of them or both, mostly of the subtractive
+// oscillators), the FILTER effect (about two presets in three) and the Drums & Perc category (tools/supermod/perc.js).
 //   const { compose } = require('./compose.js');   compose(r, cat, { taken: Set of names }) -> a preset { cat, title, desc, v, meta } or null
 'use strict';
 const { P } = require('../preset_dsl.js');
 const LAY = require('./layers.js');
-const { MODS, CLAUSE, aOsc, bOsc, allOsc } = require('./mods.js');
+const { MODS, CLAUSE, aOsc, bOsc, allOsc, canon, FLT_PROB, fltSetup, fltClause } = require('./mods.js');
+const { drum } = require('./perc.js');
 const { wclass } = LAY;
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -23,9 +26,9 @@ const CATS = {
   'SuperModulation': { kind: null }, 'Bass': { kind: 'bass', speed: [0.2, 6] }, 'Lead': { kind: 'lead', speed: [0.4, 8] }, 'Keys': { kind: 'keys', speed: [0.25, 5] },
   'Organ': { kind: 'organ', speed: [0.3, 7] }, 'Pad': { kind: 'pad', speed: [0.06, 1.4] }, 'Strings': { kind: 'strings', speed: [0.12, 4] },
   'Brass & Wind': { kind: 'brass', speed: [0.3, 6] }, 'Pluck': { kind: 'pluck', speed: [0.25, 5] }, 'Bells & Mallets': { kind: 'bell', speed: [0.08, 2.5] },
-  'FX': { kind: 'fx', speed: [0.05, 9] },
+  'FX': { kind: 'fx', speed: [0.05, 9] }, 'Drums & Perc': { kind: 'perc', speed: [1.5, 12] },
 };
-const SPEED = { bass: [0.2, 6], lead: [0.4, 8], keys: [0.25, 5], organ: [0.3, 7], pad: [0.06, 1.4], strings: [0.12, 4], brass: [0.3, 6], pluck: [0.25, 5], bell: [0.08, 2.5], fx: [0.05, 9] };
+const SPEED = { bass: [0.2, 6], lead: [0.4, 8], keys: [0.25, 5], organ: [0.3, 7], pad: [0.06, 1.4], strings: [0.12, 4], brass: [0.3, 6], pluck: [0.25, 5], bell: [0.08, 2.5], fx: [0.05, 9], perc: [1.5, 12] };
 const SUPER_KINDS = [['pad', 4], ['lead', 3], ['bass', 2.5], ['keys', 2], ['pluck', 2], ['strings', 1.2], ['fx', 3], ['brass', 1], ['bell', 1.2], ['organ', 0.6]];
 
 // which layers a kind of sound may use for each role
@@ -113,14 +116,85 @@ function globals(r, kind) {
 function candidates(mode, kind, roles) {
   return (mode === 'A' ? LAY.A : LAY.B).filter(l => roles.includes(l.role) && okLayer(l, kind));
 }
-const CONFIGS = [['A1A2', 24], ['B1B2', 15], ['A1B1', 24], ['A1A2B1', 13], ['A1B1B2', 9], ['A1A2B1B2', 6], ['A2B2', 3], ['A1B2', 3], ['A2B1', 3]];
+// beta 0.3: three oscillators. Two subtractive ones (A1 A2) are the most common: the wavelet parameters of the subtractive oscillators are what the LFOs move most.
+const CONFIGS = [['A1A2', 40], ['A1B1', 32], ['A1A2B1', 24], ['A2B1', 4]];
+
+// the modulations of a sound (ctx: osc, g, kind, speed, variant): LFO 1 recipes, then LFO 2 and / or LFO 3 on wavelet parameters, the filter, the envelope.
+// Returns the recipes used ({ m, res }) or null when the sound does not make a valid SuperModulation / category preset.
+function modulate(r, ctx, cat, kind) {
+  const super_ = cat === 'SuperModulation';
+  const used = [], dests = new Set();
+  const apply = (m) => {
+    if (dests.has(canon(m.dest)) || !m.fits(ctx)) return false;   // one LFO per control (two would add up)
+    const res = m.apply(ctx, r); if (!res) return false;
+    used.push({ m, res }); dests.add(canon(m.dest)); return true;
+  };
+  const wd = MODS.filter(m => m.wd), by = (k) => wd.filter(m => m.kind === k);
+  const weighted = (list) => { const out = [], left = list.slice(); while (left.length) { const m = r.wpick(left.map(x => [x, x.w || 1])); out.push(m); left.splice(left.indexOf(m), 1); } return out; };
+  // the filter effect first (an LFO may move it)
+  const doFlt = r.p(FLT_PROB[kind] === undefined ? 0.6 : FLT_PROB[kind]);
+  if (doFlt) fltSetup(ctx, r);
+  const both = super_ || r.p(0.45);                                    // LFO 2 and LFO 3 both move wavelet parameters
+  const first = r.p(0.5) ? 'lfo2' : 'lfo3', second = first === 'lfo2' ? 'lfo3' : 'lfo2';
+  const nL1 = super_ ? r.wpick([[1, 3], [2, 2]]) : both ? r.wpick([[0, 3], [1, 2]]) : r.wpick([[0, 1.2], [1, 3], [2, 1]]);
+  const doEnv = r.p(super_ ? 0.3 : 0.2);
+  let nDone = 0;
+  for (const m of r.shuffle(by('lfo1'))) { if (nDone >= nL1) break; if (apply(m)) nDone++; }
+  const lfoWavelet = (slot) => { for (const m of weighted(by(slot))) if (apply(m)) return true; return false; };
+  if (!lfoWavelet(first)) return null;
+  if (both) { if (!lfoWavelet(second)) return null; }
+  else if (ctx.g.flt && r.p(0.5)) {   // the other LFO moves the filter instead
+    for (const m of r.shuffle(MODS.filter(x => x.kind === second && !x.wd))) if (apply(m)) break;
+  }
+  if (doEnv) { for (const m of by('env')) if (apply(m)) break; }
+  const wdCount = new Set(used.filter(u => u.m.wd).map(u => canon(u.m.dest))).size;
+  if (super_ && (wdCount < 3 || !ctx.g.lfo2 || !ctx.g.lfo3)) return null;
+  if (!super_ && (wdCount < 1 || wdCount > 3)) return null;
+  if (r.p(0.3) && ctx.g.lfo && ctx.g.lfo.pitch === undefined && kind !== 'bell' && kind !== 'pluck' && kind !== 'perc') { const m = MODS.find(x => x.id === 'pitchVib'); if (m.fits(ctx)) apply(m); }
+  return used;
+}
 
 function compose(r, cat, opts = {}) {
   const spec = CATS[cat];
   const kind = opts.kind || spec.kind || r.wpick(SUPER_KINDS);
-  const super_ = cat === 'SuperModulation';
+  const slotsInfo = kind === 'perc' ? composeDrum(r) : composeLayers(r, kind);
+  if (!slotsInfo) return null;
+  const { slots, ctx, layerWords, form: form0, baseDesc } = slotsInfo;
+  const used = modulate(r, ctx, cat, kind);
+  if (!used) return null;
+  // an additive-only or attack-only kind keeps a safe resonance
+  for (const sl of Object.keys(ctx.osc)) { const o = ctx.osc[sl]; if (o.fres !== undefined) o.fres = Math.min(o.fres, 12); }
+  if (ctx.g.lfo && ctx.g.lfo.res) for (const sl of Object.keys(ctx.osc)) { const o = ctx.osc[sl]; if (o.fres !== undefined) o.fres = Math.min(o.fres, 6); }
+  // the name and the description
+  const modWords = used.filter(u => u.m.wd).map(u => r.pick(u.m.words));
+  const form = form0 || r.pick(FORM[kind] || FORM.fx);
+  const patterns = [() => `${r.pick(modWords)} ${form}`, () => `${r.pick(layerWords)} ${r.pick(modWords)}`, () => `${r.pick(layerWords)} ${form}`,
+    () => `${r.pick(layerWords)} & ${r.pick(layerWords)}`, () => `${r.pick(modWords)} of ${r.pick(layerWords)}`, () => `${r.pick(layerWords)} ${r.pick(modWords)} ${form}`];
+  let title = null;
+  for (let t = 0; t < 40 && !title; t++) { const c = r.pick(patterns)(); if (!/^(\w+) & \1$/.test(c) && !opts.taken.has(c.toLowerCase())) title = c; }
+  if (!title) return null;
+  const specObj = { g: ctx.g };
+  for (const s of slots) specObj[s] = ctx.osc[s];
+  const v0 = P(cat, title, '', specObj).v;
+  const desc = describeWith(baseDesc(v0), used.map(u => u.m.id), v0);
+  const pr = P(cat, title, desc, specObj);
+  pr.desc = desc;
+  const order = slotsInfo.order || slots;
+  pr.meta = { cfg: slots.join(''), bodySlot: order[0], order, kind, layers: slotsInfo.layers, roles: slotsInfo.roles, mods: used.map(u => u.m.id), dests: [...new Set(used.map(u => u.m.dest))],
+    flt: ctx.g.flt ? ctx.g.flt.type : null };
+  return pr;
+}
+
+// ---- a drum or a hit (Drums & Perc): tools/supermod/perc.js
+function composeDrum(r) {
+  const d = drum(r), slots = Object.keys(d.osc);
+  const ctx = { osc: d.osc, g: d.g, kind: 'perc', speed: SPEED.perc, variant: null, cur: null };
+  return { slots, ctx, layerWords: d.words, form: r.pick(d.form), baseDesc: () => cap(d.desc), layers: [d.id], roles: slots.map(() => 'hit'), order: slots };
+}
+
+// ---- the oscillators from the layers: one body and the others chosen against it
+function composeLayers(r, kind) {
   const cfg = r.wpick(CONFIGS), slots = cfg.match(/[AB]\d/g);
-  const want = (mode) => slots.filter(s => s[0] === mode);
   const picked = {};   // slot -> { l: layer, o: osc values, role }
   const usedFam = new Set();
   const take = (slot, l, role, isBody) => {
@@ -161,62 +235,27 @@ function compose(r, cat, opts = {}) {
     if (same.length && Math.min(...same.map(x => contrast(x, best))) < 3) return null;
     picked[s] = best; usedFam.add(best.l.fam);
   }
-  // the preset in the language of preset_dsl: oscillators and globals
-  const ctx = { osc: {}, g: globals(r, kind), kind, speed: SPEED[kind], variant: null };
-  const id = (s) => s;   // slot ids are 'A1' 'A2' 'B1' 'B2'
-  for (const s of slots) ctx.osc[id(s)] = picked[s].o;
-  // the modulations
-  const used = [];
-  const apply = (m) => { if (!m.fits(ctx)) return false; const res = m.apply(ctx, r); if (!res) return false; used.push({ m, res }); return true; };
-  const wd = MODS.filter(m => m.wd), by = (k) => wd.filter(m => m.kind === k);
-  const nL1 = super_ ? r.wpick([[1, 3], [2, 4], [3, 2]]) : r.wpick([[0, 1.3], [1, 4], [2, 1.2]]);
-  const doL2 = super_ ? r.p(0.92) : r.p(0.5);
-  const doEnv = r.p(super_ ? 0.3 : 0.2);
-  const shuffled = r.shuffle(by('lfo1'));
-  let nDone = 0;
-  for (const m of shuffled) { if (nDone >= nL1) break; if (apply(m)) nDone++; }
-  if (doL2) { for (const m of r.shuffle(by('lfo2'))) if (apply(m)) break; }
-  if (doEnv) { for (const m of by('env')) if (apply(m)) break; }
-  const wdCount = new Set(used.filter(u => u.m.wd).map(u => u.m.dest)).size;
-  if (super_ && (wdCount < 2 || used.length < 2 || !ctx.g.lfo || !ctx.g.lfo2)) return null;
-  if (!super_ && wdCount < 1) return null;
-  if (!super_ && wdCount > 2) return null;
-  if (r.p(0.3) && ctx.g.lfo && ctx.g.lfo.pitch === undefined && kind !== 'bell' && kind !== 'pluck') { const m = MODS.find(x => x.id === 'pitchVib'); if (m.fits(ctx)) apply(m); }
-  // an additive-only or attack-only kind keeps a safe resonance
-  for (const sl of Object.keys(ctx.osc)) { const o = ctx.osc[sl]; if (o.fres !== undefined) o.fres = Math.min(o.fres, 12); }
-  if (ctx.g.lfo && ctx.g.lfo.res) for (const sl of Object.keys(ctx.osc)) { const o = ctx.osc[sl]; if (o.fres !== undefined) o.fres = Math.min(o.fres, 6); }
-  // the name and the description
-  const layerWords = slots.map(s => r.pick(picked[s].l.words));
-  const modWords = used.filter(u => u.m.wd).map(u => r.pick(u.m.words));
-  const formKind = kind === 'strings' ? 'strings' : kind;
-  const form = r.pick(FORM[formKind] || FORM.fx);
-  const patterns = [() => `${r.pick(modWords)} ${form}`, () => `${r.pick(layerWords)} ${r.pick(modWords)}`, () => `${r.pick(layerWords)} ${form}`,
-    () => `${r.pick(layerWords)} & ${r.pick(layerWords)}`, () => `${r.pick(modWords)} of ${r.pick(layerWords)}`, () => `${r.pick(layerWords)} ${r.pick(modWords)} ${form}`];
-  let title = null;
-  for (let t = 0; t < 40 && !title; t++) { const c = r.pick(patterns)(); if (!/^(\w+) & \1$/.test(c) && !opts.taken.has(c.toLowerCase())) title = c; }
-  if (!title) return null;
+  const ctx = { osc: {}, g: globals(r, kind), kind, speed: SPEED[kind], variant: null, cur: null };
+  for (const s of slots) ctx.osc[s] = picked[s].o;
   const order2 = [bodySlot, ...slots.filter(s => s !== bodySlot)];
-  const desc = describe(order2.map(s => picked[s].l), order2.map(s => picked[s].o), used.map(u => u.m.id), P(cat, title, '', Object.assign({ g: ctx.g }, Object.fromEntries(slots.map(s => [s, ctx.osc[s]])))).v);
-  // the oscillators and globals into a preset
-  const specObj = { g: ctx.g };
-  for (const s of slots) specObj[s] = ctx.osc[s];
-  const pr = P(cat, title, desc, specObj);
-  pr.desc = desc;
-  pr.meta = { cfg, bodySlot, order: order2, kind, layers: slots.map(s => picked[s].l.id), roles: slots.map(s => picked[s].role), mods: used.map(u => u.m.id), dests: [...new Set(used.map(u => u.m.dest))] };
-  return pr;
+  return { slots, ctx, layerWords: slots.map(s => r.pick(picked[s].l.words)), form: null, order: order2, layers: slots.map(s => picked[s].l.id), roles: slots.map(s => picked[s].role),
+    baseDesc: () => layersText(order2.map(s => picked[s].l), order2.map(s => picked[s].o)) };
 }
 
-// the description of a preset: its layers (the body first, then the others with their relation to the body) and what the LFOs do
+// the description of a preset: its layers (the body first, then the others with their relation to the body) and what the LFOs and the filter do
 const rel = (o) => {
   const st = (o.oct || 0) * 12 + (o.semi || 0);
   const t = st === 12 ? 'an octave above' : st === 24 ? 'two octaves above' : st === -12 ? 'an octave below' : st === -24 ? 'two octaves below' : st === 7 ? 'a fifth above' : '';
   return t ? ' ' + t : o.fine ? ', slightly detuned' : '';
 };
-function describe(layers, oscs, modIds, v) {
+function layersText(layers, oscs) {
   const parts = layers.map((l, i) => l.desc + (i === 0 ? '' : rel(oscs[i])));
-  let d = cap(parts[0]) + (parts.length > 1 ? ' against ' + parts.slice(1).join(', and ') : '');
-  const cl = modIds.map(id => CLAUSE[id](v));
-  d += '; ' + (cl.length > 1 ? cl.slice(0, -1).join(', ') + ', and ' + cl[cl.length - 1] : cl[0]) + '.';
-  return d;
+  return cap(parts[0]) + (parts.length > 1 ? ' against ' + parts.slice(1).join(', and ') : '');
 }
-module.exports = { compose, describe, CATS, contrast };
+function describeWith(base, modIds, v) {
+  const cl = modIds.map(id => CLAUSE[id](v));
+  if (v.vf_cut !== undefined && v.vf_cut < 20000) cl.push(fltClause(v));
+  return base + '; ' + (cl.length > 1 ? cl.slice(0, -1).join(', ') + ', and ' + cl[cl.length - 1] : cl[0]) + '.';
+}
+function describe(layers, oscs, modIds, v) { return describeWith(layersText(layers, oscs), modIds, v); }
+module.exports = { compose, describe, describeWith, CATS, contrast };

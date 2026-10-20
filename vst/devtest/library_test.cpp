@@ -140,9 +140,9 @@ int wmain(int argc, wchar_t** argv) {
     lib.restore(kA);
   }
 
-  std::printf("8. a presets file of beta 0.1 (no SuperModulation list, none of the 300 new presets in it) is read with them in their default places\n");
+  std::printf("8. a presets file of beta 0.1 (no SuperModulation list, none of the new presets in it) is read with them in their default places\n");
   {
-    // the file the library writes now, with the beta 0.2 presets (numbers 201-500) and the SuperModulation list taken out of the LIST ORDER
+    // the file the library writes now, with the presets of beta 0.2 and 0.3 (numbers 201-1100) and the SuperModulation list taken out of the LIST ORDER
     e = lib.adjust(kA, "Old file adjusted", v);
     std::string t = readAll(file), o;
     const size_t lo = t.find("######## LIST ORDER");
@@ -155,8 +155,8 @@ int wmain(int argc, wchar_t** argv) {
       if (line.rfind("== ", 0) == 0) skipSection = line.find("SuperModulation") != std::string::npos;
       const size_t dot = line.find(". ");
       const bool entry = dot != std::string::npos && dot < 4 && std::isdigit((unsigned char)line[0]);
-      const bool isNew = entry && line.size() > dot + 5 && std::isdigit((unsigned char)line[dot + 2]) && (line[dot + 2] == '2' || line[dot + 2] == '3' || line[dot + 2] == '4' || line[dot + 2] == '5') &&
-                         std::atoi(line.substr(dot + 2, 3).c_str()) >= 201;
+      // the number of the preset (3 or 4 digits: beta 0.3's are 501-1100) is the text after "N. " up to the next space
+      const bool isNew = entry && line.size() > dot + 5 && std::isdigit((unsigned char)line[dot + 2]) && std::atoi(line.c_str() + dot + 2) >= 201;
       if (skipSection || isNew) continue;
       kept += line + "\r\n";
     }

@@ -20,7 +20,7 @@ function WSWorkletMain() {
         switch (m.t) {
           case 'p': if (Number.isFinite(m.v)) eng.setParam(m.i, m.v); break;   // a NaN would stay in the engine's state
           case 'all': for (let i = 0; i < m.v.length; i++) if (Number.isFinite(m.v[i])) eng.setParam(i, m.v[i]); break;
-          case 'tables': eng.setTables(m.tables); break;   // { needs, slots: [A1, A2, B1, B2] }: per oscillator { mode, mips, rms, ph?, w2? } or null
+          case 'tables': eng.setTables(m.tables); break;   // { needs, slots: [A1, A2, B1] }: per oscillator { mode, mips, rms, ph?, w2? } or null
           case 'on': eng.keyOn(m.n, m.v); break;      // Okto MultiWave Synth: the player's keys go through the chord layer
           case 'off': eng.keyOff(m.n); break;
           case 'plateon': eng.plateOn(m.n, m.v); break;   // the strum plate
