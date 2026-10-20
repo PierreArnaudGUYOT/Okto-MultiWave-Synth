@@ -24,12 +24,42 @@ const N03 = NEW.filter(p => numOf(p) >= 501).length, N02 = NEW.filter(p => numOf
 const SUPER = SPEC.PRESETS.filter(p => p.cat === 'SuperModulation');
 const firstNo03 = String(Math.min(...NEW.map(numOf).filter(n => n >= 501))), lastNo03 = String(Math.max(...NEW.map(numOf)));
 const SET_SIZE = 40;   // sounds per EVALUATE SOUNDS set (one file each)
-const title = t => { const p = NEW.find(q => q.name.slice(4).split(' · ')[1] === t); if (!p) throw new Error('manual: no preset titled ' + t); return `<b>${p.name}</b>`; };
-const topName = n => { if (!SPEC.PRESETS.slice(0, SPEC.TOP).some(p => p.name === n)) throw new Error('manual: no TOP Sound ' + n); return `<b>${n}</b>`; };
 const nCat = c => SPEC.PRESETS.filter(p => p.cat === c).length;
-// presets of beta 0.3 (numbers 501 and up) of a category, as bold names for a "look at" column; withFilter: only those that use the voice FILTER (cutoff below its maximum)
-const VFC = SPEC.PARAMS.findIndex(q => q.key === 'vf_cut');
-const fromBeta03 = (cat, n, withFilter) => NEW.filter(p => numOf(p) >= 501 && p.cat === cat && (!withFilter || p.values[VFC] < SPEC.PARAMS[VFC].max)).slice(0, n).map(p => `<b>${p.name}</b>`).join(', ');
+// ---- the final list (beta 1.0): presets are picked by what they do (computed from the spec's values) and never by name, so a change of the list cannot break the manuals
+const IDX = {}; SPEC.PARAMS.forEach((q, i) => { IDX[q.key] = i; });
+const pv = (p, key) => p.values[IDX[key]];                                   // a preset's value of a parameter
+const uses = (p, s) => pv(p, SLK[s].lvl) > 0;                                 // oscillator s plays in preset p
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const nameB = p => `<b>${esc(p.name)}</b>`;
+// the best rated first (the owner's stars), then the factory order
+const byStars = (a, b) => (b.stars || 0) - (a.stars || 0) || a.rank - b.rank;
+const pick = (what, n, pred) => {
+  const l = SPEC.PRESETS.filter(pred).sort(byStars).slice(0, n);
+  if (!l.length) throw new Error('manual: no preset in the final list for "' + what + '"');
+  return l.map(nameB).join(', ');
+};
+// the TOP Sounds list in its order: the TOP Sounds of the Wavelet Synthesizer he kept, then the sounds he rated above 7 and his favourites; the best rated first (same rule as tools/spec.js TOP_LIST)
+const TOP_LIST = [...SPEC.PRESETS.slice(0, SPEC.TOP).map((p, i) => i), ...SPEC.TOP_EXTRA].sort((a, b) => (SPEC.PRESETS[b].stars || 0) - (SPEC.PRESETS[a].stars || 0) || a - b);
+if (TOP_LIST[0] !== SPEC.DEFAULT_PRESET) throw new Error('manual: the first TOP Sound is not the default preset any more: check TOP_LIST in tools/manual/mw.js against tools/spec.js');
+const TOP_NAMES = new Set(TOP_LIST.map(i => SPEC.PRESETS[i].name));
+const SUPERMOD = SPEC.PRESETS.filter(p => p.cat === 'SuperModulation');   // the SuperModulation category
+const lfo23 = p => pv(p, 'lfo2_amt') > 0 || pv(p, 'lfo3_amt') > 0;   // LFO 2 and / or LFO 3 move a control
+const N_LFO23 = SPEC.PRESETS.filter(lfo23).length, N_SM_LFO23 = SUPERMOD.filter(lfo23).length;
+const N_ABOVE7 = SPEC.TOP_EXTRA.filter(i => SPEC.PRESETS[i].stars > 7).length, N_FAV = SPEC.TOP_EXTRA.length - N_ABOVE7;
+// the owner's stars as the preset browser draws them: five stars with half stars (1 to 10)
+const starsOf = p => { const n = p.stars || 0; return `<span class="stars" title="${n} of 10">${'★'.repeat(Math.floor(n / 2))}${n % 2 ? '½' : ''}</span>`; };
+// the Shape control of LFO 2 and LFO 3: the five waveforms of LFO 1 (a choice), or a knob
+const lfoShape = key => PK[key].fmt === 'choice' ? 'The same five waveforms as LFO 1.' : 'The waveform of the LFO, from the same family as LFO 1 (sine, triangle, saw, square, sample &amp; hold).';
+// the number of vanishing moments of a wavelet: how many of the moments of its high-pass filter are zero (centred, relative to their size)
+const vanishing = h => {
+  const L = h.length, g = h.map((_, n) => ((n & 1) ? -1 : 1) * h[L - 1 - n]);
+  for (let k = 0; k < L; k++) {
+    let m = 0, sc = 0;
+    for (let n = 0; n < L; n++) { const c = n - (L - 1) / 2; m += Math.pow(c, k) * g[n]; sc += Math.pow(Math.abs(c), k) * Math.abs(g[n]); }
+    if (Math.abs(m) > 1e-10 * sc) return k;
+  }
+  return L;
+};
 const catList = SPEC.CATEGORIES.slice(0, -1).join(', ') + ' and ' + SPEC.CATEGORIES[SPEC.CATEGORIES.length - 1];
 
 // ---------------------------------------------------------------- hero
@@ -44,6 +74,54 @@ function hero(E) {
 Okto MultiWave Synth has <b>two subtractive oscillators and one additive one</b> and mixes them: this manual is about the ${a ? 'subtractive pair' : 'additive oscillator'}; <a href="manual-${a ? 'b' : 'a'}.html">Manual ${a ? 'B' : 'A'}</a> describes the ${a ? 'additive oscillator' : 'subtractive pair'}.</p>
 <div class="hero-meta"><span class="pill">For the web app and the VST3 / VST2 plug-in for Windows</span><span class="pill">Version ${SPEC.APP.version} · ${SPEC.APP.date}</span><a class="pill other-${a ? 'b' : 'a'}" href="manual-${a ? 'b' : 'a'}.html">Oscillator${a ? ' B1 — read Manual B' : 's A1 · A2 — read Manual A'}</a></div>
 </header>`;
+}
+
+// ---------------------------------------------------------------- 0. what this synthesizer is, and what wavelets are (the first section of both manuals)
+// One line for each of the seven wavelets of SPEC.WAVELETS (same order): what you hear, in the words of the chapters below. The taps and the vanishing moments are computed from the wavelet's filter.
+const WAVELET_LINES = [
+  'A square step: sharp and digital. Its atoms are square waves, so a square wave is a single atom of it.',
+  'Short and lopsided: gritty, a little metallic.',
+  'A good all-rounder with mild, asymmetric ringing.',
+  'Longer and smoother: filter sweeps start to sound analogue.',
+  'The same length and smoothness as Daubechies 8, but nearly symmetric: cleaner, more balanced edges.',
+  'Nearly symmetric and very smooth for its length.',
+  'Long and almost sine-like: each band is close to a pure octave of harmonics, the most "Fourier-like" of the seven.',
+];
+function introChapter(E) {
+  const a = isA(E);
+  if (WAVELET_LINES.length !== SPEC.WAVELETS.length) throw new Error('manual: WAVELET_LINES does not match SPEC.WAVELETS');
+  const hrefA = a ? '#tone' : 'manual-a.html#tone', hrefB = a ? 'manual-b.html#tone' : '#tone';
+  const wtable = table(['Wavelet', 'Taps', 'Vanishing moments', 'What you hear'], SPEC.WAVELETS.map((w, i) => [`<b>${w.name}</b>`, String(w.h.length), String(vanishing(w.h)), WAVELET_LINES[i]]), 'compact');
+  return `<p><b>Okto MultiWave Synth</b> is a polyphonic synthesizer whose sounds are made of <b>wavelets</b> instead of sine waves. If you know subtractive synthesis — oscillator, filter, envelope — you already know the shape of its signal path; what is new is what an oscillator is made of, and what its filter takes away. This chapter explains both in plain words, then follows a note from the oscillators to the output. The chapters after it are the hands-on guide and the reference.</p>
+<h3 id="intro-wavelets">What is a wavelet?</h3>
+<p>A steady sound repeats a cycle, and the classic way to describe a cycle is <b>Fourier's</b>: a sum of sine waves, the harmonics, each lasting the whole cycle. Additive synthesis adds such sines, and an ordinary filter is a gain for each frequency. A sine knows exactly <em>which</em> frequency it is, but not <em>where</em> in the cycle: it is everywhere at once.</p>
+<p>A <b>wavelet</b> is a short wave that starts, wiggles a few times and dies away: it lives in one place. A wavelet description builds the cycle from copies of <em>one</em> such shape, called <b>atoms</b>, that differ in two ways only: their <b>scale</b> (their size; each scale is half as long as the one before, one octave finer) and their <b>position</b> in the cycle. One atom is one wavelet at one scale and one position, so it is localised in frequency (its octave) <em>and</em> in time (its place in the cycle) — which a sine cannot be.</p>
+<p>In this instrument one cycle is 2048 samples and has <b>11 scales</b>, called <b>bands</b>. Band 1 holds one atom as long as the cycle, band 2 two atoms half as long, band 3 four, and so on up to band 11 with 1024 atoms two samples apart: 2047 atoms in all. A band covers about one octave of harmonics — band 1 the fundamental, band 2 the 2nd harmonic, band 3 harmonics 3–4, band 4 harmonics 5–8 … — and the cycle is stretched to the pitch of the note, so the bands follow the note.</p>
+${figInline(`intro-tiling-${E}`, '<b>Figure 1.</b> Left: in the Fourier view each harmonic lasts the whole cycle. Right: the wavelet view cuts each band into atoms that sit at definite places in the cycle; the shading shows how big the atoms of a sawtooth are (Daubechies 4).')}
+<p>The <b>discrete wavelet transform</b> (DWT) finds how much of each atom a cycle contains: with a pair of short filters (the wavelet) it splits the cycle into a coarse half and a detail half, keeps the detail as the atoms of the finest band, and repeats on the coarse half. The <b>inverse transform</b> adds the atoms back up and returns the cycle exactly. Between the two you can change the atoms — silence a whole band, keep only the strongest, turn some up — and what comes out is the same cycle with exactly that change.</p>
+${figInline(`decomp-${E}`, '<b>Figure 2.</b> One sawtooth cycle, its 11 bands (the atoms of each band put back as a waveform: the fine bands have atoms only where the wave needs them, at the jump) and their sum, which is the cycle again.')}
+<p>That is the whole trick of the instrument. A <b>scale filter</b> does not cut frequencies: it turns bands — octaves — up and down; and because atoms have a place, it can also act on one part of the cycle only. The shape of the atom, the wavelet itself, colours what the filter leaves.</p>
+<h3 id="intro-seven">The seven wavelets</h3>
+<p>Every oscillator has its own WAVELET: the shape of its atoms. <em>Taps</em> is the length of the wavelet's filter, the number of samples an atom spans at the finest scale; <em>vanishing moments</em> is how many smooth shapes it ignores (1: a constant, 2: also a straight ramp …). The more it has, the fewer fine atoms a smooth wave needs: a sawtooth analysed with Daubechies 8 has only ${sparse(0, 3, 0).nz} non-zero atoms out of 2047, because the ramp makes no fine atoms and only its jump does. Short wavelets are precise in time and sound sharper; long ones separate the octaves cleanly. <a href="#wavelets">The wavelet chooses the atom</a> draws them.</p>
+${wtable}
+<h3 id="intro-synth">How the synthesizer works</h3>
+<p>Every note takes one <b>voice</b>. A voice has <b>three oscillators</b> — A1, A2 and B1 — a sub oscillator, a conventional filter and an amplifier; the effects are shared by all the voices. The three oscillators make their cycle out of atoms in two different ways, and the levels in <a href="#mix">OSC MIX</a> decide how much of each you hear (a new patch plays A1 alone).</p>
+<ul>
+<li><b>A1 and A2 are subtractive</b> (<a href="${hrefA}">details</a>). They start from a classic wave — saw, square, pulse, triangle, sine or a noise cycle — analyse it with their wavelet and keep every band as a separate layer. SPARSITY keeps only the strongest atoms and silences the rest, as a lossy codec does. SOURCE PHASE, WIDTH (the pulse width or the triangle's skew) and WAVELET MORPH change <em>what the atoms see</em>: the transform is not shift-invariant, so the same wave moved inside the cycle, or seen through another wavelet, is made of other atoms, and the filter, SPARSITY and the window then act on it differently. The <b>SCALE FILTER</b> finally gives each band a gain — low-pass, high-pass, band-pass or band-reject, with a slope, a resonance, key tracking, an envelope and velocity — and the <b>POSITION</b> window confines it to one part of the cycle.</li>
+<li><b>B1 is additive</b> (<a href="${hrefB}">details</a>). It analyses nothing: an atom <em>pattern</em> (ramp, mirror, alternate, Walsh, impulse or random) writes the atoms directly, an inverse transform turns every band into a layer, and 11 <b>drawbars</b> — one per band, as on an organ but with octave bands instead of harmonics — set the level of each band, TILT sloping them. Every band has its own envelope (SCALE ATTACK, SPREAD, BODY, BRIGHT, SCALE SUSTAIN), so the fine detail of a note can arrive late and die before its body, as in a real string or bell. The same SCALE FILTER and POSITION window shape the result.</li>
+<li><b>The layers are played, not recomputed.</b> The transform runs when you change something that alters the atoms (the wave, the wavelet, SPARSITY, the pattern …), in the background and with a crossfade. Every voice then reads the 11 layers like wavetables at the pitch of the note and multiplies each one by a gain: those 11 gains are what the SCALE FILTER sets, recomputed every 32 samples, so a sweep is smooth.</li>
+<li><b>The sub oscillator</b> is one sine, triangle or square, one or two octaves below the note, once per voice, outside the scale filters.</li>
+</ul>
+${figInline(`path-${E}`, '<b>Figure 3.</b> The signal path. In every voice the oscillators and the sub oscillator are mixed, filtered and shaped by the AMP ENVELOPE; the voices are then added and go through the effects, the master volume and the limiter. The modulation sources move the controls of all of it.')}
+<p>After the mix the voice goes through a conventional <b>FILTER</b>, a four-pole (24 dB per octave) resonant low-pass with its own envelope and two characters: <b>LADDER</b> (dark, gritty) and <b>OTA</b> (rounder, smoother). It cuts <em>frequencies</em>, where the SCALE FILTERs cut <em>scales</em>: use both. It is open by default. The <b>AMP ENVELOPE</b> and the velocity then shape the voice. <b>UNISON</b> stacks up to ${PK.v_unison.max} detuned copies of every oscillator, spread across the stereo field, and up to ${PK.v_voices.max} voices can sound at once (<a href="#voicefx">Voice, filter and effects</a>).</p>
+<p>The voices are added and go through <b>SATURATION</b>, a triple <b>CHORUS</b>, a ping-pong <b>DELAY</b> and a <b>REVERB</b>; the master <b>VOLUME</b>, an output guard and a soft limiter keep the result below 0 dBFS (<a href="#effects">Effects</a>).</p>
+<h3 id="intro-mod">Modulation</h3>
+<p>There are three envelopes: the <b>AMP ENVELOPE</b> (loudness), the <b>MOD ENVELOPE</b> (it moves the cutoff of every scale filter, and the wavelet morph) and the <b>FILTER ENVELOPE</b> (the cutoff of the voice FILTER); each oscillator also has its own envelope and a pitch envelope (<a href="#env">Envelopes</a>). <b>LFO 1</b> moves the pitch (vibrato), the scale cutoff, the window position, the wavelet morph, SPARSITY and the resonance. <b>LFO 2</b> and <b>LFO 3</b> each move <em>one control of your choice</em> (TARGET) — any control of the scale filters, the windows, the wavelet oscillators or the voice FILTER — in every oscillator at once (<a href="#lfo">LFO 1, LFO 2 and LFO 3</a>).</p>
+<p>When an LFO moves a <em>wavelet</em> control — a scale cutoff, the resonance, SPARSITY, the window, the source phase, the morph between two wavelets, the drawbar tilt … — the harmonics are re-coupled according to the wavelet, and the timbre swims in a way an ordinary filter sweep cannot. That is <b>SuperModulation</b>, and the first category of the presets (${SUPERMOD.length} sounds) is made of it: see <a href="#supermod">SuperModulation</a>.</p>
+<h3 id="intro-play">Playing it, and choosing sounds</h3>
+<p><b>CHORD MODE</b> turns the keyboard into a chord harp: one octave of keys chooses the chord type, and every key above it plays the whole chord with one finger, with a bass note if you like (<a href="#chord">Chord mode</a>). The <b>TUNING</b> switch gives the keyboard the quarter tones of Arabic music and the 53 commas of Turkish music, with a MAQAM and a TONIC (<a href="#oriental">Oriental keyboard</a>).</p>
+<p>The instrument opens on <b>${esc(SPEC.PRESETS[SPEC.DEFAULT_PRESET].name)}</b>. There are <b>${SPEC.PRESETS.length} presets</b>, all kept by their author, OktoPierre, after his own listening: <b>TOP Sounds</b> first, then the ${SPEC.CATEGORIES.length} categories. Click the name in the preset box to open the preset browser; in the plug-in it shows the author's stars at the right of every sound. Your own sounds go to the user bank (SAVE PRESET), and EXPORT / IMPORT carry them as files (<a href="#presets">Presets</a>).</p>
+<p>${a ? `This is Manual A: it describes the subtractive oscillators A1 and A2 in detail (<a href="#tone">The subtractive oscillators</a>); <a href="manual-b.html">Manual B</a> describes the additive oscillator B1.` : `This is Manual B: it describes the additive oscillator B1 in detail (<a href="#tone">The additive oscillator</a>); <a href="manual-a.html">Manual A</a> describes the subtractive oscillators A1 and A2.`} To start sounding at once, go to the <a href="#quick">Quick start</a>.</p>`;
 }
 
 // ---------------------------------------------------------------- 1. quick start
@@ -162,7 +240,7 @@ function oscillatorsChapter(E) {
 <ul>
 <li><b>One panel at a time.</b> The folder tabs ${ctl('OSC1 A1')} ${ctl('OSC2 A2')} ${ctl('OSC3 B1')} under the header choose the oscillator: they show one oscillator's cards on the plate (yellow for A1 and A2, blue for B1) while the other two keep their settings and keep sounding. A lit dot on a folder tab says its oscillator is heard (its level is above 0). Switching a tab never changes the sound and never marks a preset as modified. <b>OSC MIX</b> and the <b>SCOPE</b> are common to every oscillator, so they stay in place at the top right whatever tab is shown; the scope and the scalogram draw one cycle of the <em>whole</em> sound (every oscillator that plays, and the sub oscillator, at C4).</li>
 <li><b>Levels cost nothing at 0.</b> An oscillator whose level is 0 is not computed and its wave tables are not even built, so presets that use two oscillators cost about twice one — not three times. A level is smoothed over 20 ms, so it can be moved while playing.</li>
-<li><b>Every preset uses at least two oscillators</b> (the 22 TOP Sounds keep their one or two of the Wavelet Synthesizer). The letters in the names of the new presets — <code>A1A2</code>, <code>A1B1</code>, <code>A1A2B1</code> — say which.</li>
+<li><b>Most presets use two oscillators or more</b> (the ${SPEC.TOP} TOP Sounds that come from the Wavelet Synthesizer have one or two). The letters in the names of the other presets — <code>A1A2</code>, <code>A1B1</code>, <code>A2B1</code>, <code>A1A2B1</code> — say which.</li>
 </ul>
 <h3 id="mix">OSC MIX and SUB OSC</h3>
 ${controls(mix)}
@@ -183,12 +261,18 @@ ${controls([
 <p class="small muted">The table shows the ranges and defaults of A1's controls; A2 and B1 have the same ones. The own envelope has no effect while its switch is off.</p>
 <h3 id="ideas">Ideas, and presets to study</h3>
 ${table(['Idea', 'How', 'Look at'], [
-    ['A percussive attack', `One oscillator with its own envelope: a noise cycle played low (OCTAVE −2 or −3) through a high-pass at band 6–9, DECAY 20–40 ms, SUSTAIN 0; the other oscillator is the body.`, `${title('Pick Bass')}, ${title('Snare')}, ${title('Clap')}`],
-    ['A pitch drop', 'A sine with PITCH ENV +12 … +30 semitones and a TIME of 30–60 ms.', `${title('Kick')}, ${title('Sub Drop')}, ${title('Tom')}`],
-    ['A fat pair', 'Two oscillators of the same kind a few cents apart, or an octave apart with different cutoffs.', `${title('Reese Duo')}, ${title('Deep Saw Bass')}, ${title('Velvet Pad')}`],
-    ['Additive body, subtractive attack', 'B1 for the body (drawbars, atoms), A1 as a short, bright start.', `${title('Rhodes Warm')}, ${title('Dream Keys')}, ${title('Solo Violin')}`],
-    ['Two LFOs on the wavelet', 'LFO 2 on one wavelet control (the SPARSITY, the window position, the SOURCE PHASE …), LFO 3 on another, at unrelated speeds; then set their amounts to 0 one at a time to hear what each does.', fromBeta03('SuperModulation', 3)],
-    ['A real filter on top', 'The voice FILTER with an envelope: a low cutoff, some RESO and a positive ENV AMT with a short decay is the classic synth bass or pluck; aim LFO 3 at FILTER CUTOFF for a wah.', fromBeta03('Bass', 3, true)],
+    ['A percussive attack', `One oscillator with its own envelope: a noise cycle played low (OCTAVE −2 or −3) through a high-pass at band 6–9, DECAY 20–40 ms, SUSTAIN 0; the other oscillator is the body.`,
+      pick('a percussive own envelope', 3, p => p.cat === 'Drums & Perc' && [0, 1, 2].some(s => uses(p, s) && pv(p, SLK[s].eon) >= 0.5 && pv(p, SLK[s].es) === 0 && pv(p, SLK[s].ed) < 0.15))],
+    ['A pitch drop', 'A sine with PITCH ENV +12 … +30 semitones and a TIME of 30–60 ms.',
+      pick('a pitch envelope of +12 semitones or more', 3, p => p.cat === 'Drums & Perc' && [0, 1, 2].some(s => uses(p, s) && pv(p, SLK[s].pamt) >= 12))],
+    ['A fat pair', 'Two oscillators of the same kind a few cents apart, or an octave apart with different cutoffs.',
+      pick('two detuned subtractive oscillators', 3, p => (p.cat === 'Bass' || p.cat === 'Pad') && uses(p, 0) && uses(p, 1) && pv(p, SLK[0].oct) === pv(p, SLK[1].oct) && Math.abs(pv(p, SLK[0].fine) - pv(p, SLK[1].fine)) >= 4)],
+    ['Additive body, subtractive attack', 'B1 for the body (drawbars, atoms), A1 as a short, bright start.',
+      pick('A1 with its own envelope under B1', 3, p => uses(p, 0) && uses(p, 2) && !uses(p, 1) && pv(p, SLK[0].eon) >= 0.5)],
+    ['Two LFOs on the wavelet', 'LFO 2 on one wavelet control (the SPARSITY, the window position, the SOURCE PHASE …), LFO 3 on another, at unrelated speeds; then set their amounts to 0 one at a time to hear what each does.',
+      pick('LFO 2 and LFO 3 both on', 3, p => p.cat === 'SuperModulation' && pv(p, 'lfo2_amt') > 0 && pv(p, 'lfo3_amt') > 0)],
+    ['A real filter on top', 'The voice FILTER with an envelope: a low cutoff, some RESO and a positive ENV AMT with a short decay is the classic synth bass or pluck; aim LFO 3 at FILTER CUTOFF for a wah.',
+      pick('a bass with the FILTER and its envelope', 3, p => p.cat === 'Bass' && pv(p, 'vf_cut') < PK.vf_cut.max && pv(p, 'vf_env') > 0)],
   ], 'compact')}`;
 }
 
@@ -196,6 +280,7 @@ ${table(['Idea', 'How', 'Look at'], [
 function toneChapter(E) {
   const a = isA(E), k = a ? SLK[0] : SLK[2];
   const wavelets = SPEC.WAVELETS.map(w => w.h.length);
+  const F = a ? { sparse: 4, atoms: 5 } : { tiling: 4, patterns: 5, env: 6, atoms: 7 };   // figure numbers, in the order of the page: Figures 1-3 are in the introduction
   const wdesc = a ? [
     'A square step up and down: sharp, digital, 8-bit; every removed band halves the number of steps of the wave.',
     'Short and lopsided: asymmetric ringing, gritty and slightly metallic.', 'A good all-rounder with mild, asymmetric ringing.',
@@ -208,11 +293,11 @@ function toneChapter(E) {
     'Nearly symmetric and very smooth for its length.', 'Each RAMP band is practically a sine at its octave: the cleanest drawbar-organ sound.',
   ];
   const wtable = table(['Wavelet', 'Taps', 'Character'], SPEC.WAVELETS.map((w, i) => [`<b>${w.name}</b>`, String(wavelets[i]), wdesc[i]]), 'compact');
-  const bands = `<p>Every oscillator plays <b>one cycle of 2048 samples</b>, analysed by a periodic wavelet transform into <b>11 bands</b>: band <i>b</i> has 2<sup><i>b</i>−1</sup> atoms and covers about one octave of harmonics (band 1 the fundamental, band 2 the 2nd harmonic, band 3 harmonics 3–4, band 4 harmonics 5–8 …). The analysis is pitch-synchronous, so the bands follow the note. To keep high notes alias-free each band is stored in octave-wise band-limited versions: <b>the finest bands only exist on low notes</b> — at middle C only bands 1–7 are played, at C2 bands 1–9. The SCALOGRAM draws the atoms of the 11 bands of the oscillator shown (B1 at the bottom).</p>
-${a ? figInline('tiling-a', '<b>Figure 1.</b> Left: in the Fourier view each harmonic spans the whole cycle. Right: the 11 bands of one cycle, shaded by the atoms of a SAW analysed with Daubechies 4.') : figInline('tiling-b', '<b>Figure 1.</b> The 11 bands of one cycle: 1 to 1024 atoms. An atom pattern (RAMP, MIRROR, …) writes which atoms exist; the drawbars set how loud each band is.')}`;
+  const bands = `<p>Every oscillator plays <b>one cycle of 2048 samples</b>, analysed by a periodic wavelet transform into <b>11 bands</b>: band <i>b</i> has 2<sup><i>b</i>−1</sup> atoms and covers about one octave of harmonics (band 1 the fundamental, band 2 the 2nd harmonic, band 3 harmonics 3–4, band 4 harmonics 5–8 …). The analysis is pitch-synchronous, so the bands follow the note. To keep high notes alias-free each band is stored in octave-wise band-limited versions: <b>the finest bands only exist on low notes</b> — at middle C only bands 1–7 are played, at C2 bands 1–9. The SCALOGRAM draws the atoms of the 11 bands of the oscillator shown (B1 at the bottom).${a ? ' <a href="#intro-wavelets">Figure 1</a> draws the bands.' : ''}</p>
+${a ? '' : figInline('tiling-b', `<b>Figure ${F.tiling}.</b> The 11 bands of one cycle: 1 to 1024 atoms. An atom pattern (RAMP, MIRROR, …) writes which atoms exist; the drawbars set how loud each band is.`)}`;
   const wl = `<h3 id="wavelets">The wavelet chooses the atom</h3>
 <p>Each oscillator has its own ${ctl('WAVELET')} (the step control under the atom picture): seven classic wavelets from the 2-tap Haar step to the 40-tap Daubechies 20. Short wavelets are precise in time — sharp edges, crisp POSITION window borders — but their bands overlap; long wavelets separate the octaves cleanly. ${a ? 'For sweeps that sound like a conventional filter choose Daubechies 8 or longer; for stepped, digital colours Haar or Daubechies 2.' : 'For a clean, organ-like staircase choose Daubechies 8 or longer; for hard, chip-like bands Haar.'}</p>
-${fig(`atoms-${E}.svg`, '<b>Figure 2.</b> One atom of each wavelet, as the ATOM SHAPE display draws it. “Taps” is the length of the wavelet filter.')}
+${fig(`atoms-${E}.svg`, `<b>Figure ${F.atoms}.</b> One atom of each wavelet, as the ATOM SHAPE display draws it. “Taps” is the length of the wavelet filter.`)}
 ${wtable}
 <p><b>WAVELET MORPH</b> builds every oscillator with a second wavelet too (${ctl('WAVELET 2')}) and moves between the two with ${P('wmorph')}, LFO 1 (its ${ctl('WAVELET')} knob) and the mod envelope (${ctl('ENV&gt;WAV')}); it acts on each oscillator that plays and is heard where the wavelet shapes the sound.</p>`;
   let body;
@@ -240,7 +325,7 @@ ${table(['Wave', 'One cycle', 'Character'], [
 ${fig('haar-square.png', '<b>Haar + SQUARE:</b> a single atom, in band 1.', 'shot')}${fig('db20-square.png', '<b>Daubechies 20 + SQUARE:</b> atoms in every band, clustered at the two edges.', 'shot')}</div>
 <h3 id="sparsity">Sparsity</h3>
 <p>Keeping only the K largest atoms is what wavelet lossy codecs do to save bits; here it is a timbre control. The range is relative to the wave: a SAW analysed with Daubechies 8 has only ${sparse(0, 3, 0).nz} non-zero atoms (a straight ramp needs no fine atoms, only the jump does). SPARSITY keeps K = nz<sup>1 − SPARSITY</sup> of them, so the knob does something over its whole range for every wave; sources that need few atoms change in clear jumps.</p>
-${fig('sparsity-a.svg', `<b>Figure 3.</b> A SAW analysed with Daubechies 8 (${sparse(0, 3, 0).nz} non-zero atoms) at five SPARSITY settings (grey = the original).`)}
+${fig('sparsity-a.svg', `<b>Figure ${F.sparse}.</b> A SAW analysed with Daubechies 8 (${sparse(0, 3, 0).nz} non-zero atoms) at five SPARSITY settings (grey = the original).`)}
 ${wl}`;
   } else {
     const rows = [
@@ -258,8 +343,8 @@ ${wl}`;
     body = `<p>A <b>B</b> oscillator builds its sound from atoms: a pattern writes the coefficients of the 11 bands, the drawbars (with TILT) set their levels, and a <b>scale envelope</b> gives every band its own time behaviour — before the oscillator's filter, window, own envelope and the AMP ENVELOPE shape the whole.</p>
 ${bands}
 ${controls(rows)}
-${fig('patterns-b.svg', '<b>Figure 3.</b> The six atom patterns, drawn with the same drawbars.')}
-${fig('scaleenv-b.svg', '<b>Figure 4.</b> The scale envelope: the level of each band over the life of a note (BODY, BRIGHT, SPREAD, SCALE ATTACK).')}
+${fig('patterns-b.svg', `<b>Figure ${F.patterns}.</b> The six atom patterns, drawn with the same drawbars.`)}
+${fig('scaleenv-b.svg', `<b>Figure ${F.env}.</b> The scale envelope: the level of each band over the life of a note (BODY, BRIGHT, SPREAD, SCALE ATTACK).`)}
 ${fig('organ.png', 'B1 with a RAMP pattern: the drawbars at their positions, the scope and the scalogram.', 'shot')}
 ${wl}`;
   }
@@ -324,7 +409,7 @@ ${controls([
 
 // ---------------------------------------------------------------- 7. LFOs
 function lfoChapter() {
-  return `<p>Three LFOs: <b>LFO 1</b>, and <b>LFO 2</b> and <b>LFO 3</b>, which share a card (the small ${ctl('2 | 3')} switch next to its title shows one or the other). They are shared by all voices and oscillators and run freely (not restarted by new notes): in a chord every voice moves together. For a movement that starts with each note use the MOD ENVELOPE.</p>
+  return `<p>Three LFOs: <b>LFO 1</b>, and <b>LFO 2</b> and <b>LFO 3</b>, which share one card (its ${ctl('2')} and ${ctl('3')} selector chooses the one you see and edit; both keep running). They are shared by all voices and oscillators and run freely (not restarted by new notes): in a chord every voice moves together. For a movement that starts with each note use the MOD ENVELOPE.</p>
 <h3 id="lfo1">LFO 1</h3>
 ${controls([
     ['lfo_shape', `${ctl('SINE')}, ${ctl('TRI')}, ${ctl('SAW')}, ${ctl('SQR')} or ${ctl('S&amp;H')} (sample &amp; hold: a new random value per cycle).`, ''],
@@ -340,20 +425,20 @@ ${controls([
 <h3 id="lfo2">LFO 2 and LFO 3</h3>
 <p>LFO 2 and LFO 3 are the same LFO twice: each moves <b>one control, in every oscillator at once</b>, by the same amount: the one chosen in its ${ctl('TARGET')} menu — ${ctl('CUTOFF')}, ${ctl('SLOPE')}, ${ctl('RESO')}, ${ctl('KEY TRK')}, ${ctl('ENV AMT')} or ${ctl('VEL AMT')} of the scale filters, ${ctl('POSITION')}, ${ctl('WIDTH')} or ${ctl('DEPTH')} of the windows, the ${ctl('PHASE')}, ${ctl('SPARSITY')} or ${ctl('SRC WIDTH')} of the subtractive oscillators, the ${ctl('TILT')}, ${ctl('ODD BARS')}, ${ctl('EVEN BARS')} or ${ctl('SCALE SUS')} of the additive ones, the ${ctl('MORPH')} between two wavelets, or the ${ctl('FILTER CUTOFF')} or ${ctl('FILTER RESONANCE')} of the voice FILTER: every control of the wavelet oscillators, of the scale filter and of the voice filter. Each oscillator keeps its own base value; the LFO moves them in step. The two LFOs can aim at different controls (two independent movements) or at the same one (their moves add up). A target acts on <em>every</em> oscillator that has the control, and cannot be limited to one: aim it at a control that only one kind has (SPARSITY, PHASE or SRC WIDTH for the subtractive oscillators; TILT, ODD BARS, EVEN BARS or SCALE SUS for the additive one) to move that kind only.</p>
 ${controls([
-    ['lfo2_target', 'What LFO 2 moves (the menu next to its title; the mouse wheel steps through it). LFO 3 has the same menu.', 'LFO 1 already has CUTOFF and POSITION: give LFO 2 another target for two independent movements.'],
-    ['lfo2_shape', 'The same five shapes as LFO 1.', ''],
+    ['lfo2_target', 'What LFO 2 moves (a menu; the mouse wheel steps through it). LFO 3 has the same menu.', 'LFO 1 already has CUTOFF and POSITION: give LFO 2 another target for two independent movements.'],
+    ['lfo2_shape', lfoShape('lfo2_shape'), ''],
     ['lfo2_rate', 'Speed, independent of LFO 1; note values with SYNC in the plug-in.', 'A rate that does not divide LFO 1\'s makes the two drift against each other.'],
     ['lfo2_amt', 'How far the target moves: up to ± this share of half its range, kept in range (FILTER CUTOFF: half of its ten octaves, so 30 % is about ± 1.5 octaves). 0 % (the default) switches LFO 2 off.', 'Start around 20–30 %.'],
     ['lfo3_target', 'What LFO 3 moves: the same menu as LFO 2. When both aim at the same control their moves add.', 'Use LFO 3 for a second control of the wavelet oscillators: LFO 2 on SPARSITY, LFO 3 on the WINDOW position, for instance.'],
-    ['lfo3_shape', 'The same five shapes.', ''],
+    ['lfo3_shape', lfoShape('lfo3_shape'), ''],
     ['lfo3_rate', 'Speed, independent of the two other LFOs; note values with SYNC in the plug-in.', 'Rates that do not divide each other make the LFOs drift apart.'],
     ['lfo3_amt', 'How far the target moves, as for LFO 2. 0 % (the default) switches LFO 3 off.', ''],
   ])}
 <p><b>PHASE, SPARSITY and SRC WIDTH</b> (SOURCE WIDTH: the pulse width of a PULSE source or the skew of a TRI one) change what the wavelet transform sees, so the subtractive oscillators' tables are built at several values — 12 phases round the cycle, 9 sparsities from 0 to 100 %, 9 widths from 2 to 98 % (about 1 MB per set) — and each voice crossfades between the two nearest: a smooth scan through the timbres. At AMOUNT 0 nothing extra is built. One kind of scan per oscillator at a time: SPARSITY (from LFO 1, LFO 2 or LFO 3) comes first, then PHASE, then SRC WIDTH. TILT, ODD BARS, EVEN BARS and SCALE SUS move the additive oscillators' drawbars (odd = bands 1, 3, 5 …; even = bands 2, 4, 6 …) and the level their bands decay to; MORPH adds to the WAVELET MORPH position. <b>FILTER CUTOFF</b> moves the cutoff of the voice FILTER (in octaves: the whole range is ten octaves) and <b>FILTER RESONANCE</b> its resonance; either one switches the filter on, even while its own settings are open.</p>
 <h3 id="supermod">SuperModulation</h3>
-<p>The idea of the instrument is that every timbre control acts on the <em>scales</em> of one cycle of the wave — and so can an LFO, while the note sounds. Moving the cutoff of a scale filter, the resonance, the SPARSITY, the window, the SOURCE PHASE or the morph between two wavelets does not sweep a Fourier filter: the harmonics are re-coupled according to the wavelet, so the timbre swims in a way an ordinary filter sweep does not. The <b>SuperModulation</b> section of the presets (the first one in the lists, ${SUPER.length} sounds) is made of such sounds: two oscillators of very different character, and LFO 1, LFO 2 and LFO 3 each moving one to three of these controls at unrelated speeds. In every preset of beta 0.3, LFO 2 and / or LFO 3 move wavelet controls — mostly of the subtractive oscillators — and the SuperModulation ones use both. Open one, then set the amounts of the LFOs to 0 one by one to hear what each does.</p>
+<p>The idea of the instrument is that every timbre control acts on the <em>scales</em> of one cycle of the wave — and so can an LFO, while the note sounds. Moving the cutoff of a scale filter, the resonance, the SPARSITY, the window, the SOURCE PHASE or the morph between two wavelets does not sweep a Fourier filter: the harmonics are re-coupled according to the wavelet, so the timbre swims in a way an ordinary filter sweep does not. The <b>SuperModulation</b> category of the presets (the first one in the lists, ${SUPERMOD.length} sounds) is made of such sounds: oscillators of different character and LFOs that move several of these controls at unrelated speeds. LFO 2 and / or LFO 3 are on a control in ${N_LFO23} of the ${SPEC.PRESETS.length} factory presets (${N_SM_LFO23} of the ${SUPERMOD.length} SuperModulation ones). Open one, then set the amounts of the LFOs to 0 one by one to hear what each does.</p>
 <h3 id="lfo-sync">Tempo sync (plug-in only)</h3>
-<p>In the plug-in a ${ctl('SYNC')} button sits at the right of the LFO 1 title, on the LFO 2/3 card (one for each of the two LFOs) and at the delay heading. Lit, the RATE (or the delay's TIME) becomes a note value at the host's tempo (120 BPM when the host gives none) and follows its tempo changes. The note values run from ${PK.lfo_div.choiceShort[0]} to ${PK.lfo_div.choiceShort[PK.lfo_div.choiceShort.length - 1]} for the LFOs and ${PK.fx_ddiv.choiceShort[0]} to ${PK.fx_ddiv.choiceShort[PK.fx_ddiv.choiceShort.length - 1]} for the delay (T = triplet, D = dotted). SYNC sets the speed only; the LFO is not restarted on the beat. SYNC is off by default, and the web app has none (a browser page has no tempo).</p>`;
+<p>In the plug-in a ${ctl('SYNC')} button belongs to LFO 1, to LFO 2 and to LFO 3 (each has its own) and to the delay. Lit, the RATE (or the delay's TIME) becomes a note value at the host's tempo (120 BPM when the host gives none) and follows its tempo changes. The note values run from ${PK.lfo_div.choiceShort[0]} to ${PK.lfo_div.choiceShort[PK.lfo_div.choiceShort.length - 1]} for the LFOs and ${PK.fx_ddiv.choiceShort[0]} to ${PK.fx_ddiv.choiceShort[PK.fx_ddiv.choiceShort.length - 1]} for the delay (T = triplet, D = dotted). SYNC sets the speed only; the LFO is not restarted on the beat. SYNC is off by default, and the web app has none (a browser page has no tempo).</p>`;
 }
 
 // ---------------------------------------------------------------- 8. voice and effects
@@ -371,7 +456,7 @@ ${controls([
   ])}
 <p>When all voices are busy a new note takes the oldest released voice first, then the oldest held one. Each note plays at about −8 dB to leave headroom for chords. A preset can switch mono ↔ poly; a note off always finds its voice.</p>
 <h3 id="flt">FILTER</h3>
-<p>The <b>FILTER</b> card (under the plate, left of the AMP ENVELOPE) is a conventional filter in every voice: a <b>four-pole (24 dB per octave) resonant low-pass</b> that works on the voice <em>after</em> its oscillators are mixed and <em>before</em> its AMP ENVELOPE. It cuts <em>frequencies</em>, on top of the SCALE FILTERs, which cut scales. Two characters, chosen with the ${ctl('LADDER')} | ${ctl('OTA')} switch: <b>LADDER</b> saturates at every stage — dark and gritty, and the resonance thins the low end as it rises; <b>OTA</b> saturates only the input of its feedback loop and keeps part of the low end — rounder and smoother. The cutoff a voice uses is <code>CUTOFF × 2<sup>ENV AMT × 8 × FILTER ENVELOPE + KEY TRK × (note − C4) ÷ 12 + LFO 2 + LFO 3</sup></code> (the exponent is in octaves). <b>It is open by default</b> (CUTOFF at its maximum, no resonance, no drive, no envelope): then it is not even computed, and every sound made before it exists is unchanged. Turning any of its controls, or aiming an LFO at it, switches it on.</p>
+<p>The <b>FILTER</b> card (below the plate, next to the AMP ENVELOPE) is a conventional filter in every voice: a <b>four-pole (24 dB per octave) resonant low-pass</b> that works on the voice <em>after</em> its oscillators are mixed and <em>before</em> its AMP ENVELOPE. It cuts <em>frequencies</em>, on top of the SCALE FILTERs, which cut scales. Two characters, chosen with the ${ctl('LADDER')} | ${ctl('OTA')} switch: <b>LADDER</b> saturates at every stage — dark and gritty, and the resonance thins the low end as it rises; <b>OTA</b> saturates only the input of its feedback loop and keeps part of the low end — rounder and smoother. The cutoff a voice uses is <code>CUTOFF × 2<sup>ENV AMT × 8 × FILTER ENVELOPE + KEY TRK × (note − C4) ÷ 12 + LFO 2 + LFO 3</sup></code> (the exponent is in octaves). <b>It is open by default</b> (CUTOFF at its maximum, no resonance, no drive, no envelope): then it is not even computed and costs nothing. Turning any of its controls, or aiming an LFO at it, switches it on.</p>
 ${controls([
     ['vf_type', `${ctl('LADDER')}: every stage saturates, the resonance takes the low end away; ${ctl('OTA')}: only the input of the loop saturates, the low end is partly kept.`, 'LADDER for gritty basses and leads, OTA for rounder pads and keys.'],
     ['vf_cut', 'The frequency above which the sound is attenuated (24 dB per octave); exponential scale, 20 Hz to 20 kHz. At the top it is open.', 'Play a note and sweep it; add RESO for the classic wah.'],
@@ -399,13 +484,13 @@ ${controls([
 
 // ---------------------------------------------------------------- 9. chord mode
 function chordChapter() {
-  return `<p>The <b>CHORD MODE</b> button of the <b>PLAY</b> card (above the keyboard, at the right) turns the keyboard into a <b>chord harp</b>: the panel grows and the <b>CHORD KEYBOARD</b> card appears below it. With CHORD MODE off the card is not shown and the keyboard plays plain notes.</p>
+  return `<p>The <b>CHORD MODE</b> button of the <b>PLAY</b> card (above the keyboard) turns the keyboard into a <b>chord harp</b>: the panel grows and the <b>CHORD KEYBOARD</b> card appears below it. With CHORD MODE off the card is not shown and the keyboard plays plain notes.</p>
 ${fig('chord-card.png', 'The CHORD KEYBOARD card with G major 7 held (FOLDED) and a string of the strum plate touched.', 'shot')}
 <ul>
 <li><b>One octave chooses the chord type</b> and makes no sound: ${ctl('KEYS OCT')} (C3–B3 by default, tinted purple on the keyboard). Every key <b>above</b> it plays the whole chord with one finger; keys pressed while the root is held play as themselves; keys <b>below</b> it play a bass line.</li>
 <li><b>Twelve pads</b> in the layout of the selector octave — Maj, Min, 7, m7, Maj7, Sus2, Sus4, Dim, Aug, 5, Add9, Note: the white keys carry the major and bright chords, the black keys the minor, altered or bare ones. A click on a pad chooses the type and switches CHORD MODE on. ${SPEC.CHORDS.length} chord types in all (the Chord Type parameter has the others: 6, m6, m7b5, dim7, 9, m9, maj9, 7sus4, mMaj7, 6/9).</li>
 <li>${ctl('VOICING')}: ${ctl('STACKED')} (root + intervals) or ${ctl('FOLDED')} (the chord's notes inside the octave of the root, as on an electronic chord harp); ${ctl('STRUM')} (0–100 ms) starts the notes one after the other; the <b>strum plate</b> strums the chord with the mouse.</li>
-<li>${ctl('BASS')} (the button under CHORD MODE, <b>on by default</b>) adds a bass note with every chord: the root <b>two octaves below</b>, a little louder (+3 dB), never lower than C1. A chord keeps the level of a triad whatever its size (the notes of a seventh with its bass are turned down a little), so chords never press on the limiter.</li>
+<li>${ctl('BASS')} (a button of the PLAY card, <b>on by default</b>) adds a bass note with every chord: the root <b>two octaves below</b>, a little louder (+3 dB), never lower than C1. A chord keeps the level of a triad whatever its size (the notes of a seventh with its bass are turned down a little), so chords never press on the limiter.</li>
 <li><b>The chord follows the left hand.</b> Hold a note with the right hand and press another chord on the selector octave: the held chord changes <i>at once</i>, even for the note already pressed. Only the notes of the chord now played sound — the notes that are not in the new chord fade out in a few milliseconds, the ones the two chords share go on without being played again. The left hand has a <b>memory</b>: the last chord chosen stays chosen after its key is released and applies to the next right-hand note. Clicking a pad, ${ctl('VOICING')} or ${ctl('BASS')} while a note is held changes the held chord the same way.</li>
 <li>The chord's notes are ordinary notes: sustain, portamento, voice allocation and every sound parameter work as usual, and a chord never uses more voices than VOICES. A note shared by the chord and a held key sounds until both release it.</li>
 <li>The chord settings are plug-in parameters (automatable, saved with the Live Set) but <b>never part of a preset</b>: loading a sound does not change how you play. A selector key updates the Chord Type parameter.</li>
@@ -415,13 +500,13 @@ ${fig('chord-card.png', 'The CHORD KEYBOARD card with G major 7 held (FOLDED) an
 // ---------------------------------------------------------------- 9b. oriental keyboard
 function orientalChapter() {
   const sc = SPEC.PARAMS[SPEC.PARAMS.findIndex(p => p.key === 'mt_scale')].choices;
-  return `<p>Beta 0.2 adds an <b>oriental keyboard</b> with quarter tones, as on the oriental keyboards of Yamaha. The three-position switch ${ctl('TUNING')} sits in the <b>PLAY</b> card, to the right of CHORD MODE:</p>
+  return `<p>The <b>oriental keyboard</b> plays quarter tones, as arranger keyboards with oriental scales do. The three-position switch ${ctl('TUNING')} sits in the <b>PLAY</b> card:</p>
 <ul>
 <li>${ctl('WEST')} — equal temperament, as always (the default).</li>
 <li>${ctl('ARAB')} — the <b>Arabic</b> tuning: 24 tones to the octave, the quarter tone being 50 cents. The keys that are half-flat in the scale chosen are lowered by a quarter tone.</li>
 <li>${ctl('TURK')} — the <b>Turkish</b> tuning of the makams: 53 commas to the octave (a comma is 22.6 cents; the values of the Arel-Ezgi-Uzdilek system), so a third or a seventh is a comma or two away from the Western one.</li>
 </ul>
-<p>Outside WEST two more controls show in the PLAY card, under the switch: ${ctl('MAQAM')} chooses the scale (${sc.join(', ')}) and ${ctl('TONIC')} the key it starts on (the scale is moved to it: Rast on D is Rast starting at D). The keys the tuning moves carry a small amber arrow on the keyboard (pointing down: lower than the piano key). A key that is not a degree of the scale keeps its piano pitch, so the sharps and flats you need stay in tune.</p>
+<p>Outside WEST two more controls show in the PLAY card: ${ctl('MAQAM')} chooses the scale (${sc.join(', ')}) and ${ctl('TONIC')} the key it starts on (the scale is moved to it: Rast on D is Rast starting at D). The keys the tuning moves carry a small amber arrow on the keyboard (pointing down: lower than the piano key). A key that is not a degree of the scale keeps its piano pitch, so the sharps and flats you need stay in tune.</p>
 <ul>
 <li>Every note follows the tuning: the keys, the chord harp's notes (a chord on Rast has its half-flat third), the sub oscillator, the notes a MIDI file plays — except the <b>demo</b> and <b>EVALUATE SOUNDS</b>, which always play in equal temperament so that they are not out of tune with the music.</li>
 <li>TUNING, MAQAM and TONIC are <em>playing</em> settings, like CHORD MODE: they are automatable parameters, saved with the Live Set, and never part of a preset.</li>
@@ -432,33 +517,48 @@ function orientalChapter() {
 
 // ---------------------------------------------------------------- 10. presets
 const oscOf = p => SL.filter(s => p.values[s.k.lvl] > 0).map(s => s.name).join(' + ');   // SPEC.SLOTS holds parameter indices
+// the one-line description of a preset: the TOP Sounds of the Wavelet Synthesizer have theirs in top_desc.js, the others in the spec
+const descOf = p => {
+  const d = SPEC.PRESETS.indexOf(p) < SPEC.TOP ? (TOP_DESC[p.name] || [])[1] : SPEC.DESCRIPTIONS[p.name];
+  if (!d) console.warn('manual: no description for ' + p.name);
+  return (d || '').replace(/^./, c => c.toUpperCase());
+};
 function presetTable() {
-  const head = ['Preset', 'Oscillators', 'Sound'];
+  const star = p => (TOP_NAMES.has(p.name) ? '<span class="fav" title="In TOP Sounds">★</span> ' : '');
+  const opens = p => (p.name === SPEC.PRESETS[SPEC.DEFAULT_PRESET].name ? ' <span class="small muted">(the synth opens here)</span>' : '');
+  const th = h => `<thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead>`;
+  // TOP Sounds, in their order
+  const topRows = TOP_LIST.map(i => { const p = SPEC.PRESETS[i]; return `<tr><td>${esc(p.name)}${opens(p)}</td><td class="small">${p.cat}</td><td class="small">${oscOf(p)}</td><td>${starsOf(p)}</td></tr>`; }).join('');
+  // the categories, in the factory order: the sounds of the Wavelet Synthesizer first, then the others from the best rated to the least rated
   let body = '';
   for (const cat of SPEC.CATEGORIES) {
     const list = SPEC.PRESETS.filter(p => p.cat === cat);
     if (!list.length) continue;
-    body += `<tr class="cat"><td colspan="${head.length}">${cat} · ${list.length}</td></tr>`;
-    for (const p of list) {
-      const top = SPEC.PRESETS.indexOf(p) < SPEC.TOP;
-      const d = top ? TOP_DESC[p.name][1] : (SPEC.DESCRIPTIONS[p.name] || '');
-      if (!d) console.warn('manual: no description for ' + p.name);
-      const star = top ? '<span class="fav" title="One of OktoPierre\'s TOP Sounds">★</span> ' : '';
-      const def = p.name === SPEC.PRESETS[SPEC.DEFAULT_PRESET].name ? ' <span class="small muted">(default sound)</span>' : '';
-      body += '<tr>' + [star + p.name + def, `<span class="small">${oscOf(p)}</span>`, d.replace(/^./, c => c.toUpperCase())].map(c => `<td>${c}</td>`).join('') + '</tr>';
-    }
+    body += `<tr class="cat"><td colspan="4">${cat} · ${list.length}</td></tr>`;
+    for (const p of list) body += `<tr><td>${star(p)}${esc(p.name)}${opens(p)}</td><td class="small">${oscOf(p)}</td><td>${starsOf(p)}</td><td>${descOf(p)}</td></tr>`;
   }
-  return `<div class="tbl"><table class="presets"><thead><tr>${head.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+  return `<h4 id="top-list">TOP Sounds · ${TOP_LIST.length}</h4>
+<div class="tbl"><table class="presets toplist">${th(['Preset', 'Category', 'Oscillators', 'Stars'])}<tbody>${topRows}</tbody></table></div>
+<h4 id="category-list">The ${SPEC.CATEGORIES.length} categories · ${SPEC.PRESETS.length} presets</h4>
+<div class="tbl"><table class="presets rated">${th(['Preset', 'Oscillators', 'Stars', 'Sound'])}<tbody>${body}</tbody></table></div>`;
 }
 function presetsChapter(E) {
-  return `<p>Okto MultiWave Synth has <b>${SPEC.PRESETS.length} factory presets</b>: OktoPierre's ${SPEC.TOP} <b>TOP Sounds</b> (unchanged from the Wavelet Synthesizer beta 0.7: they sound exactly as there, from <b>${SPEC.PRESETS[0].name}</b> to <b>${SPEC.PRESETS[SPEC.TOP - 1].name}</b>) and <b>${SPEC.NEW_COUNT} new presets</b>: <b>${N03} of beta 0.3</b> (numbers <code>${firstNo03}</code>–<code>${lastNo03}</code>: ${Math.round(N03 / SPEC.CATEGORIES.length)} in each of the ${SPEC.CATEGORIES.length} categories), in which LFO 2 and / or LFO 3 move wavelet controls of the oscillators (mostly of the subtractive ones) and about two in three also use the new voice FILTER; <b>${N02} of beta 0.2</b> (numbers <code>201</code>–<code>500</code>), in which LFO 1 and LFO 2 move the controls of the wavelet oscillators and A1 and A2 are very different from each other; and <b>${N01} of beta 0.1</b> (<code>001</code>–<code>200</code>, unchanged), sorted into the categories ${catList}. Beta 0.3 removed the second additive oscillator (B2): the presets that used it left the list, and their numbers are not used again, so the ratings you gave to the others stay valid. A new preset's name is its number, the oscillators it uses (<code>A1A2</code>, <code>A1B1</code>, <code>A1A2B1</code> …) and a title: <code>${NEW[0].name}</code>. Every new preset uses at least two oscillators, often one of them as the attack; their loudness is matched to the TOP Sounds. The <b>SuperModulation</b> category (${SUPER.length} sounds) holds the ones whose life is the LFOs moving the scale filter, the sparsity, the window, the source phase, the morph and the additive scales (see <a href="#supermod">SuperModulation</a>). The preset browser at the right follows the preset box: step with ◀ ▶ or the name's menu and it shows the category of the sound and the sound itself. ◀ ▶ step through them in that order; clicking the name opens the list (the <b>preset browser</b> at the right of the panel: TOP Sounds and the categories, one click plays a sound, the arrow keys ${kbd('↑')} ${kbd('↓')} ${kbd('←')} ${kbd('→')} too).</p>
+  const first = SPEC.PRESETS[SPEC.DEFAULT_PRESET], cats = SPEC.CATEGORIES.map(c => `${c} (${SPEC.PRESETS.filter(p => p.cat === c).length})`).filter(x => !/\(0\)$/.test(x));
+  return `<p>Okto MultiWave Synth has <b>${SPEC.PRESETS.length} factory presets</b>. They are the sounds that its author, OktoPierre, kept after listening to the candidates and rating them: only the presets he rated more than one star (3 or more on his scale of 1 to 10) are in the instrument.</p>
+<ul>
+<li><b>TOP Sounds</b> come first (${TOP_LIST.length}): the ${SPEC.TOP} sounds of the Wavelet Synthesizer beta 0.7 that he kept (they sound exactly as there; one or two oscillators), the ${N_ABOVE7} sounds he rated above 7 and ${N_FAV} favourites he named, sorted from the best to the least rated. <b>The synth opens on the first of them, ${esc(first.name)}.</b></li>
+<li>Then come the <b>${SPEC.CATEGORIES.length} categories</b>: ${cats.slice(0, -1).join(', ')} and ${cats[cats.length - 1]}. A category lists all its sounds (the TOP Sounds that belong to it are marked ★) in the factory order: the Wavelet Synthesizer sounds first, then the others from the best rated to the least rated.</li>
+<li>A name that begins with a number, such as <code>${esc(SPEC.PRESETS[SPEC.TOP].name)}</code>, is a sound made for Okto MultiWave Synth: its number, the oscillators it uses (<code>A1A2</code>, <code>A1B1</code>, <code>A2B1</code>, <code>A1A2B1</code>) and a title. The numbers have gaps, because the sounds that were not kept are gone. The Wavelet Synthesizer sounds are named like <code>${esc(SPEC.PRESETS[0].name)}</code>.</li>
+</ul>
+<p>The <b>SuperModulation</b> category (${SUPERMOD.length} sounds) holds the sounds whose life is the LFOs moving the scale filter, the sparsity, the window, the source phase, the morph and the additive scales (see <a href="#supermod">SuperModulation</a>).</p>
+<p><b>Choosing a sound.</b> The preset box shows the name of the sound; ◀ ▶ step through the factory presets and clicking the name opens the <b>preset browser</b> at the right of the panel: TOP Sounds and the categories, one click plays a sound, the arrow keys ${kbd('↑')} ${kbd('↓')} ${kbd('←')} ${kbd('→')} too. The browser follows the preset box: it shows the category of the sound and the sound itself. In the plug-in the browser also shows the author's <b>stars</b> at the right of every sound (five stars, with half stars: 1 to 10); click to give your own rating, click the same rating to clear it. The ratings are saved in the presets file, and EXPORT carries them.</p>
 <h3 id="saving">Saving your own sounds</h3>
 <ul>
 <li><b>Web app.</b> The buttons at the right of the status bar: <b>Save preset</b> keeps the sound in this browser's storage (the USER PRESETS group), <b>Export</b> downloads it as a <code>.json</code> file, <b>Import</b> loads one. User presets live in that browser profile only: use Export for anything you want to keep.</li>
 <li><b>Plug-in.</b> See <a href="#plugin">The plug-in</a>: SAVE PRESET, the user bank, the presets file. You can also keep sounds with Live (a device preset, an Instrument Rack, the Live Set).</li>
 </ul>
 <h3 id="preset-list">All the presets</h3>
-<p class="small muted">★ = one of OktoPierre's TOP Sounds. The oscillators are the ones whose level is above 0.</p>
+<p class="small muted">★ = in TOP Sounds. Stars: the author's rating, from ½ to 5 stars (hover a rating for its value from 1 to 10). The oscillators are the ones whose level is above 0.</p>
 ${presetTable()}`;
 }
 
@@ -510,7 +610,7 @@ function troubleChapter() {
     ['I click an oscillator tab and the sound does not change', 'By design: the tabs only choose the panel shown. The sound is set by the three levels in the OSC MIX card. A tab shows the cards of an oscillator whose level may be 0.'],
     ['A knob I turn has no effect', 'Check the level of the oscillator whose panel you are editing (OSC MIX) — an oscillator at 0 is silent — and whether the control is greyed out (WIDTH, SEED, the sub oscillator). With the filter wide open, the cutoff does nothing.'],
     ['The filter does nothing on a SQUARE with Haar', 'A square analysed with Haar is a single atom (see Manual A): choose a smoother wavelet.'],
-    ['A preset sounds quieter or louder than another', 'The new presets are matched to the TOP Sounds, but very short sounds (hats, clicks) are measured over 50 ms. Use the master VOLUME, or the level knobs.'],
+    ['A preset sounds quieter or louder than another', 'The presets are matched to the loudness of the TOP Sounds, but very short sounds (hats, clicks) are measured over 50 ms. Use the master VOLUME, or the level knobs.'],
     ['The plug-in does not appear in Live', 'Copy the <b>whole</b> bundle folder (not only the file inside), check <b>Use VST3 Plug-in System Folders</b> and press <b>Rescan</b>; the folder must be 64-bit Windows.'],
     ['SAVE PRESET says it cannot write', 'The presets file sits next to the <code>.vst3</code> folder; that folder must allow writing (see <a href="#vst-diff">What is specific to the plug-in</a>).'],
     ['EVALUATE SOUNDS says the passage did not play', 'The host\'s audio engine must be running: in Live, turn the audio engine on and arm or enable the track. The window waits a few seconds, then continues so that you can still rate the preset.'],
@@ -544,13 +644,13 @@ ${table(['Term', 'Meaning'], [
     ['Own envelope', 'An oscillator\'s private ADSR; it multiplies the AMP ENVELOPE.'],
     ['Pitch envelope', 'A glide of an oscillator from some semitones away to the note.'],
     ['OSC MIX', 'The three oscillator levels.'],
-    ['TOP Sounds', 'OktoPierre\'s 22 favourite presets, first in the list.'],
+    ['TOP Sounds', `OktoPierre's selection (${TOP_LIST.length} presets), first in the preset lists, sorted from the best to the least rated.`],
   ], 'compact')}`;
 }
 
 // ---------------------------------------------------------------- 15. about
 function aboutChapter() {
-  return `<p><b>Okto MultiWave Synth</b> ${SPEC.APP.version}, a test version (${SPEC.APP.date}), created by <b>Pierre Arnaud GUYOT</b> (OktoPierre), on the basis of his Wavelet Synthesizer beta 0.7 and his chord keyboard (WaveChord). Free software under the GNU General Public License v3 or later, WITHOUT ANY WARRANTY: <a href="https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth">github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth</a>.</p>
+  return `<p><b>Okto MultiWave Synth</b> ${SPEC.APP.version} (${SPEC.APP.date}), created by <b>Pierre Arnaud GUYOT</b> (OktoPierre), on the basis of his Wavelet Synthesizer beta 0.7 and his chord keyboard (WaveChord). Free software under the GNU General Public License v3 or later, WITHOUT ANY WARRANTY: <a href="https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth">github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth</a>.</p>
 <ul>
 <li>Demo music: MIDI from the <a href="https://www.mutopiaproject.org">Mutopia Project</a> — J. S. Bach <i>Toccata in D minor</i> and Beethoven's Op. 57 III, Op. 129, Op. 67 I, Op. 13 I, Op. 31/2 I, Op. 111 I (public domain); Beethoven <i>Moonlight</i> Op. 27/2 III typeset by Stewart Holmes (CC BY-SA 2.5). The listening passage of EVALUATE SOUNDS is part of Op. 57 III.</li>
 <li>VST3 interface headers: Steinberg Media Technologies, MIT licence. Wavelet filter coefficients generated with PyWavelets (MIT).</li>
@@ -562,6 +662,7 @@ function aboutChapter() {
 function manual(E) {
   const a = isA(E);
   const sections = [
+    { id: 'intro', title: 'What this synthesizer is, and what wavelets are', html: introChapter(E), subs: [{ id: 'intro-wavelets', title: 'What is a wavelet?' }, { id: 'intro-seven', title: 'The seven wavelets' }, { id: 'intro-synth', title: 'How the synthesizer works' }, { id: 'intro-mod', title: 'Modulation' }, { id: 'intro-play', title: 'Playing it, and choosing sounds' }] },
     { id: 'quick', title: 'Quick start', html: quickStart(E) },
     { id: 'panel', title: 'The panel', html: panelChapter(E), subs: [{ id: 'header-controls', title: 'The header' }, { id: 'handling', title: 'Working with the controls' }] },
     { id: 'oscillators', title: 'Three oscillators', html: oscillatorsChapter(E), subs: [{ id: 'mix', title: 'OSC MIX and SUB OSC' }, { id: 'osc-card', title: 'Tune, own envelope, pitch envelope' }, { id: 'ideas', title: 'Ideas, and presets to study' }] },
