@@ -692,31 +692,18 @@ PRESETS.map((p, i) => i).sort((x, y) => (PRESETS[y].stars || 0) - (PRESETS[x].st
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
 const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app / a new plugin instance opens: the first of TOP Sounds (beta 1.0)
-// The preset tour of the demo (the default piece, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard):
-// the TOP Sounds mixed one by one with new presets that show the oscillators at work (a TOP Sound by its name, a new preset as
-// "new:<title>": the number of its name may change). 29 presets are heard. (Beta 0.3: four picks played B2, which is gone: Crystal Choir, Harp,
-// Marimba and Full Drawbar Organ became Cloud Choir, Harp Pluck, Celeste Bell and Chapel Organ.)
-const TOUR_PICKS = ['A · Warm Pad', 'A · Wavelet Lead',
-  'A · Noise Wash Pad', 'new:Velvet Pad', 'B · Mirror Sub Bass', 'B · Theatre Organ', 'new:Tine E-Piano', 'B · Space Choir',
-  'new:Cloud Choir', 'A · Wavelet Lead', 'new:Classic Saw Lead', 'B · Flute Lead', 'new:Ensemble Strings', 'B · Choir Pad',
-  'new:Harp Pluck', 'A · Wave Brass', 'new:Silk Cloud', 'A · Wave Attack Lead', 'new:Celeste Bell', 'A · Warm Pad', 'new:Rhodes Warm',
-  'AB · Glass Choir', 'new:Chapel Organ', 'A · Dub Echo Lead', 'new:Solo Violin', 'A · Wave Pulse Lead', 'new:Brass Section',
-  'A · Cello Section', 'new:Dream Keys', 'AB · Silk Strings', 'new:Orchestra Swell'];
-// beta 0.3.4: a pick that the owner rated one star or less is left out of the list: a preset he rated high (TOP Sounds after the 22) takes its place
-const SPARE = TOP_LIST.map(i => PRESETS[i].name).filter(n => !TOUR_PICKS.includes(n)).concat(TOP_LIST.map(i => PRESETS[i].name).filter(n => TOUR_PICKS.includes(n)));
-let spareAt = 0;
-const TOUR = TOUR_PICKS.map(n => {
-  const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.split(' · ').slice(1).join(' · ') === n.slice(4)) : PRESETS.find(q => q.name === n);
-  if (!p) {
-    if (spareAt >= SPARE.length) throw new Error('TOUR: preset not found: ' + n);
-    return SPARE[spareAt++];
-  }
-  return p.name;
-});
+// The preset tour of the demo (the default piece, Beethoven's Appassionata, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard). Version 1.0: it is the tour of the
+// Wavelet Synthesizer's web app (beta 0.7.1): the same piece, the same presets in the same order, at the same level. Those presets are not all in the factory list (the 237 the owner kept), so
+// the tour carries its own copies, DEMO_PRESETS (tools/demo_presets.js, written by tools/demo_presets_extract.js from that web app and converted as the TOP Sounds are): they play the demo
+// and are in no list of the browsers.
+const DEMO_RAW = require('./demo_presets.js');
+const DEMO_PRESETS = DEMO_RAW.presets.map(r => ({ name: r.name, v: convertLegacy(r.v) }));
+const TOUR = DEMO_RAW.order.slice();
+for (const n of TOUR) if (!DEMO_PRESETS.some(p => p.name === n)) throw new Error('TOUR: preset not found: ' + n);
 if (!PRESETS.some(p => p.name === DEFAULT_PRESET)) throw new Error('DEFAULT_PRESET not found: ' + DEFAULT_PRESET);
 
 // Validate preset keys and ranges at generation time.
-for (const pr of PRESETS) for (const [k, v] of Object.entries(pr.v)) {
+for (const pr of [...PRESETS, ...DEMO_PRESETS]) for (const [k, v] of Object.entries(pr.v)) {
   if (!(k in idx)) throw new Error(`preset ${pr.name}: unknown param ${k}`);
   const p = P[idx[k]];
   if (v < p.min || v > p.max) throw new Error(`preset ${pr.name}: ${k}=${v} out of range`);
@@ -731,5 +718,5 @@ for (const s of S) {
   }
 }
 
-module.exports = { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, TOP_LIST, CATEGORIES,
+module.exports = { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, TOP_LIST, DEMO_PRESETS, CATEGORIES,
   LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };

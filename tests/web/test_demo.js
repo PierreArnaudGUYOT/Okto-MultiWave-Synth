@@ -37,7 +37,7 @@ const SPEC = require(path.join(ROOT, 'tools', 'spec.js'));
 if (typeof SPEC.DEFAULT_PRESET === 'number') SPEC.DEFAULT_PRESET = (SPEC.PRESETS[SPEC.DEFAULT_PRESET] || {}).name;
 const SPEC_BY_KEY = Object.fromEntries(SPEC.PARAMS.map((p) => [p.key, p]));
 const presetValues = (name) => {
-  const pr = SPEC.PRESETS.find((p) => p.name === name);
+  const pr = (SPEC.DEMO_PRESETS || []).find((p) => p.name === name) || SPEC.PRESETS.find((p) => p.name === name);   // the demo's tour has presets of its own
   return pr ? Object.assign({}, ...SPEC.PARAMS.map((p) => ({ [p.key]: p.def })), pr.v) : null;
 };
 
@@ -59,7 +59,6 @@ const TOUR_INTRO = [
 const SUMMARY_END = 'Played polyphonic at its normal octave, with short echoes.';   // the end of every preset summary (demo.js presetSummary)
 const FORCED = { v_voices: 16, v_oct: 0, v_glide: 0 }; // + caps: amp_a <= 0.08, fx_dmix <= 0.1, fx_dfb <= 0.3
 const CAPS = { amp_a: 0.08, fx_dmix: 0.1, fx_dfb: 0.3 };
-const TOUR_TRIM_DB = -6;   // version 1.0: every tour preset is played 6 dB lower (the piece is at velocity 1 on 16 voices; tools/demo_level.js)
 
 // ------------------------------------------------------------------ report
 const lines = [], results = [];
@@ -166,7 +165,6 @@ function tourChecks(name, song, samples, plan, full, intro = true, start = plan[
         if (SPEC_BY_KEY[key].hidden) continue;
         let e = key in FORCED ? FORCED[key] : v;
         if (key in CAPS) e = Math.min(v, CAPS[key]);
-        if (key === 'master') e = Math.max(SPEC_BY_KEY.master.min, v + TOUR_TRIM_DB);
         if (!(Math.abs(x.all[key] - e) <= 1e-6 * Math.max(1, Math.abs(SPEC_BY_KEY[key].max - SPEC_BY_KEY[key].min)))) { badVals.push(`t=${t.toFixed(1)} ${want}: ${key}=${x.all[key]} expected ${e}`); break; }
       }
     }
@@ -183,7 +181,7 @@ function tourChecks(name, song, samples, plan, full, intro = true, start = plan[
   check(seen[0] === start, `${name}: the tour starts at '${start}'`, `first preset '${seen[0]}'`);
   check(badOrder.length === 0, `${name}: at every moment the preset of the tour plan`, short(badOrder));
   check(badLbl.length === 0, `${name}: preset label shows exactly the tour preset (no modified dot)`, short(badLbl));
-  check(badVals.length === 0, `${name}: each preset's spec values with Voices 16, Octave 0, Glide 0 forced and Amp Attack <= 0.08 s, Delay Mix <= 0.1, Delay Feedback <= 0.3, Master 6 dB lower`, short(badVals));
+  check(badVals.length === 0, `${name}: each preset's spec values with Voices 16, Octave 0, Glide 0 forced and Amp Attack <= 0.08 s, Delay Mix <= 0.1, Delay Feedback <= 0.3`, short(badVals));
   check(badText.length === 0, `${name}: window shows 'Preset tour · n/${N}', 'Now playing: <preset>' and the next preset`, short(badText));
   if (intro) {
     const nIntro = Math.min(TOUR_INTRO.length, N);

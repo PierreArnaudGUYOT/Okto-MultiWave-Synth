@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Version 1.0.1: the level of the web demo. The demo plays Beethoven's Appassionata with every note at velocity 1 and 16 voices, through the presets of the tour (web/js/demo.js: the
-// presets are set as in enterScene). This tool renders the 4 s each preset plays (song time 4 k to 4 k + 4) with the engine, with the master lowered by each trim in turn, and measures what
+// Version 1.0: the level of the web demo. The demo plays Beethoven's Appassionata with every note at velocity 1 and 16 voices, through the presets of the tour (WS_SPEC.DEMO_PRESETS, web/js/demo.js:
+// the presets are set as in enterScene). This tool renders the 4 s each preset plays (song time 4 k to 4 k + 4) with the engine, with the master lowered by each trim in turn, and measures what
 // the output stage (the peak guard and the soft limiter) adds: the same window 24 dB lower, scaled back up, is the clean reference (`d` = relative RMS of the difference), and the share of
 // the time the output goes above the limiter's knee (0.7).
 //   node tools/demo_level.js                   trims 0 -3 -6 -9 -12 dB, a table per trim
@@ -29,7 +29,7 @@ if (process.argv.includes('--worker')) {
   const out = [];
   SPEC.TOUR.forEach((name, k) => {
     if (k < 2 || k % of !== part) return;
-    const pr = SPEC.PRESETS.find(p => p.name === name);
+    const pr = SPEC.DEMO_PRESETS.find(p => p.name === name) || SPEC.PRESETS.find(p => p.name === name);
     const base = Float64Array.from(pr.values);
     // as demo.js enterScene: polyphonic, normal octave, no glide, short attack, little delay
     base[P.v_voices] = 16; base[P.v_oct] = 0; base[P.v_glide] = 0;

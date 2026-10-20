@@ -10,7 +10,7 @@ const wav = JSON.parse(fs.readFileSync(path.join(__dirname, 'wavelets.json'), 'u
 
 const root = path.join(__dirname, '..');
 const { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, TOP_EXTRA, TOP_LIST, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, MICRO_TABLES,
-  CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR } = spec;
+  CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, DEMO_PRESETS } = spec;
 // the fields of an oscillator, in the order of the C++ SlotDef (a field an oscillator lacks is -1: the subtractive ones have no
 // atom pattern, the additive ones no source wave)
 const SLOT_FIELDS = ['lvl', 'wavelet', 'wave', 'width', 'sparsity', 'phase', 'pattern', 'seed', 'tilt', 'bar1', 'atk', 'spread', 'body', 'bright', 'sus',
@@ -24,12 +24,15 @@ const presetValues = PRESETS.map(pr => ({
   rank: pr.rank,   // beta 0.5: its place in its category's list (the preset browsers' default order)
   values: PARAMS.map(p => (pr.v[p.key] !== undefined ? pr.v[p.key] : p.def)),
 }));
+// version 1.0: the presets of the demo's tour (web only: the plug-in has no demo)
+const demoPresets = DEMO_PRESETS.map(pr => ({ name: pr.name, values: PARAMS.map(p => (pr.v[p.key] !== undefined ? pr.v[p.key] : p.def)) }));
 const wavelets = wav.order.map((n, i) => ({ id: n, name: PARAMS[INDEX.wavelet].choices[i], h: wav.h[n] }));
 
 // ---------------------------------------------------------------- web
 const web = {
   DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, TOP_EXTRA, TOP_LIST, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
   PRESETS: presetValues,
+  DEMO_PRESETS: demoPresets,
   LFO2_TARGETS: LFO2_TARGETS.map(k => INDEX[k]),   // beta 0.3: the parameters LFO 2 can move (lfo2_target order, the parameters of A1)
   MICRO: MICRO_TABLES,   // beta 0.2: the oriental tunings: [Arabic, Turkish][scale][semitone above the tonic] = cents from the equal-tempered key
   ROLES, LFO2_ROLE: LFO2_ROLE.map(r => ROLES.indexOf(r)),   // the role (index in ROLES) of each target: LFO 2 moves it in every oscillator

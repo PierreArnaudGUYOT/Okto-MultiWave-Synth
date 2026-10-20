@@ -503,9 +503,10 @@
     values: () => values,
     ctxTime: () => (actx ? actx.currentTime : 0),
     applyPreset: (name) => {
-      const k = SPEC.PRESETS.findIndex(p => p.name === name);
-      if (k < 0) return;
-      const o = {}; PARAMS.forEach((p, i) => { if (!p.perf) o[p.key] = SPEC.PRESETS[k].values[i]; });
+      // version 1.0: the demo's tour has presets of its own (the ones of the Wavelet Synthesizer's web app), then the factory list
+      const src = (SPEC.DEMO_PRESETS || []).find(p => p.name === name) || SPEC.PRESETS.find(p => p.name === name);
+      if (!src) return;
+      const o = {}; PARAMS.forEach((p, i) => { if (!p.perf) o[p.key] = src.values[i]; });
       applyKeyed(o);
     },
     snapshot: () => ({ values: toKeyed(), presetId, presetName, dirty }),

@@ -107,7 +107,7 @@ function vst3() {
 }
 
 // ---------------------------------------------------------------- 4. web app smoke test (muted headless Edge)
-const DEMO_FIRST = 'A · Noise Wash Pad';   // the agreed opening sound of the demo (tests/web/test_demo.js has the whole sequence)
+const DEMO_FIRST = require('../web/js/spec.js').TOUR[2];   // the opening sound of the demo, as in the Wavelet Synthesizer's web app: B · Clarinet (tests/web/test_demo.js has the whole sequence)
 async function web() {
   const t = Date.now(), bad = [];
   const { Browser, sleep } = require(R('tests', 'web', 'cdp.js'));
@@ -128,7 +128,8 @@ async function web() {
     if (await B.evaluate('WS_TEST.audioState()') !== 'running') bad.push('audio did not start');
     // (beta 0.3: the last preset of the list is a tambourine, a transient a few tens of ms long that the 150 ms polling missed in about one run in three:
     // the last sustained sound is played instead, and the level is read every 50 ms)
-    const sustained = SPEC.PRESETS.map((p, i) => i).filter(i => !/Drums|Pluck|Bells/.test(SPEC.PRESETS[i].cat)).pop();
+    const ampS = SPEC.PARAMS.findIndex(q => q.key === 'amp_s');   // (version 1.0: Pluck is part of Keyboard: a sustained sound is one whose amp sustain is high)
+    const sustained = SPEC.PRESETS.map((p, i) => i).filter(i => !/Drums|Bells/.test(SPEC.PRESETS[i].cat) && SPEC.PRESETS[i].values[ampS] >= 0.5).pop();
     for (const k of [0, SPEC.DEFAULT_PRESET, sustained]) {
       await B.evaluate(`WS_TEST.loadPreset(${k})`);
       await B.evaluate('WS_TEST.noteOn(60, 0.9)');
