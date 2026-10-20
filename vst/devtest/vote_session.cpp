@@ -506,6 +506,15 @@ int wmain(int argc, wchar_t** argv) {
     check(h.plain(P_LFO_VIEW) == 0, "LFO 2 is shown first", fmt("lfo_view %.0f", h.plain(P_LFO_VIEW)));
     setP(P_LFO2_AMT, 0.45); setP(P_LFO3_AMT, -0.3); setP(P_LFO2_SHAPE, 2); setP(P_LFO3_SHAPE, 3); setP(P_LFO_SHAPE, 1);
     h.shot(out + L"\\14_lfo2_tab.png");
+    {   // the plug-in's SYNC buttons (the tab bar of LFO 2/3, the title line of LFO 1): lit, RATE becomes a note value; the screenshot shows both cards synced
+      float sx2 = 0, sy2 = 0;
+      check(widgetCenter(W_TOGGLE, P_LFO2_SYNC, 0, sx2, sy2) && sy2 < lt[1] + 25, "the SYNC button of LFO 2 is in the tab bar", fmt("(%.0f, %.0f)", sx2, sy2));
+      h.click(sx2, sy2); h.run(0.2);
+      check(h.plain(P_LFO2_SYNC) == 1, "a click on the SYNC button of the tab bar switches the tempo sync of LFO 2 on", fmt("lfo2_sync %.0f", h.plain(P_LFO2_SYNC)));
+      setP(P_LFO_SYNC, 1);
+      h.shot(out + L"\\14_lfo_sync.png");
+      setP(P_LFO_SYNC, 0); setP(P_LFO2_SYNC, 0);
+    }
     const float tabX = lt[0] + 6 + 60 + 29, tabY = lt[1] + 14;   // the LFO 3 tab: 58 x 22 at x 66
     h.click(tabX, tabY); h.run(0.2);
     check(h.plain(P_LFO_VIEW) == 1, "the LFO 3 tab shows LFO 3 (the parameter lfo_view)", fmt("lfo_view %.0f", h.plain(P_LFO_VIEW)));
