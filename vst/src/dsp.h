@@ -13,6 +13,11 @@
 #include <string>
 #include <vector>
 #include "generated/spec.h"
+// CPU optimisations (CLAUDE.md "CPU optimisations", Revue_CPU.md): SSE2 does the same double-precision operations as the scalar code, lane by lane, so the output is
+// bit-identical; without SSE2 (other platforms) the scalar form is used. No FMA, no fast-math, no reassociation anywhere.
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
 
 namespace ws {
 
@@ -453,7 +458,8 @@ inline void buildTables(const double* params, bool withMips, Tables& t) {
 }
 
 // ------------------------------------------------------------------ gains & window
-inline double softplus(double x) { return x > 10 ? x : std::log(1 + std::exp(4 * x)) / 4; }
+// below -9.5 exp(4x) is under 3.2e-17, 1 + exp(4x) is exactly 1, its log exactly 0: no call needed (the same value)
+inline double softplus(double x) { return x > 10 ? x : x < -9.5 ? 0.0 : std::log(1 + std::exp(4 * x)) / 4; }
 inline void filterGains(int type, double cut, double slope, double res, double* out) {
   for (int b = 0; b < NB; b++) {
     double d = (b + 1) - cut, g;
@@ -465,7 +471,7 @@ inline void filterGains(int type, double cut, double slope, double res, double* 
       if (type == 0) att = slope * softplus(d);
       else if (type == 1) att = slope * softplus(-d);
       else att = slope * softplus(std::fabs(d) - 0.5);
-      double boost = res * std::exp(-d * d / (2 * 0.36));
+      double boost = res == 0 && !std::signbit(res) ? 0.0 : res * std::exp(-d * d / (2 * 0.36));   // +0 times a finite number is +0
       att = std::min(att, 140.0);
       g = std::exp((boost - att) * (LN10 / 20));
     }
@@ -624,13 +630,46 @@ inline double ladder(double* st, int o, double u, double G, double k, int type) 
 }
 
 // ------------------------------------------------------------------ engine
+// renderVoice's two per-sample kernels. bandTerms: for the layers of one table row (base) and the next one (nx), t[b] = lg[b] * (v0 + fr * (nx[b] - v0)) with v0 the float of
+// base[b] as a double, exactly the scalar expression (the floats are converted, then everything is done in double, one operation after the other). SSE2: two layers at a time, the
+// pairs (2q, 2q + 1) listed in pq[0 .. npq - 1] (every pair that holds an active layer; the other layer of a pair is computed too and never used); otherwise the layers of the
+// active list act[0 .. na - 1]. lg and t must be 16-byte aligned (NL entries each). rampGains: lg[b] += d[b] for the same pairs of layers.
+inline void bandTerms(const float* base, const float* nx, double fr, const double* lg, double* t, const int* pq, int npq, const int* act, int na) {
+#if defined(__SSE2__)
+  (void)act; (void)na;
+  const __m128d f = _mm_set1_pd(fr);
+  for (int e = 0; e < npq; e++) {
+    const int b = 2 * pq[e];
+    const __m128d a = _mm_cvtps_pd(_mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)(base + b)))), c = _mm_cvtps_pd(_mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)(nx + b))));
+    _mm_store_pd(t + b, _mm_mul_pd(_mm_load_pd(lg + b), _mm_add_pd(a, _mm_mul_pd(f, _mm_sub_pd(c, a)))));
+  }
+#else
+  (void)pq; (void)npq;
+  for (int j = 0; j < na; j++) { const int b = act[j]; const double v0 = base[b]; t[b] = lg[b] * (v0 + fr * (nx[b] - v0)); }
+#endif
+}
+inline void rampGains(double* lg, const double* d, const int* pq, int npq) {
+#if defined(__SSE2__)
+  for (int e = 0; e < npq; e++) { const int b = 2 * pq[e]; _mm_store_pd(lg + b, _mm_add_pd(_mm_load_pd(lg + b), _mm_load_pd(d + b))); }
+#else
+  (void)pq; (void)npq;
+  for (int b = 0; b < NL; b++) lg[b] += d[b];
+#endif
+}
+
+// exp() of an argument that is the same in every call of a block (it depends on the settings and on the block length only, not on the voice): computed once, the same value
+// as the call it replaces (the memo is keyed on the exact argument)
+struct ExpMemo {
+  double arg = std::nan(""), val = 0;
+  double get(double a) { if (a != arg) { arg = a; val = std::exp(a); } return val; }
+};
 struct Env {
   int stage = 0; double level = 0;  // 0 idle, 1 attack, 2 decay/sustain, 3 release
   void gate(bool on) { stage = on ? 1 : (stage ? 3 : 0); }
-  double step(int n, double sr, double a, double d, double s, double r) {
+  double step(int n, double sr, double a, double d, double s, double r, ExpMemo& decay, ExpMemo& release) {
     if (stage == 1) { level += n / (a * sr); if (level >= 1) { level = 1; stage = 2; } }
-    else if (stage == 2) level = s + (level - s) * std::exp(-n * LN1000 / (d * sr));
-    else if (stage == 3) { level *= std::exp(-n * LN1000 / (r * sr)); if (level < 1e-5) { level = 0; stage = 0; } }
+    else if (stage == 2) level = s + (level - s) * decay.get(-n * LN1000 / (d * sr));
+    else if (stage == 3) { level *= release.get(-n * LN1000 / (r * sr)); if (level < 1e-5) { level = 0; stage = 0; } }
     return level;
   }
 };
@@ -645,6 +684,12 @@ struct Slot {
   bool live = false;                                     // rendered in the last block
   // its place among the sets of each kind of variant (VK_*: phase, sparsity, width), from the start to the end of the block
   double vq0[3] = {0, 0, 0}, vq1[3] = {0, 0, 0};
+  // memos of what the last block computed from the same inputs (the results of pure functions of their inputs, compared exactly): the oscillator's pitch, the scale filter's
+  // gains, the mip level. A held note with a static sound recomputes none of them.
+  double mA = std::nan(""), mF0 = 0;                                     // pow(2, a): the oscillator's frequency
+  double mL2f0 = std::nan(""), mL2 = 0;                                  // log2(261.63 / f0)
+  double mTop = std::nan(""), mFmax = std::nan(""); int mMip = 0;        // the mip level for the highest unison frequency
+  int mType = -1; double mCut = 0, mSlope = 0, mRes = 0, mFg[NB] = {};   // filterGains(type, cut, slope, res)
 };
 struct Voice {
   bool active = false, gate = false, held = false, fresh = true;
@@ -653,9 +698,10 @@ struct Voice {
   bool glide = false;
   double subPhase = 0;
   Env amp, mod;
-  Env fe; double fs[8] = {}; bool fOn = false;   // the filter's envelope and states (left and right: four each); filtered in the last block
+  Env fe; double fs[8] = {}; bool fOn = false;   // the filter's envelope and states (stage q of the left channel at fs[2q], of the right one at fs[2q + 1]: one SSE2 pair per stage); filtered in the last block
   double fG0 = 0, fG1 = 0, fk = 0;               // its coefficient G at the start and the end of the block, the feedback gain
   Slot sl[NS];
+  double mSemis = std::nan(""), mPitchF0 = 0;   // memo: the voice's frequency for its last pitch in semitones
   double wm0 = 0, wm1 = 0;   // WAVELET MORPH position at the start / end of the block
   double gain = 1; bool quick = false;   // the chord's bass note plays louder; a note dropped by a live chord change fades out quickly
 };
@@ -1083,11 +1129,16 @@ class Engine {
   double quiet = 0, quietNeed = 1e18;   // the idle rule (block)
   std::vector<float> chBuf; int chLen = 0, chW = 0; double chPh = 0, chPh2 = 0;   // triple chorus
   float bufL[CTRL], bufR[CTRL];
-  float vtL[CTRL], vtR[CTRL];   // a voice before its filter (the sum of its oscillators with a unit envelope)
+  float vtL[MAXV][CTRL], vtR[MAXV][CTRL];   // each voice before its filter (the sum of its oscillators with a unit envelope)
   double envOne[CTRL] = {};
   bool fltOn = false; double dFltOct = 0, dFltRes = 0;   // the filter is in the path; the moves LFO 2 / LFO 3 give its cutoff (octaves) and resonance
   float *wL = nullptr, *wR = nullptr; const double* eP = nullptr;   // where the oscillators of a voice are rendered and the envelope they follow (the mix and the amp envelope, or the voice buffers and a unit envelope)
-  double fg[NB], tmpB[NB], lg[NB], panL[4], panR[4], inc[4], detMul[4];
+  double fg[NB], tmpB[NB], panL[4], panR[4], inc[4], detMul[4];
+  // exp() memos of the envelopes' factors (amp, mod, filter, each oscillator's own envelope and pitch envelope) and of the filter gains of the last voice that asked (per oscillator)
+  ExpMemo mAmpD, mAmpR, mAmpQ, mModD, mModR, mFeD, mFeR, mOwnD[NS], mOwnR[NS], mOwnStepD[NS], mOwnStepR[NS], mPe[NS];
+  ExpMemo mKd, mVol, mLvl; double mCompKd = std::nan(""), mComp = 0;   // the output stage's and the level smoothing's factors
+  int uMemoU = -1; double uMemoDet = std::nan(""), uMemoWidth = std::nan("");   // the unison copies' detune and pan, for the settings they were computed with
+  struct FgMemo { int type = -1; double cut = 0, slope = 0, res = 0, fg[NB] = {}; } fgMemo[NS];
   int act[NL];
   // per block, computed once for all voices (prepBlock): the oscillators' levels (smoothed over 20 ms) and settings
   struct Prep {
@@ -1097,8 +1148,8 @@ class Engine {
   double lvlSm[NS] = {}, m0[NS] = {}, m1[NS] = {}; bool live[NS] = {};
   int U = 1; double topMul = 1; int role2 = -1; double d2 = 0; int role3 = -1; double d3 = 0; double dMorph = 0;
   // per voice and block: the amp envelope (with the velocity gain) per sample, each oscillator's own envelope, end states
-  double envA[CTRL], ownBuf[NS][CTRL], endPh[NS][4];
-  bool ownOn[NS] = {}; double ownLevel[NS] = {}; int ownStage[NS] = {};
+  double envAv[MAXV][CTRL], ownBuf[NS][CTRL], endPh[NS][4];   // envAv: each voice's amp envelope for the block (the filtered voices go through the filter first, see filterVoices)
+  bool ownOn[NS] = {}, ownZero[NS] = {}; double ownLevel[NS] = {}; int ownStage[NS] = {};   // ownZero: the own envelope is exactly 0 for the whole block
   double endLevel = 0, endSubPhase = 0; int endStage = 0;
 
   void removeFromStack(int note) {
@@ -1213,15 +1264,18 @@ class Engine {
     // unison copies (detune and pan are the same for every oscillator)
     const int Un = (int)jsRound(p[P_V_UNISON]); const double det = p[P_V_DETUNE], width = p[P_V_WIDTH];
     U = std::max(1, std::min(4, Un));
-    const double uGain = 1 / std::sqrt((double)U);
-    topMul = std::pow(2.0, (U > 1 ? det : 0) / 1200);
-    for (int u = 0; u < U; u++) {
-      const double pos = U > 1 ? 2.0 * u / (U - 1) - 1 : 0;
-      detMul[u] = std::pow(2.0, det * pos / 1200);
-      const double th = (pos * width + 1) * PI / 4;
-      panL[u] = std::sqrt(2.0) * std::cos(th) * uGain; panR[u] = std::sqrt(2.0) * std::sin(th) * uGain;
+    if (U != uMemoU || det != uMemoDet || width != uMemoWidth) {   // topMul, detMul, panL, panR depend on these three only
+      uMemoU = U; uMemoDet = det; uMemoWidth = width;
+      const double uGain = 1 / std::sqrt((double)U);
+      topMul = std::pow(2.0, (U > 1 ? det : 0) / 1200);
+      for (int u = 0; u < U; u++) {
+        const double pos = U > 1 ? 2.0 * u / (U - 1) - 1 : 0;
+        detMul[u] = std::pow(2.0, det * pos / 1200);
+        const double th = (pos * width + 1) * PI / 4;
+        panL[u] = std::sqrt(2.0) * std::cos(th) * uGain; panR[u] = std::sqrt(2.0) * std::sin(th) * uGain;
+      }
     }
-    const double a = 1 - std::exp(-n / (0.02 * sr));
+    const double a = 1 - mLvl.get(-n / (0.02 * sr));
     for (int s = 0; s < NS; s++) {
       const SlotDef& k = kSlots[s]; Prep& q = pr[s];
       m0[s] = lvlSm[s];
@@ -1263,8 +1317,9 @@ class Engine {
       if (std::fabs(vc.target - vc.pitch) < 1e-3) vc.pitch = vc.target;
     } else vc.pitch = vc.target;
     const double semis = vc.pitch + microSemis(vc.pitch) + 12 * p[P_V_OCT] + p[P_V_FINE] / 100 + 2 * p[P_BEND] + lfo * (p[P_LFO_PITCH] + 50 * p[P_MODWHEEL]) / 100;
-    vc.f0 = 440 * std::pow(2.0, (semis - 69) / 12);   // the voice's pitch (the sub oscillator follows it); each oscillator adds its tuning
-    const double mod = vc.mod.step(n, sr, p[P_MOD_A], p[P_MOD_D], p[P_MOD_S], p[P_MOD_R]);
+    if (semis != vc.mSemis) { vc.mSemis = semis; vc.mPitchF0 = 440 * std::pow(2.0, (semis - 69) / 12); }
+    vc.f0 = vc.mPitchF0;   // the voice's pitch (the sub oscillator follows it); each oscillator adds its tuning
+    const double mod = vc.mod.step(n, sr, p[P_MOD_A], p[P_MOD_D], p[P_MOD_S], p[P_MOD_R], mModD, mModR);
     // WAVELET MORPH position of this voice (0 = WAVELET, 1 = WAVELET 2): MORPH + LFO + mod envelope
     // (beta 0.2: LFO 2 can add to the morph, LFO 1 can swing the envelope's reach: ENV>WAV + LFO1 TO ENV>WAV * LFO)
     const double wm = std::min(1.0, std::max(0.0, p[P_WMORPH] + dMorph + p[P_LFO_WAV] * lfo + (p[P_ENV_WAV] + p[P_LFO_EW] * lfo) * mod));
@@ -1274,22 +1329,37 @@ class Engine {
     for (int s = 0; s < NS; s++) {
       Slot& sl = vc.sl[s]; const SlotDef& k = kSlots[s]; const Prep& q = pr[s];
       // the pitch envelope and the own envelope go on whether the oscillator sounds or not
-      if (p[k.pamt] != 0) sl.pe *= std::exp(-n * LN1000 / (p[k.ptime] * sr));
+      if (p[k.pamt] != 0) sl.pe *= mPe[s].get(-n * LN1000 / (p[k.ptime] * sr));
       if (!live[s]) {
-        if (p[k.eon] >= 0.5) sl.own.step(n, sr, p[k.ea], p[k.ed], p[k.es], p[k.er]);
+        if (p[k.eon] >= 0.5) sl.own.step(n, sr, p[k.ea], p[k.ed], p[k.es], p[k.er], mOwnStepD[s], mOwnStepR[s]);
         sl.live = false;
         continue;
       }
-      const double f0 = 440 * std::pow(2.0, (semis + q.tune + p[k.pamt] * sl.pe - 69) / 12);
+      const double pa = (semis + q.tune + p[k.pamt] * sl.pe - 69) / 12;
+      if (pa != sl.mA) { sl.mA = pa; sl.mF0 = 440 * std::pow(2.0, pa); }
+      const double f0 = sl.mF0;
       sl.f0 = f0;
       const double fTop = f0 * topMul;
-      const double maxH = std::floor(fmax / fTop);
-      sl.mip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : std::min(NMIP - 1, (int)std::ceil(std::log2(1024 / maxH) - 1e-9));
+      if (fTop != sl.mTop || fmax != sl.mFmax) {
+        sl.mTop = fTop; sl.mFmax = fmax;
+        const double maxH = std::floor(fmax / fTop);
+        sl.mMip = maxH >= 1024 ? 0 : maxH < 1 ? NMIP - 1 : std::min(NMIP - 1, (int)std::ceil(std::log2(1024 / maxH) - 1e-9));
+      }
+      sl.mip = sl.mMip;
       // scale filter
-      const double cut = q.fcut + (1 - q.fkey) * std::log2(261.63 / f0) + q.fenv * mod + p[P_LFO_CUT] * lfo + q.fvel * (vc.vel - 1);
+      if (f0 != sl.mL2f0) { sl.mL2f0 = f0; sl.mL2 = std::log2(261.63 / f0); }
+      const double cut = q.fcut + (1 - q.fkey) * sl.mL2 + q.fenv * mod + p[P_LFO_CUT] * lfo + q.fvel * (vc.vel - 1);
       // LFO 1 TO RESO: the resonance swings by +- the amount (dB), kept in 0 .. 24
       const double res = p[P_LFO_RES] > 0 ? std::min(24.0, std::max(0.0, q.fres + p[P_LFO_RES] * lfo)) : q.fres;
-      filterGains(q.ftype, cut, q.fslope, res, fg);
+      // the band gains are a function of (type, cut, slope, res) only: the voice's last ones, or the last ones computed for this oscillator (the voices of a chord that
+      // share a cutoff), are reused when those four are the same
+      if (sl.mType == q.ftype && sl.mCut == cut && sl.mSlope == q.fslope && sl.mRes == res) std::memcpy(fg, sl.mFg, sizeof fg);
+      else {
+        FgMemo& m = fgMemo[s];
+        if (m.type == q.ftype && m.cut == cut && m.slope == q.fslope && m.res == res) std::memcpy(fg, m.fg, sizeof fg);
+        else { filterGains(q.ftype, cut, q.fslope, res, fg); m.type = q.ftype; m.cut = cut; m.slope = q.fslope; m.res = res; std::memcpy(m.fg, fg, sizeof fg); }
+        sl.mType = q.ftype; sl.mCut = cut; sl.mSlope = q.fslope; sl.mRes = res; std::memcpy(sl.mFg, fg, sizeof fg);
+      }
       const bool fresh = !sl.live;   // a note's first block, or the oscillator just came in: the gains start at their target
       if (k.mode == 0) {
         // the voice's place among the sets of each kind of variant (the tables' own kind decides which one is read, renderTable): PHASE:
@@ -1334,14 +1404,14 @@ class Engine {
   }
 
   // The voice's AMP ENVELOPE for the block, per sample, with the velocity gain (envA); its end state in endLevel / endStage.
-  void ampPass(const Voice& vc, int n) {
+  void ampPass(const Voice& vc, int n, double* envA) {
     double lev = vc.amp.level; int st = vc.amp.stage;
     const double s = p[P_AMP_S];
-    const double aInc = 1 / (p[P_AMP_A] * sr), dC = std::exp(-LN1000 / (p[P_AMP_D] * sr)), rC = std::exp(-LN1000 / (p[P_AMP_R] * sr));
+    const double aInc = 1 / (p[P_AMP_A] * sr), dC = mAmpD.get(-LN1000 / (p[P_AMP_D] * sr)), rC = mAmpR.get(-LN1000 / (p[P_AMP_R] * sr));
     // beta 0.2: the chord's bass note plays louder (vc.gain; exactly the old value when it is 1), and a note dropped by a live chord
     // change fades out in QUICK_REL at most
     const double velGain = VOICE_GAIN * (1 - p[P_AMP_VEL] * (1 - vc.vel)) * vc.gain;
-    const double rQ = vc.quick && p[P_AMP_R] > QUICK_REL ? std::exp(-LN1000 / (QUICK_REL * sr)) : rC;
+    const double rQ = vc.quick && p[P_AMP_R] > QUICK_REL ? mAmpQ.get(-LN1000 / (QUICK_REL * sr)) : rC;
     for (int i = 0; i < n; i++) {
       if (st == 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
       else if (st == 2) lev = s + (lev - s) * dC;
@@ -1354,14 +1424,17 @@ class Engine {
   void ownPass(const Voice& vc, int s, int n) {
     const SlotDef& k = kSlots[s]; const Slot& sl = vc.sl[s];
     double lev = sl.own.level; int st = sl.own.stage;
+    bool zero = true;
     const double sus = p[k.es];
-    const double aInc = 1 / (p[k.ea] * sr), dC = std::exp(-LN1000 / (p[k.ed] * sr)), rC = std::exp(-LN1000 / (p[k.er] * sr));
+    const double aInc = 1 / (p[k.ea] * sr), dC = mOwnD[s].get(-LN1000 / (p[k.ed] * sr)), rC = mOwnR[s].get(-LN1000 / (p[k.er] * sr));
     for (int i = 0; i < n; i++) {
       if (st == 1) { lev += aInc; if (lev >= 1) { lev = 1; st = 2; } }
       else if (st == 2) { lev = sus + (lev - sus) * dC; if (std::fabs(lev - sus) < 1e-9) lev = sus; }
       else if (st == 3) { lev *= rC; if (lev < 1e-5) { lev = 0; st = 0; } }
       ownBuf[s][i] = lev;
+      if (lev != 0) zero = false;
     }
+    ownZero[s] = zero;
     ownLevel[s] = lev; ownStage[s] = st;
   }
 
@@ -1384,13 +1457,28 @@ class Engine {
     const bool useDry = audible && mode == 0 && sl.pd > 0;
     double* ph = endPh[s];
     for (int u = 0; u < U; u++) { inc[u] = sl.f0 * detMul[u] / sr; ph[u] = sl.phase[u]; }
-    for (int b = 0; b < NB; b++) lg[b] = g[b];
+    // The band gains and their steps, padded to NL entries (pairs for SSE2). A band that is not in the active list keeps its gain (step 0) and its term is never added.
+    // When every active step is exactly 0 the per-sample ramp (lg += 0) is skipped: the same values.
+    alignas(16) double lg[NL], dgl[NL], tv[NL];
+    for (int b = 0; b < NL; b++) { lg[b] = b < NB ? g[b] : 0; dgl[b] = 0; tv[b] = 0; }
+    bool ramp = false;
+    unsigned pairs = 0;   // the pairs of layers (2q, 2q + 1) that hold an active layer
+    for (int j = 0; j < na; j++) { const int b = act[j]; dgl[b] = dg[b]; if (dg[b] != 0) ramp = true; pairs |= 1u << (b >> 1); }
+    int pq[NL / 2], npq = 0;
+    for (int q = 0; q < NL / 2; q++) if (pairs >> q & 1) pq[npq++] = q;
+    const bool contig = na > 0 && act[na - 1] - act[0] + 1 == na;   // the active layers are consecutive: the sum runs straight along tv from the first one
+    const double* tvA = tv + (na > 0 ? act[0] : 0);
     const double pc = sl.pc, pw = sl.pw, pd = sl.pd;
     const double* own = ownOn[s] ? ownBuf[s] : nullptr;
+    if (own && ownZero[s]) {   // the output is the product of the envelope and the own envelope, which is 0 all block: every sample adds (float)(x * 0) = +-0, which changes no sum; the phases move as ever
+      for (int i = 0; i < n; i++)
+        for (int u = 0; u < U; u++) { double x = ph[u] + inc[u]; if (x >= 1) x -= std::floor(x); ph[u] = x; }
+      return;
+    }
     const bool unity = gain0 == 1 && gainInc == 0;
     double fade = fade0, gain = gain0;
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < na; j++) { int b = act[j]; lg[b] += dg[b]; }
+      if (ramp) rampGains(lg, dgl, pq, npq);
       const double fg1 = fade >= 1 ? 1 : fade;
       double env = eP[i] * (invert ? 1 - fg1 : fg1);
       if (!unity) env *= gain;
@@ -1403,20 +1491,27 @@ class Engine {
         ph[u] = x;
         double pos = x * N; int i0 = (int)pos; double fr = pos - i0;
         const float* base = mips + off + (size_t)i0 * NL; const float* nx = base + NL;
+        bandTerms(base, nx, fr, lg, tv, pq, npq, act, na);   // tv[b] = lg[b] * (v0 + fr * (nx[b] - v0)) for the active layers, summed below in the order of the active list
         double y;
         if (mode == 0) {
           double sum = 0;
-          for (int j = 0; j < na; j++) { int b = act[j]; double v0 = base[b]; sum += lg[b] * (v0 + fr * (nx[b] - v0)); }
+          if (contig) { for (int j = 0; j < na; j++) sum += tvA[j]; }
+          else for (int j = 0; j < na; j++) sum += tv[act[j]];
           if (useDry) {
             double v0 = base[DRY], dry = v0 + fr * (nx[DRY] - v0);
             y = dry + windowValue(x, pc, pw, pd) * (sum - dry);
           } else y = sum;
         } else {
           double first = 0, sum = 0;
-          for (int j = 0; j < na; j++) {
-            int b = act[j]; double v0 = base[b]; double v = lg[b] * (v0 + fr * (nx[b] - v0));
-            if (b == 0) first = v; else sum += v;
-          }
+          if (contig) {
+            int j = 0;
+            if (act[0] == 0) { first = tv[0]; j = 1; }
+            for (; j < na; j++) sum += tvA[j];
+          } else
+            for (int j = 0; j < na; j++) {
+              int b = act[j]; double v = tv[b];
+              if (b == 0) first = v; else sum += v;
+            }
           y = pd > 0 ? first + windowValue(x, pc, pw, pd) * sum : first + sum;
         }
         oL += y * panL[u]; oR += y * panR[u];
@@ -1438,20 +1533,78 @@ class Engine {
     const double res = std::min(1.0, std::max(0.0, p[P_VF_RES] + dFltRes));
     vc.fk = FLT_K * res;
   }
-  // The voice buffers through the filter, times the amp envelope, added to the mix
-  void fltProcess(Voice& vc, int n) {
-    const int type = (int)jsRound(p[P_VF_TYPE]); const double drive = p[P_VF_DRIVE], k = vc.fk;
-    const double gin = 1 + 7 * drive, mk = (1 + gin) / (2 * gin), comp = type == 1 ? 1 + 0.6 * k : 1;   // OTA: the low end the resonance takes away comes back in part
-    const double G0 = vc.fG0, dG = (vc.fG1 - vc.fG0) / n;
-    for (int i = 0; i < n; i++) {
-      const double G = G0 + dG * (i + 1);
-      double xl = vtL[i], xr = vtR[i];
-      if (drive > 0) { xl = tnh(gin * xl) * mk; xr = tnh(gin * xr) * mk; }
-      xl *= comp; xr *= comp;
-      bufL[i] += (float)(ladder(vc.fs, 0, xl, G, k, type) * envA[i]);
-      bufR[i] += (float)(ladder(vc.fs, 4, xr, G, k, type) * envA[i]);
+  // The voice buffers (vtL / vtR) of the voices list[0 .. nf - 1] (ascending) through the filter, times their amp envelopes, added to the mix, voice by voice: the same operations
+  // as core.js fltProcess for each voice (the float sums of the mix are added in voice order, as when each voice was filtered as soon as it was rendered). The voices are interleaved
+  // sample by sample so that their independent chains of divisions overlap, and a voice's two channels are the two lanes of an SSE2 pair.
+  void filterVoices(const int* list, int nf, int n) {
+    const int type = (int)jsRound(p[P_VF_TYPE]); const double drive = p[P_VF_DRIVE];
+    const double gin = 1 + 7 * drive;
+    const double mk = (1 + gin) / (2 * gin);
+    double G0[MAXV], dG[MAXV], kf[MAXV], comp[MAXV];
+    for (int f = 0; f < nf; f++) {
+      const Voice& vc = voices[list[f]];
+      kf[f] = vc.fk; comp[f] = type == 1 ? 1 + 0.6 * vc.fk : 1;   // OTA: the low end the resonance takes away comes back in part
+      G0[f] = vc.fG0; dG[f] = (vc.fG1 - vc.fG0) / n;
     }
-    for (int q = 0; q < 8; q++) { const double x = vc.fs[q]; if (std::fabs(x) < 1e-20 || !std::isfinite(x)) vc.fs[q] = 0; }   // no denormals, no NaN left in a state
+#if defined(__SSE2__)
+    const __m128d c27 = _mm_set1_pd(27), c9 = _mm_set1_pd(9), c3 = _mm_set1_pd(3), cm3 = _mm_set1_pd(-3), vgin = _mm_set1_pd(gin), vmk = _mm_set1_pd(mk);
+    // tnh() on two lanes; min / max keep a NaN as it is, like the comparisons of the scalar form
+    auto tnh2 = [&](__m128d x) {
+      x = _mm_max_pd(cm3, _mm_min_pd(c3, x));
+      const __m128d x2 = _mm_mul_pd(x, x);
+      return _mm_div_pd(_mm_mul_pd(x, _mm_add_pd(c27, x2)), _mm_add_pd(c27, _mm_mul_pd(c9, x2)));
+    };
+    for (int i = 0; i < n; i++) {
+      float aL = bufL[i], aR = bufR[i];
+      for (int f = 0; f < nf; f++) {
+        const int v = list[f]; double* st = voices[v].fs;
+        const double G = G0[f] + dG[f] * (i + 1), k = kf[f];
+        const double g1 = 1 - G, G2 = G * G, G3 = G2 * G, G4 = G2 * G2;
+        __m128d u = _mm_set_pd((double)vtR[v][i], (double)vtL[v][i]);
+        if (drive > 0) u = _mm_mul_pd(tnh2(_mm_mul_pd(vgin, u)), vmk);
+        u = _mm_mul_pd(u, _mm_set1_pd(comp[f]));
+        const __m128d s1 = _mm_loadu_pd(st), s2 = _mm_loadu_pd(st + 2), s3 = _mm_loadu_pd(st + 4), s4 = _mm_loadu_pd(st + 6);
+        const __m128d vG = _mm_set1_pd(G);
+        // S = g1 * (G3 s1 + G2 s2 + G s3 + s4), y4l = (G4 u + S) / (1 + k G4), x = u - k y4l: the feedback solved without delay for the linear ladder
+        const __m128d S = _mm_mul_pd(_mm_set1_pd(g1), _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(_mm_set1_pd(G3), s1), _mm_mul_pd(_mm_set1_pd(G2), s2)), _mm_mul_pd(vG, s3)), s4));
+        const __m128d y4l = _mm_div_pd(_mm_add_pd(_mm_mul_pd(_mm_set1_pd(G4), u), S), _mm_set1_pd(1 + k * G4));
+        __m128d x = _mm_sub_pd(u, _mm_mul_pd(_mm_set1_pd(k), y4l)), y1, y2, y3, y4;
+        if (type == 0) {   // LADDER: every stage saturates
+          const __m128d a = tnh2(x), v1 = _mm_mul_pd(_mm_sub_pd(a, s1), vG); y1 = _mm_add_pd(v1, s1); _mm_storeu_pd(st, _mm_add_pd(y1, v1));
+          const __m128d b = tnh2(y1), v2 = _mm_mul_pd(_mm_sub_pd(b, s2), vG); y2 = _mm_add_pd(v2, s2); _mm_storeu_pd(st + 2, _mm_add_pd(y2, v2));
+          const __m128d c = tnh2(y2), v3 = _mm_mul_pd(_mm_sub_pd(c, s3), vG); y3 = _mm_add_pd(v3, s3); _mm_storeu_pd(st + 4, _mm_add_pd(y3, v3));
+          const __m128d d = tnh2(y3), v4 = _mm_mul_pd(_mm_sub_pd(d, s4), vG); y4 = _mm_add_pd(v4, s4); _mm_storeu_pd(st + 6, _mm_add_pd(y4, v4));
+        } else {           // OTA: only the input of the loop saturates
+          x = tnh2(x);
+          const __m128d v1 = _mm_mul_pd(_mm_sub_pd(x, s1), vG); y1 = _mm_add_pd(v1, s1); _mm_storeu_pd(st, _mm_add_pd(y1, v1));
+          const __m128d v2 = _mm_mul_pd(_mm_sub_pd(y1, s2), vG); y2 = _mm_add_pd(v2, s2); _mm_storeu_pd(st + 2, _mm_add_pd(y2, v2));
+          const __m128d v3 = _mm_mul_pd(_mm_sub_pd(y2, s3), vG); y3 = _mm_add_pd(v3, s3); _mm_storeu_pd(st + 4, _mm_add_pd(y3, v3));
+          const __m128d v4 = _mm_mul_pd(_mm_sub_pd(y3, s4), vG); y4 = _mm_add_pd(v4, s4); _mm_storeu_pd(st + 6, _mm_add_pd(y4, v4));
+        }
+        const __m128 r = _mm_cvtpd_ps(_mm_mul_pd(y4, _mm_set1_pd(envAv[v][i])));   // (float)(ladder(...) * env), left in lane 0, right in lane 1
+        aL += _mm_cvtss_f32(r); aR += _mm_cvtss_f32(_mm_shuffle_ps(r, r, 1));
+      }
+      bufL[i] = aL; bufR[i] = aR;
+    }
+#else
+    for (int f = 0; f < nf; f++) {
+      const int v = list[f]; double* fs = voices[v].fs; double st[8] = {fs[0], fs[2], fs[4], fs[6], fs[1], fs[3], fs[5], fs[7]};   // left states, then right ones, as ladder() reads them
+      const double k = kf[f];
+      for (int i = 0; i < n; i++) {
+        const double G = G0[f] + dG[f] * (i + 1);
+        double xl = vtL[v][i], xr = vtR[v][i];
+        if (drive > 0) { xl = tnh(gin * xl) * mk; xr = tnh(gin * xr) * mk; }
+        xl *= comp[f]; xr *= comp[f];
+        bufL[i] += (float)(ladder(st, 0, xl, G, k, type) * envAv[v][i]);
+        bufR[i] += (float)(ladder(st, 4, xr, G, k, type) * envAv[v][i]);
+      }
+      for (int q = 0; q < 4; q++) { fs[2 * q] = st[q]; fs[2 * q + 1] = st[4 + q]; }
+    }
+#endif
+    for (int f = 0; f < nf; f++) {
+      double* fs = voices[list[f]].fs;
+      for (int q = 0; q < 8; q++) { const double x = fs[q]; if (std::fabs(x) < 1e-20 || !std::isfinite(x)) fs[q] = 0; }   // no denormals, no NaN left in a state
+    }
   }
 
   // The sub oscillator: one per voice (not per unison voice), centred, not filtered, following the amp envelope.
@@ -1550,6 +1703,10 @@ class Engine {
     const double gT = nv > POLY_FREE + 1e-6 ? std::sqrt(POLY_FREE / nv) : 1;
     double g = polyG;
     if (g == 1 && gT == 1) return;
+    if (g == gT) {   // settled: g += (gT - g) * c adds 0 and the snap keeps g, so every sample is scaled by the same g
+      for (int i = 0; i < n; i++) { L[i] = (float)(L[i] * g); R[i] = (float)(R[i] * g); }
+      return;
+    }
     const double c = gT < g ? polyDown : polyUp;
     for (int i = 0; i < n; i++) {
       g += (gT - g) * c;
@@ -1577,8 +1734,8 @@ class Engine {
     }
     std::fill(bufL, bufL + n, 0.0f); std::fill(bufR, bufR + n, 0.0f);
     if (envOne[0] != 1.0) std::fill(envOne, envOne + CTRL, 1.0);
-    wL = bufL; wR = bufR; eP = envA;
     uint32_t vmask = 0;
+    int fl[MAXV], nf = 0;   // the voices that go through the filter this block
     const bool fading = hasPrev;
     const double fadeInc = fading ? 1.0 / 512 : 0, fade0 = fading ? fade : 1;
     prepBlock(n, fading);
@@ -1586,14 +1743,16 @@ class Engine {
       Voice& vc = voices[k];
       if (!vc.active || !hasCur) continue;
       control(vc, n);
-      ampPass(vc, n);
+      ampPass(vc, n, envAv[k]);
       // the FILTER (beta 0.3): the voice is rendered with a unit envelope into its own buffers, filtered, then shaped by the real amp envelope and added to the mix
-      const double feLev = vc.fe.step(n, sr, p[P_VF_A], p[P_VF_D], p[P_VF_S], p[P_VF_R]);
+      const double feLev = vc.fe.step(n, sr, p[P_VF_A], p[P_VF_D], p[P_VF_S], p[P_VF_R], mFeD, mFeR);
       const bool filt = fltOn;
+      eP = envAv[k]; wL = bufL; wR = bufR;
       if (filt) {
         fltPrep(vc, n, feLev);
-        eP = envOne; wL = vtL; wR = vtR;
-        std::fill(vtL, vtL + n, 0.0f); std::fill(vtR, vtR + n, 0.0f);
+        eP = envOne; wL = vtL[k]; wR = vtR[k];
+        std::fill(vtL[k], vtL[k] + n, 0.0f); std::fill(vtR[k], vtR[k] + n, 0.0f);
+        fl[nf++] = k;
       } else vc.fOn = false;
       for (int s = 0; s < NS; s++) {
         if (!live[s]) continue;
@@ -1605,7 +1764,6 @@ class Engine {
         if (cur.slot[s].on) renderSlot(vc, n, s, cur.slot[s], fade0, fadeInc, false, m0[s], m1[s]);
       }
       renderSub(vc, n);
-      if (filt) { eP = envA; wL = bufL; wR = bufR; fltProcess(vc, n); }
       // commit end-of-block state
       vc.amp.level = endLevel; vc.amp.stage = endStage;
       vc.subPhase = endSubPhase;
@@ -1620,6 +1778,7 @@ class Engine {
       if (vc.amp.stage == 0) { vc.active = false; vc.gate = false; continue; }
       vmask |= 1u << k;
     }
+    if (nf) filterVoices(fl, nf, n);
     if (fading) {
       fade += n * fadeInc;
       if (fade >= 1) { fade = 1; hasPrev = false; if (nReleased < 4) released[nReleased++] = prev.owner; }
@@ -1627,11 +1786,13 @@ class Engine {
     polyComp(bufL, bufR, n);
 
     // effects
-    const double drive = p[P_FX_DRIVE], kd = std::exp(drive * 24 * (LN10 / 20)), comp = 0.5 / std::tanh(0.5 * kd);
+    const double drive = p[P_FX_DRIVE], kd = mKd.get(drive * 24 * (LN10 / 20));
+    if (kd != mCompKd) { mCompKd = kd; mComp = 0.5 / std::tanh(0.5 * kd); }
+    const double comp = mComp;
     const double fb = p[P_FX_DFB], dmix = p[P_FX_DMIX], rmix = p[P_FX_RMIX];
     const double dTarget = delaySec() * sr;
     const double feedback = 0.7 + 0.28 * p[P_FX_RSIZE];
-    const double volT = std::exp(p[P_MASTER] * (LN10 / 20));
+    const double volT = mVol.get(p[P_MASTER] * (LN10 / 20));
     const double chMix = p[P_CH_MIX], chBase = CH_BASE * sr, chDepth = p[P_CH_DEPTH] * CH_DEPTH * sr;
     const double chInc = p[P_CH_RATE] / sr, chInc2 = chInc * CH_FAST;
     // the chorus's two LFOs as rotating vectors (sin and cos of the phase, turned by one step per sample): two sines and two
