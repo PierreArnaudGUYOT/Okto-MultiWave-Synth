@@ -4,7 +4,7 @@
 // Created by Pierre Arnaud GUYOT ("OktoPierre"). Release history: see RELEASE_HISTORY.md
 // Okto MultiWave Synth beta 0.1 (2026-10-18) — the Wavelet Synthesizer beta 0.7 with TWO OSCILLATORS PER ENGINE (A1 A2 subtractive,
 //   B1 B2 additive, each with its own wavelet, filter, window, level, tuning, own envelope and pitch envelope), its 22 TOP
-//   Sounds, 200 new presets to evaluate (EVALUATE SOUNDS), a CHORD MODE (chord-harp-style chord keyboard) and the findings of
+//   Sounds, 200 new presets (the first listening), a CHORD MODE (chord-harp-style chord keyboard) and the findings of
 //   the CPU load study. The history of the base synthesizer is in RELEASE_HISTORY.md.
 // Parameters, panel layout and factory presets are defined here once and
 // generated into web/js/spec.js and vst/src/generated/spec.h by gen_spec.js.
@@ -271,7 +271,7 @@ add('lfo_ew', 'LFO 1 to Envelope>Wavelet', 'ENV>WAV', { fmt: 'pct', min: 0, max:
 // of 50 cents); Turkish: the 53-comma system (a comma = 1200/53 = 22.64 cents, the Arel-Ezgi-Uzdilek values). A key that is not a
 // degree of the scale keeps its equal-tempered pitch, so the sharps and flats stay playable. Each key's pitch is moved from its
 // equal-tempered value by MICRO_TABLES[tuning][scale][semitones above the tonic] cents, whatever plays it (a key, a chord's notes).
-// A performance setting, like CHORD MODE: never in a preset, off in the demo and in EVALUATE SOUNDS.
+// A performance setting, like CHORD MODE: never in a preset, off in the demo.
 const COMMA = 1200 / 53;
 const MICRO_SCALES = [   // degrees: semitone above the tonic -> cents (Arabic) / commas (Turkish) above the tonic
   { name: 'Rast', short: 'RAST', ar: { 2: 200, 4: 350, 5: 500, 7: 700, 9: 900, 11: 1050 }, tr: { 2: 9, 4: 17, 5: 22, 7: 31, 9: 40, 11: 48 } },
@@ -605,7 +605,7 @@ function convertLegacy(v0) {
   return v;
 }
 // The new presets (tools/presets_new.js, written with tools/make_presets.js): { name, cat, v } in this version's parameters,
-// numbered in their names ("012 A1A2 · Glass Bell": the oscillators they use) for the listening test (EVALUATE SOUNDS).
+// numbered in their names ("012 A1A2 · Glass Bell": the oscillators they use) for the listening tests.
 let OLD_RAW = [], SUPER_RAW = [], LFO3_RAW = [], FILTER_RAW = [], FAV_RAW = [];
 try { OLD_RAW = require('./presets_new.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }   // the 200 presets of beta 0.1 (001-200), unchanged
 // beta 0.2: 300 more (201-500, tools/supermod/build.js); MW_NO_SUPER=1 leaves them out (the builder measures the others)
@@ -650,10 +650,10 @@ const starsOf = r => RATED2.numbers[numOfName(r)] || RATED[numOfName(r)];
 // beta 0.3.4: the master volume of a preset lowered in whole dB after measuring a loud chord at velocity 1 (tools/supermod/loud.js --spec -> tools/master_adjust.js, by number)
 let MASTER_ADJ = {};
 try { MASTER_ADJ = require('./master_adjust.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
-// the presets EVALUATE SOUNDS rates, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones and the low-rated ones)
+// the presets of the listening tests, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones and the low-rated ones)
 const NEW_RAW = [...LFO3_RAW, ...FILTER_RAW, ...FAV_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).filter(r => !lowRated(r)).map(withoutB2).map(withAdjusted)
   .sort((a, b) => RATED2.numbers[numOfName(b)] - RATED2.numbers[numOfName(a)] || numOfName(a) - numOfName(b));   // the best first
-const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
+const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the manual's preset table shows them)
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
 // Categories (preset menu groups, like the banks of a hardware synthesizer), in menu order.

@@ -18,7 +18,8 @@ const CXX = path.join(LLVM, 'x86_64-w64-mingw32-clang++.exe'), SCRATCH = path.jo
 fs.mkdirSync(SCRATCH, { recursive: true });
 const LOGNAME = arg('log') || 'full';
 const LOG = path.join(ROOT, 'tests', 'out', LOGNAME + '.log');
-if (process.argv.includes('--parallel')) {   // the web suites (headless Edge) and the rest (node, C++) do not need each other: two child runs
+const PARALLEL = process.argv.includes('--parallel');
+if (PARALLEL) {   // the web suites (headless Edge) and the rest (node, C++) do not need each other: two child runs
   const kids = [['web', ['--only', 'web:', '--log', 'full-web']], ['main', ['--skip', 'web:', '--log', 'full-main']]];
   console.log('Okto MultiWave Synth - full validation, two lanes side by side (logs: tests/out/full-web.log, full-main.log)');
   let pending = kids.length, bad = 0;
@@ -32,9 +33,8 @@ if (process.argv.includes('--parallel')) {   // the web suites (headless Edge) a
       if (--pending === 0) { console.log(`${bad ? 'FAIL' : 'PASS'}: both lanes in ${((Date.now() - t0) / 60000).toFixed(1)} min`); process.exit(bad ? 1 : 0); }
     });
   }
-  return;
 }
-fs.writeFileSync(LOG, 'full validation ' + new Date().toISOString() + '\n');
+if (!PARALLEL) fs.writeFileSync(LOG, 'full validation ' + new Date().toISOString() + '\n');
 const env = Object.assign({}, process.env, { PATH: LLVM + path.delimiter + process.env.PATH });
 
 const steps = [];
@@ -86,15 +86,17 @@ for (const [label, notes] of [['triad C6', '84,88,91'], ['five notes', '72,76,79
   });
 }
 
-const results = [], t0 = Date.now();
-console.log('Okto MultiWave Synth - full validation (log: tests/out/full.log)');
-for (const s of steps) {
-  if ((skip.length && skip.some(k => s.name.includes(k))) || (only.length && !only.some(k => s.name.includes(k)))) { console.log(`  skip  ${s.name}`); continue; }
-  const t = Date.now();
-  let r; try { r = s.fn(); } catch (e) { r = { ok: false, detail: e.message }; }
-  results.push({ name: s.name, ok: r.ok });
-  console.log(`  ${r.ok ? 'ok  ' : 'FAIL'}  ${s.name.padEnd(42)} ${((Date.now() - t) / 1000).toFixed(0).padStart(5)} s  ${r.detail || ''}`);
+if (!PARALLEL) {   // (the parallel run only starts the two lanes above)
+  const results = [], t0 = Date.now();
+  console.log('Okto MultiWave Synth - full validation (log: tests/out/full.log)');
+  for (const s of steps) {
+    if ((skip.length && skip.some(k => s.name.includes(k))) || (only.length && !only.some(k => s.name.includes(k)))) { console.log(`  skip  ${s.name}`); continue; }
+    const t = Date.now();
+    let r; try { r = s.fn(); } catch (e) { r = { ok: false, detail: e.message }; }
+    results.push({ name: s.name, ok: r.ok });
+    console.log(`  ${r.ok ? 'ok  ' : 'FAIL'}  ${s.name.padEnd(42)} ${((Date.now() - t) / 1000).toFixed(0).padStart(5)} s  ${r.detail || ''}`);
+  }
+  const fails = results.filter(r => !r.ok);
+  console.log(`${fails.length ? 'FAIL' : 'PASS'}: ${results.length - fails.length} / ${results.length} steps in ${((Date.now() - t0) / 60000).toFixed(1)} min${fails.length ? '; failed: ' + fails.map(f => f.name).join(', ') : ''}`);
+  process.exit(fails.length ? 1 : 0);
 }
-const fails = results.filter(r => !r.ok);
-console.log(`${fails.length ? 'FAIL' : 'PASS'}: ${results.length - fails.length} / ${results.length} steps in ${((Date.now() - t0) / 60000).toFixed(1)} min${fails.length ? '; failed: ' + fails.map(f => f.name).join(', ') : ''}`);
-process.exit(fails.length ? 1 : 0);
