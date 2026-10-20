@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // C++ <-> JS cross-check of the engine. The cases are in tools/dsp_cases.js.
 //   node tools/dsp_compare.js --list <dir>   writes <dir>/cases.txt (read by vst/devtest/dsp_render.cpp)
-//   node tools/dsp_compare.js <dir>          renders the cases with the JS core and compares them with <dir>/cpp_NNN.raw
+//   node tools/dsp_compare.js <dir> [i/n]    renders the cases with the JS core and compares them with <dir>/cpp_NNN.raw (only the cases whose number is i modulo n: tests/quick.js runs the shards side by side)
 // Every case must match within TOL (2e-6 of full scale): the C++ and JS engines do the same operations in the same order, the
 // remaining differences are float rounding of the buffers and the maths libraries.
 'use strict';
@@ -36,8 +36,11 @@ const LIVE_SCRIPT = [
 const LOUD_SCRIPT = [
   [0, 1, 72, 1], [0, 1, 76, 1], [0, 1, 79, 1], [19200, 1, 84, 1], [19200, 1, 88, 1], [38400, 1, 60, 1], [38400, 1, 64, 1], [38400, 1, 67, 1],
   [72000, 0, 72, 0], [72000, 0, 76, 0], [72000, 0, 79, 0], [72000, 0, 84, 0], [72000, 0, 88, 0], [96000, 0, 60, 0], [96000, 0, 64, 0], [96000, 0, 67, 0]];
-let worst = 0, fails = 0;
+const SHARD = (process.argv[3] || '0/1').split('/').map(Number);
+let worst = 0, fails = 0, checked = 0;
 cases.forEach((c, idx) => {
+  if (SHARD[1] > 1 && idx % SHARD[1] !== SHARD[0]) return;
+  checked++;
   const params = Float64Array.from(c.values);
   const eng = new C.Engine(sr); params.forEach((v, i) => eng.setParam(i, v));
   eng.setTempo(c.tempo);   // 0 = no tempo (the factory presets, the web app)
@@ -75,5 +78,5 @@ cases.forEach((c, idx) => {
   worst = Math.max(worst, maxd);
   if (!ok || idx % 20 === 0 || idx >= SPEC.PRESETS.length) console.log(`${ok ? 'ok  ' : 'FAIL'} ${String(idx).padStart(3)} ${c.name.padEnd(46)} max |C++ - JS| = ${maxd.toExponential(2)} (peak ${peak.toFixed(3)})`);
 });
-console.log(fails ? `${fails} mismatch(es) in ${cases.length} cases` : `C++ port matches the JS reference in ${cases.length} cases (worst ${worst.toExponential(2)})`);
+console.log(fails ? `${fails} mismatch(es) in ${checked} cases` : `C++ port matches the JS reference in ${checked} cases (worst ${worst.toExponential(2)})`);
 process.exit(fails ? 1 : 0);

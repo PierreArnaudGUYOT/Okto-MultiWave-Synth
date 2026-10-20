@@ -4,7 +4,8 @@
 // (tests/vst3host, tests/web/test_web.js, tests/web/test_demo.js) stay for releases and big changes.
 //
 //   node tests/quick.js          static checks + JS engine + VST3 core sections + web app smoke test
-//   node tests/quick.js --dsp    also compares the C++ engine with the JS reference (needs llvm-mingw, +20 s)
+//   node tests/quick.js --dsp    also compares the C++ engine with the JS reference (needs llvm-mingw; the cases run in parallel shards, about a minute; skipped when the engine, the
+//                                spec and the cases are unchanged since the last successful run, --force runs it anyway)
 //
 // The browser is headless and muted (cdp.js always passes --mute-audio) and is always closed at the end.
 'use strict';
@@ -12,7 +13,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), cp = requi
 
 const ROOT = path.resolve(__dirname, '..');
 const R = (...p) => path.join(ROOT, ...p);
-const opt = { dsp: process.argv.includes('--dsp') };
+const opt = { dsp: process.argv.includes('--dsp'), force: process.argv.includes('--force') };
 const results = [];
 const t0 = Date.now();
 const secs = (t) => ((Date.now() - t) / 1000).toFixed(1) + ' s';
@@ -46,7 +47,7 @@ function staticChecks() {
 }
 
 // ---------------------------------------------------------------- 2. JS engine (reference DSP), no browser
-function jsEngine() {
+async function jsEngine() {
   const t = Date.now(), bad = [];
   const SPEC = require(R('web', 'js', 'spec.js')), C = require(R('web', 'js', 'core.js'))(SPEC), P = C.P;
   const sr = 48000, L = new Float32Array(128), Rb = new Float32Array(128);
@@ -60,12 +61,13 @@ function jsEngine() {
     }
     return { pk, nan };
   };
-  for (const pr of SPEC.PRESETS) {
-    const r = run(pr.values, (e, b) => { if (b === 0) e.noteOn(60, 0.9); if (b === 120) { e.noteOn(64, 0.8); e.noteOn(67, 0.8); } }, 190);
-    if (r.nan) bad.push(`${pr.name}: ${r.nan} non-finite samples`);
-    else if (r.pk < 1e-4) bad.push(`${pr.name}: silent`);
-    else if (r.pk > 1.0001) bad.push(`${pr.name}: peak ${r.pk.toFixed(3)} > 0 dBFS`);
-  }
+  // every preset plays a note and a chord (the worker threads share the work: tests/quick_engine_worker.js)
+  const { Worker } = require('worker_threads'), nw = Math.max(1, Math.min(12, (require('os').cpus().length || 4) - 2));
+  const parts = await Promise.all(Array.from({ length: nw }, (_, k) => new Promise((res) => {
+    const w = new Worker(R('tests', 'quick_engine_worker.js'), { workerData: { k, n: nw } });
+    w.on('message', res); w.on('error', (e) => res(['worker ' + k + ': ' + e.message]));
+  })));
+  for (const p of parts) bad.push(...p);
   // Okto MultiWave Synth: the chord keyboard on the opening preset: a selector key, a root, a strum, a plate note
   const ch = SPEC.PRESETS[SPEC.DEFAULT_PRESET].values.slice(); ch[P.chord_mode] = 1; ch[P.chord_strum] = 0.02; ch[P.chord_bass] = 1;
   const c = run(ch, (e, b) => { if (b === 0) { e.keyOn(50, 1); e.keyOn(67, 0.9); } if (b === 60) e.plateOn(79, 0.8); if (b === 90) { e.plateOff(79); e.keyOff(67); } }, 150);
@@ -156,27 +158,44 @@ async function web() {
 }
 
 // ---------------------------------------------------------------- 5. optional: C++ engine vs JS reference
-function dspCompare() {
+const crypto = require('crypto');
+async function dspCompare() {
   const t = Date.now(), dir = R('tests', 'vst3host', 'out_quick', 'dsp');
   fs.mkdirSync(dir, { recursive: true });
+  // what the result depends on: the two engines, the spec they are built from, the cases and the two drivers
+  const inputs = ['vst/src/dsp.h', 'vst/src/common.h', 'vst/src/generated/spec.h', 'web/js/core.js', 'web/js/spec.js', 'tools/dsp_cases.js', 'tools/dsp_compare.js', 'vst/devtest/dsp_render.cpp'];
+  const h = crypto.createHash('sha256'); for (const f of inputs) h.update(fs.readFileSync(R(...f.split('/'))));
+  const sig = h.digest('hex'), stamp = path.join(dir, 'last_ok.json');
+  if (!opt.force) { try { const o = JSON.parse(fs.readFileSync(stamp, 'utf8')); if (o.sig === sig) return report('C++ vs JS', true, 'unchanged since the last successful run (' + o.line + '); --force runs it again', t); } catch (e) { /* none yet */ } }
   const bin = path.join(process.env.LLVM_MINGW || path.join(process.env.USERPROFILE, 'tools', 'llvm-mingw'), 'bin', 'x86_64-w64-mingw32-clang++.exe');
   const exe = path.join(dir, 'dsp_render.exe');
   let r = cp.spawnSync(bin, ['-std=c++17', '-O2', '-static', '-Wno-format', '-DNOMINMAX', '-I', R('vst', 'external'), '-I', R('vst', 'src'), R('vst', 'devtest', 'dsp_render.cpp'), '-o', exe], { encoding: 'utf8' });
   if (r.status !== 0) return report('C++ vs JS', false, 'compile failed: ' + (r.stderr || r.error || '').toString().slice(0, 300), t);
   r = cp.spawnSync(process.execPath, [R('tools', 'dsp_compare.js'), '--list', dir], { encoding: 'utf8' });   // the cases (cases.txt) the C++ engine renders
-  r = cp.spawnSync(exe, [dir], { encoding: 'utf8' });
-  r = cp.spawnSync(process.execPath, [R('tools', 'dsp_compare.js'), dir], { encoding: 'utf8' });
-  const last = (r.stdout || '').trim().split('\n').pop();
-  report('C++ vs JS', r.status === 0 && /matches/.test(last), last, t);
+  // the shards side by side: each renders its cases with the C++ engine, then compares them with the JS core
+  const n = Math.max(1, Math.min(12, (require('os').cpus().length || 4) - 2));
+  const run = (cmd, args) => new Promise(res => { let out = ''; const p = cp.spawn(cmd, args, { windowsHide: true }); p.stdout.on('data', d => { out += d; }); p.on('close', code => res({ code, out })); p.on('error', () => res({ code: -1, out })); });
+  const shards = await Promise.all(Array.from({ length: n }, async (_, i) => {
+    await run(exe, [dir, i + '/' + n]);
+    return run(process.execPath, [R('tools', 'dsp_compare.js'), dir, i + '/' + n]);
+  }));
+  let cases = 0, worst = 0, ok = true;
+  for (const s of shards) {
+    const m = /matches the JS reference in (\d+) cases \(worst ([0-9.e+-]+)\)/.exec(s.out.trim().split('\n').pop());
+    if (s.code !== 0 || !m) { ok = false; continue; }
+    cases += +m[1]; worst = Math.max(worst, +m[2]);
+  }
+  const last = ok ? `C++ port matches the JS reference in ${cases} cases (worst ${worst.toExponential(2)}, ${n} shards)` : shards.filter(s => s.code !== 0).map(s => s.out.trim().split('\n').pop()).join(' | ').slice(0, 300) || 'a shard failed';
+  if (ok) fs.writeFileSync(stamp, JSON.stringify({ sig, line: last }));
+  report('C++ vs JS', ok, last, t);
 }
 
 // ---------------------------------------------------------------- run
 (async () => {
   console.log('Okto MultiWave Synth - quick check' + (opt.dsp ? ' (+ C++/JS cross-check)' : ''));
   staticChecks();
-  jsEngine();
-  await Promise.all([vst3(), web()]);   // the two slowest parts run side by side
-  if (opt.dsp) dspCompare();
+  await Promise.all([jsEngine(), vst3(), web()]);   // the slowest parts run side by side
+  if (opt.dsp) await dspCompare();
   for (const r of results) console.log(`  ${r.ok ? 'ok  ' : 'FAIL'}  ${r.name.padEnd(11)} ${r.detail}${r.time ? `  (${r.time})` : ''}`);
   const ok = results.every(r => r.ok);
   console.log(`${ok ? 'PASS' : 'FAIL'} in ${secs(t0)}`);

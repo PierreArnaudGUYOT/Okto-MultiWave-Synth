@@ -64,11 +64,14 @@ static void render(const double* params, int idx, const std::string& name, int c
 }
 int main(int argc, char** argv) {
   const char* outdir = argc > 1 ? argv[1] : ".";
+  int shardI = 0, shardN = 1;   // dsp_render <dir> [i/n]: only the cases whose number is i modulo n (the cross-check runs the shards side by side)
+  if (argc > 2 && std::sscanf(argv[2], "%d/%d", &shardI, &shardN) != 2) { shardI = 0; shardN = 1; }
   std::ifstream in(std::string(outdir) + "/cases.txt");
   if (!in) { std::fprintf(stderr, "no cases.txt in %s: run `node tools/dsp_compare.js --list %s` first\n", outdir, outdir); return 1; }
   std::string line; int idx = 0;
   while (std::getline(in, line)) {
     if (line.empty()) continue;
+    if (shardN > 1 && idx % shardN != shardI) { idx++; continue; }
     const size_t bar = line.rfind(" | ");
     std::istringstream ss(line.substr(0, bar));
     std::string kind; double tempo; ss >> kind >> tempo;
