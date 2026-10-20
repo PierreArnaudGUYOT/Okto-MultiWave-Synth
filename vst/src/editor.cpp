@@ -1478,18 +1478,21 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // "Start at…": the player types the number of the first sound (the first one not rated yet is offered)
   void voteAskStart() {
     const int n = (int)vList.size(), next = vNextFree();
+    long vlo = 1 << 30, vhi = 0;   // the list starts at 501 but its numbers run from 001 to 1100
+    for (int i = 0; i < n; i++) { const long x = std::atol(vNum(i).c_str()); vlo = std::min(vlo, x); vhi = std::max(vhi, x); }
+    char range[48]; std::snprintf(range, sizeof range, "%03ld to %ld", vlo, vhi);
     std::wstring t = envPath(L"MW_START_AT");   // developer tests: no window
     if (t.empty()) {
       if (!win) return;
       SaveDlg d; d.name = toW(vNum(next < n ? next : 0)); d.label = L"Number:"; d.ok = L"Start"; d.maxLen = 6;
-      if (!win->saveDialog(d, L"Start at…", false, (L"Number of the first sound to rate (" + toW(vNum(0)) + L" to " + toW(vNum(n - 1)) + L"):").c_str())) return;
+      if (!win->saveDialog(d, L"Start at…", false, (L"Number of the first sound to rate (the list starts at " + toW(vNum(0)) + L"; numbers go from " + toW(range) + L"):").c_str())) return;
       t = d.name;
     }
     const long v = std::wcstol(t.c_str(), nullptr, 10);
     int k = -1;
     for (int i = 0; i < n && v > 0; i++) if (std::atol(vNum(i).c_str()) == v) { k = i; break; }
     if (k < 0) {
-      vStatus = L"No sound numbered “" + t + L"” in the list (" + toW(vNum(0)) + L" to " + toW(vNum(n - 1)) + L").";
+      vStatus = L"No sound numbered “" + t + L"” in the list (numbers " + toW(range) + L").";
       voteInvalidate();
       return;
     }

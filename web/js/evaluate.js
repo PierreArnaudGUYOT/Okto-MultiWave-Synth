@@ -270,10 +270,11 @@ function WSEvaluate(api) {
   // "Start at…": the player types the number of the first sound (the first one not rated yet is offered)
   function askStart() {
     const next = nextFree(), def = num(next < PRESETS.length ? next : 0);
-    const t = window.prompt(`Number of the first sound to rate (${num(0)} to ${num(PRESETS.length - 1)}):`, def);
+    const nums = PRESETS.map(p => parseInt(KEY(p), 10)), lo = String(Math.min(...nums)).padStart(3, '0'), hi = String(Math.max(...nums));   // the list starts at 501 but its numbers run from 001 to 1100
+    const t = window.prompt(`Number of the first sound to rate (the list starts at ${num(0)}; numbers go from ${lo} to ${hi}):`, def);
     if (t === null) return;
     const v = parseInt(String(t).trim(), 10), k = Number.isFinite(v) ? PRESETS.findIndex(p => parseInt(KEY(p), 10) === v) : -1;
-    if (k < 0) { status('No sound numbered "' + String(t).trim() + '" in the list (' + num(0) + ' to ' + num(PRESETS.length - 1) + ').'); return; }
+    if (k < 0) { status('No sound numbered "' + String(t).trim() + '" in the list (numbers ' + lo + ' to ' + hi + ').'); return; }
     startAt(k);
   }
   function startAt(k) { s.k0 = k; s.sent = {}; play(k); }
