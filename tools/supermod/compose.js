@@ -147,7 +147,7 @@ const CONFIGS = [['A1A2', 40], ['A1B1', 32], ['A1A2B1', 24], ['A2B1', 4]];
 
 // the modulations of a sound (ctx: osc, g, kind, speed, variant): LFO 1 recipes, then LFO 2 and / or LFO 3 on wavelet parameters, the filter, the envelope.
 // Returns the recipes used ({ m, res }) or null when the sound does not make a valid SuperModulation / category preset.
-function modulate(r, ctx, cat, kind) {
+function modulate(r, ctx, cat, kind, opts = {}) {
   const super_ = cat === 'SuperModulation';
   const used = [], dests = new Set();
   const apply = (m) => {
@@ -159,8 +159,10 @@ function modulate(r, ctx, cat, kind) {
   const wt = (m) => (m.w || 1) * (super_ && isInnov(m.id) ? 2.2 : 1);
   const weighted = (list) => { const out = [], left = list.slice(); while (left.length) { const m = r.wpick(left.map(x => [x, wt(x)])); out.push(m); left.splice(left.indexOf(m), 1); } return out; };
   // the filter effect first (an LFO may move it)
-  const doFlt = r.p((FLT_PROB[kind] === undefined ? 0.6 : FLT_PROB[kind]) * 0.6);   // beta 0.3.1: the sounds with the filter envelope were rated lower: less often
-  if (doFlt) fltSetup(ctx, r);
+  const doFlt0 = r.p((FLT_PROB[kind] === undefined ? 0.6 : FLT_PROB[kind]) * 0.6);   // beta 0.3.1: the sounds with the filter envelope were rated lower: less often
+  // (the filter batch, tools/supermod/filter_build.js: opts.flt(ctx, r) sets the filter in every preset, in its own way; opts.fltLfo = how often an LFO moves it; the default is as before)
+  const doFlt = opts.flt ? true : doFlt0;
+  if (doFlt) { if (opts.flt) ctx.g.flt = opts.flt(ctx, r); else fltSetup(ctx, r); }
   const both = super_ || r.p(0.45);                                    // LFO 2 and LFO 3 both move wavelet parameters
   const first = r.p(0.5) ? 'lfo2' : 'lfo3', second = first === 'lfo2' ? 'lfo3' : 'lfo2';
   const nL1 = super_ ? r.wpick([[1, 3], [2, 2]]) : both ? r.wpick([[0, 3], [1, 2]]) : r.wpick([[0, 1.2], [1, 3], [2, 1]]);
@@ -170,7 +172,7 @@ function modulate(r, ctx, cat, kind) {
   const lfoWavelet = (slot) => { for (const m of weighted(by(slot))) if (apply(m)) return true; return false; };
   if (!lfoWavelet(first)) return null;
   if (both) { if (!lfoWavelet(second)) return null; }
-  else if (ctx.g.flt && r.p(0.5)) {   // the other LFO moves the filter instead
+  else if (ctx.g.flt && r.p(opts.fltLfo === undefined ? 0.5 : opts.fltLfo)) {   // the other LFO moves the filter instead
     for (const m of r.shuffle(MODS.filter(x => x.kind === second && !x.wd))) if (apply(m)) break;
   }
   if (doEnv) { for (const m of by('env')) if (apply(m)) break; }
@@ -184,11 +186,12 @@ function modulate(r, ctx, cat, kind) {
 function compose(r, cat, opts = {}) {
   const spec = CATS[cat];
   const kind = opts.kind || spec.kind || r.wpick(SUPER_KINDS);
-  const slotsInfo = kind === 'perc' ? composeDrum(r) : composeLayers(r, kind);
+  const slotsInfo = kind === 'perc' ? composeDrum(r) : composeLayers(r, kind, opts.configs);
   if (!slotsInfo) return null;
   const { slots, ctx, layerWords, form: form0, baseDesc } = slotsInfo;
-  const used = modulate(r, ctx, cat, kind);
+  const used = modulate(r, ctx, cat, kind, opts);
   if (!used) return null;
+  if (opts.tune) opts.tune(ctx, r, kind);   // (the filter batch: the voice and the effects are touched up before the preset is written)
   // an additive-only or attack-only kind keeps a safe resonance
   for (const sl of Object.keys(ctx.osc)) { const o = ctx.osc[sl]; if (o.fres !== undefined) o.fres = Math.min(o.fres, 12); }
   if (ctx.g.lfo && ctx.g.lfo.res) for (const sl of Object.keys(ctx.osc)) { const o = ctx.osc[sl]; if (o.fres !== undefined) o.fres = Math.min(o.fres, 6); }
@@ -207,7 +210,7 @@ function compose(r, cat, opts = {}) {
   const pr = P(cat, title, desc, specObj);
   pr.desc = desc;
   const order = slotsInfo.order || slots;
-  pr.meta = { cfg: slots.join(''), bodySlot: order[0], order, kind, layers: slotsInfo.layers, roles: slotsInfo.roles, mods: used.map(u => u.m.id), dests: [...new Set(used.map(u => u.m.dest))],
+  pr.meta = { base: baseDesc(v0), cfg: slots.join(''), bodySlot: order[0], order, kind, layers: slotsInfo.layers, roles: slotsInfo.roles, mods: used.map(u => u.m.id), dests: [...new Set(used.map(u => u.m.dest))],
     flt: ctx.g.flt ? ctx.g.flt.type : null };
   return pr;
 }
@@ -220,8 +223,8 @@ function composeDrum(r) {
 }
 
 // ---- the oscillators from the layers: one body and the others chosen against it
-function composeLayers(r, kind) {
-  const cfg = r.wpick(CONFIGS), slots = cfg.match(/[AB]\d/g);
+function composeLayers(r, kind, configs) {
+  const cfg = r.wpick(configs || CONFIGS), slots = cfg.match(/[AB]\d/g);
   const picked = {};   // slot -> { l: layer, o: osc values, role }
   const usedFam = new Set();
   const take = (slot, l, role, isBody) => {
