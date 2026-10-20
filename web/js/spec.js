@@ -73,252 +73,308 @@ var WS_SPEC = {
   64,
   103
  ],
+ "TOP_LIST": [
+  0,
+  1,
+  21,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  28,
+  29,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  30,
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47,
+  48,
+  18,
+  19,
+  49,
+  62,
+  63,
+  64,
+  20,
+  103
+ ],
  "NEW_FIRST": 21,
  "NEW_COUNT": 216,
  "DESCRIPTIONS": {
-  "508 A1A2 · Moss Tide": "A soft triangle against a sine that dives in pitch; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the scale cutoff breathes, LFO 2 thins and thickens the atoms (sparsity), and LFO 3 swells the resonance.",
-  "079 A1A2 · Analog Cloud": "pulse and saw, three unison copies: a big soft cloud",
-  "527 A1A2 · Salt Beam Strings": "A pure sine against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (2544 Hz) that opens on every note.",
-  "545 A1A2 · Sweep of Pixel": "A pure sine against a gritty Haar saw, slightly detuned; the filtered part of the cycle is swept along it, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 sweeps the scale filter, and a 24 dB ladder low-pass (919 Hz) that opens on every note with some bite.",
-  "608 A1A2 · Chalk Edge Call": "A jagged Haar triangle against a rounded square sub two octaves below; LFO 2 sharpens and relaxes the edge of the scale filter, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (2070 Hz) that opens on every note with some bite.",
-  "762 A1B1 · Mosaic & Velvet": "A warm saw against stepped Walsh atoms an octave above; the wavelet morphs towards Haar, LFO 2 sweeps the scale filter, LFO 3 sweeps the cutoff of the low-pass filter, a light vibrato, and a 24 dB ladder low-pass (341 Hz) that opens on every note.",
-  "782 A1B1 · Lean of Pure": "A pure sine against random atoms that glitter an octave below; the scale cutoff breathes, LFO 2 tilts the scales from dark to bright, and a 24 dB OTA low-pass (524 Hz) that opens on every note.",
-  "788 A1A2 · Surge of Breath": "A pure sine against a veil of band-passed noise an octave above; LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 sweeps the cutoff of the low-pass filter, and a 24 dB OTA low-pass (1382 Hz) that opens on every note.",
-  "1067 A1A2 · Sizzle Surge": "An open hi-hat: bright, metallic noise and a thin pulse, left to ring; the wavelet morphs towards Daubechies 8, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (3111 Hz) that opens on every note with a singing resonance.",
-  "095 A1B1 · Silk Cloud": "a saw and a choir of mirror atoms: a cloud with a human colour",
-  "502 A1B1 · Resonance Storm": "Only the odd scales, hollow as a clarinet against a sine that dives in pitch two octaves above; the resonance of the scale filter pulses, LFO 2 tilts the scales from dark to bright, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (3331 Hz) that closes on every note with some bite.",
-  "506 A1A2 · Orbit Pad": "A warm saw against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 2 sweeps the scale filter, LFO 3 swells the resonance, and a 24 dB OTA low-pass (1136 Hz) that opens on every note.",
-  "539 A1A2 · Cavern Sweep Cloud": "A hollow square against a sine that dives in pitch; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 2 drifts the wavelet towards Daubechies 2, LFO 3 sweeps the scale filter, and a 24 dB ladder low-pass (1256 Hz) that opens on every note with some bite.",
-  "558 A2B1 · Step Sub": "A soft triangle against stepped Walsh atoms; the filtered part of the cycle is swept along it, LFO 3 sweeps the scale filter, LFO 2 pulls the source wave between narrow and wide, and a light vibrato.",
-  "669 A1A2B1 · Resonance Keys": "A hollow square against a sine that dives in pitch an octave above, and stepped Walsh atoms, slightly detuned; the resonance of the scale filter pulses, LFO 2 carries the window of the scale filter round the cycle, LFO 3 pulses the resonance of the low-pass filter, a light vibrato, and a 24 dB OTA low-pass (1832 Hz) that opens on every note with some bite.",
-  "774 A1B1 · Velvet Cloud": "A warm saw against random atoms that glitter an octave below; the resonance of the scale filter pulses, LFO 3 drifts the wavelet towards Daubechies 2, and a 24 dB OTA low-pass (499 Hz) that opens on every note with some bite.",
-  "786 A1B1 · Sweep of Faint": "A saw thinned to a few atoms against a ringing bell of single atoms an octave above; LFO 3 sweeps the scale filter, and LFO 2 swells the resonance.",
-  "799 A1A2B1 · Rust Aurora": "A warm saw against a veil of band-passed noise, and rough random atoms that clang and fade an octave below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, a light vibrato, and a 24 dB OTA low-pass (1347 Hz) that opens on every note with some bite.",
-  "800 A1B1 · Step Spiral": "A warm saw against stepped Walsh atoms an octave above; the scale cutoff breathes, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (1357 Hz) that opens on every note with a singing resonance.",
-  "1006 A1A2 · Drum Bloom": "A hollow square against a soft thump an octave above; the scale cutoff breathes, LFO 2 thins and thickens the atoms (sparsity), LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (4539 Hz) that closes on every note with some bite.",
-  "1101 A1A2 · Bloom of Soft": "A soft triangle against a glassy square a fifth above; the wavelet morphs towards Haar, the scale cutoff breathes, LFO 2 widens and narrows the filtered window, and LFO 3 thins and thickens the atoms (sparsity).",
-  "1104 A1A2B1 · Sweep Call": "A pure sine against a bright Haar ping, and rough random atoms that clang and fade an octave below; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 2 carries the window of the scale filter round the cycle, LFO 3 changes how much of the upper scales survives the decay, and a 24 dB OTA low-pass (1185 Hz) that opens on every note with some bite.",
-  "1129 A1A2B1 · Dive Texture": "Mirrored atoms that sing like a choir against a sine that dives in pitch, and a round triangle sub an octave below; the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 tilts the scales from dark to bright.",
-  "1155 A1A2B1 · Ice & Halo": "A buzzing band-passed saw against a glassy square an octave above, and a halo of high random atoms two octaves above; the filtered part of the cycle is swept along it, the scale cutoff breathes, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 2 drifts the wavelet towards Daubechies 20, and each note opens its scale filter on its own envelope.",
-  "1187 A1A2B1 · Pick & Soft": "A soft triangle against a saw whose filter works in one part of the cycle a fifth above, and scales that die from the top, like a pluck an octave above; the scale cutoff breathes, the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 swells the resonance.",
-  "1210 A1A2B1 · Static & Fibre": "An organ made of single wavelet atoms against a veil of band-passed noise two octaves above, and a buzzing band-passed saw, slightly detuned; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 carries the window of the scale filter round the cycle, LFO 2 drifts the wavelet towards Daubechies 2, and a 24 dB OTA low-pass (821 Hz) that opens on every note with some bite.",
-  "1287 A1A2 · Chalk Drift": "A jagged Haar triangle against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 swells the resonance, LFO 2 drifts the wavelet towards Haar, and each note opens its scale filter on its own envelope.",
-  "1355 A1A2B1 · Breath & Drift": "Only the odd scales, hollow as a clarinet against a Haar saw read from the middle of its cycle a fifth above, and a veil of band-passed noise; the resonance of the scale filter pulses, the wavelet morphs towards Daubechies 20, LFO 3 carries the window of the scale filter round the cycle, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (2056 Hz) that opens on every note.",
-  "377 A1B1 · Hornet & Cello": "Low mirrored atoms against a buzzing band-passed saw, slightly detuned; the sparsity swings between a rich tone and a few wavelet atoms, and the wavelet morphs towards Daubechies 2.",
-  "401 A1B1 · Pure Fog": "A pure sine against random atoms that glitter, slightly detuned; the resonance of the scale filter pulses, the sparsity swings between a rich tone and a few wavelet atoms, and a light vibrato.",
-  "513 A1B1 · Moss Beam Strum": "A soft triangle against random atoms that glitter an octave above; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 2 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (1850 Hz) that opens on every note with some bite.",
-  "514 A1A2B1 · Lung of Quartz": "Mirrored atoms that sing like a choir against a glassy square a fifth above, and a buzzing band-passed saw, slightly detuned; the resonance of the scale filter pulses, the scale cutoff breathes, LFO 2 widens and narrows the filtered window, LFO 3 pulls the even scales in and out, and a 24 dB ladder low-pass (1199 Hz) that opens on every note.",
-  "529 A1A2 · Breathe Pluck": "A pure sine against a tick of noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 widens and narrows the filtered window, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (2059 Hz) that opens on every note.",
-  "550 A1A2 · Origami & Honey": "A warm saw against a jagged Haar triangle an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, and LFO 3 sweeps the scale filter.",
-  "554 A1A2 · Hollow Bass": "A hollow square against a soft thump an octave below; the resonance of the scale filter pulses, LFO 2 sweeps the scale filter, LFO 3 pulses the resonance of the low-pass filter, each note opens its scale filter on its own envelope, and a 24 dB ladder low-pass (415 Hz) that opens on every note with a singing resonance.",
-  "562 A1B1 · Ripple of Marimba": "A warm saw against alternating atoms struck like a mallet; LFO 3 changes how much of the upper scales survives the decay, and LFO 2 swells the resonance.",
-  "575 A1A2 · Orbit Bloom": "A pure sine against a saw whose filter works in one part of the cycle, slightly detuned; LFO 2 thins and thickens the atoms (sparsity).",
-  "593 A1B1 · Ghost Foundation": "A saw thinned to a few atoms against stepped Walsh atoms, slightly detuned; the resonance of the scale filter pulses, LFO 3 thins and thickens the atoms (sparsity), LFO 2 sweeps the cutoff of the low-pass filter, and a 24 dB OTA low-pass (154 Hz) that opens on every note with some bite.",
-  "602 A1B1 · Atoms Signal": "A pure sine against a halo of high random atoms two octaves above; LFO 2 thins and thickens the atoms (sparsity), LFO 3 widens and narrows the filtered window, and a 24 dB ladder low-pass (2351 Hz) that opens on every note with some bite.",
-  "603 A1A2 · Flint Line": "A buzzing band-passed saw against a jagged Haar triangle an octave below; LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 3 swells the resonance.",
-  "607 A1A2B1 · Ripple Signal": "A hollow square against a narrow pulse shifted inside its cycle an octave above, and stepped Walsh atoms an octave below; the resonance of the scale filter pulses, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (1780 Hz) that opens on every note with a singing resonance.",
-  "680 A2B1 · Swing of Odd": "Only the odd scales, hollow as a clarinet against a veil of band-passed noise two octaves above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), a light vibrato, and a 24 dB OTA low-pass (1357 Hz) that opens on every note.",
-  "692 A1B1 · Ice Chords": "An organ made of single wavelet atoms against a glassy square an octave below; the wavelet morphs towards Daubechies 2, LFO 3 carries the window of the scale filter round the cycle, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (1730 Hz) that opens on every note.",
-  "694 A1B1 · Cave Pinch Keys": "Only the odd scales, hollow as a clarinet against a sine that dives in pitch an octave above; LFO 3 tilts the scales from dark to bright, LFO 2 widens and narrows the filtered window, and a 24 dB ladder low-pass (1694 Hz) that opens on every note with some bite.",
-  "768 A1A2 · Velvet Aurora": "A warm saw against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 drifts the wavelet towards Haar, and a 24 dB OTA low-pass (850 Hz) that opens on every note.",
-  "773 A1A2B1 · Swell of Drop": "Low mirrored atoms against a buzzing band-passed saw, slightly detuned, and a sine that dives in pitch an octave above; the scale cutoff breathes, LFO 2 drifts the wavelet towards Daubechies 2, and LFO 3 tilts the scales from dark to bright.",
-  "781 A1A2 · Knock Sweep": "A soft triangle against a woody knock an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 swells the resonance, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (1151 Hz) that opens on every note with some bite.",
-  "785 A1A2 · Flint Ripple Haze": "A hollow square against a jagged Haar triangle an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 3 drifts the wavelet towards Daubechies 8, and a 24 dB ladder low-pass (1323 Hz) that opens on every note.",
-  "841 A1B1 · Moss Tide Strings": "A soft triangle against stepped Walsh atoms a fifth above; LFO 2 thins and thickens the atoms (sparsity), LFO 3 drifts the wavelet towards Daubechies 2, and a 24 dB ladder low-pass (2998 Hz) that opens on every note.",
-  "844 A1A2 · Ripple of Mist": "A warm saw against a veil of band-passed noise an octave above; the resonance of the scale filter pulses, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB ladder low-pass (1540 Hz) that opens on every note.",
-  "845 A1A2 · Wood Rise Bows": "A nasal pulse against a woody knock an octave above; LFO 2 changes how far each note's envelope opens the scale filter, and LFO 3 sweeps the scale filter.",
-  "847 A1A2 · Breath Section": "A warm saw against a veil of band-passed noise; the scale cutoff breathes, LFO 2 swells the resonance, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (1796 Hz) that opens on every note.",
-  "1035 A1A2 · Mist & Origami": "A jagged Haar triangle against a veil of band-passed noise; LFO 2 sweeps the scale filter.",
-  "1092 A1A2 · Orbit Drum": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 2 thins and thickens the atoms (sparsity), and LFO 3 carries the window of the scale filter round the cycle.",
-  "1141 A1A2 · Pure Tide Pad": "A pure sine against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 carries the window of the scale filter round the cycle, LFO 2 widens and narrows the filtered window, and a 24 dB ladder low-pass (445 Hz) that opens on every note with some bite.",
-  "1205 A1B1 · Atom Shapeshift": "An organ made of single wavelet atoms against a saw whose filter works in one part of the cycle an octave below; the wavelet morphs towards Daubechies 20, the resonance of the scale filter pulses, LFO 2 thins and thickens the atoms (sparsity), LFO 3 tilts the scales from dark to bright, and each note opens its scale filter on its own envelope.",
-  "1219 A1B1 · Breath of Hornet": "Only the odd scales, hollow as a clarinet against a buzzing band-passed saw an octave below; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the scale cutoff breathes, LFO 3 pulls the even scales in and out, and LFO 2 thins and thickens the atoms (sparsity).",
-  "1321 A1A2 · Lantern Signal": "A saw whose filter works in one part of the cycle against a jagged Haar triangle an octave above; the wavelet morphs towards Daubechies 8, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 sweeps the scale filter, and a light vibrato.",
-  "109 A1A2 · Tremolo Strings": "a saw pair with a fast square LFO on the pitch and the filter: trembling bows",
-  "110 A1A2 · Slow Violins": "a high, soft string line that blooms slowly",
-  "122 A1B1 · Vintage Violas": "a mid-register saw and ramp atoms: a thick, mellow viola section",
-  "186 A1B1 · Wind Tunnel": "a rushing tunnel: band-passed noise and a random-atom whistle, the filter breathing",
-  "187 A1B1 · Spaceship": "a spaceship hum: a slow, deep saw wobbling in pitch and a mirror choir shimmering on top",
-  "189 A1A2 · Kick": "a deep kick: a sine that falls from high to low in a blink, a short click on top",
-  "190 A1A2 · Snare": "a snare: a tone that falls a little and a bright burst of noise with a short tail",
-  "191 A1A2 · Closed Hat": "a closed hi-hat: bright, metallic noise and a thin pulse, a tight chick",
-  "192 A1A2 · Open Hat": "an open hi-hat: the same shimmer, left to ring for most of a second",
-  "193 A1A2 · Clap": "a handclap: band-passed noise with a slightly slower attack and a roomy tail",
-  "198 A1B1 · Tom": "a tom: a round sine with a falling pitch and mirror atoms for the skin",
-  "199 A1B1 · Rim Shot": "a rim shot: a sharp knock with a bright crack, dry and quick",
-  "501 A1A2 · Abyss Sweep Signal": "A buzzing band-passed saw against a sine sub an octave below; the wavelet morphs towards Daubechies 20, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 2 sweeps the scale filter.",
-  "511 A1A2B1 · Cedar Aurora": "A warm saw against a breath chiff, and a halo of high random atoms; the filtered part of the cycle is swept along it, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (1379 Hz) that opens on every note.",
-  "526 A1A2B1 · Ice Rise Clav": "A buzzing band-passed saw against a glassy square an octave above, and a halo of high random atoms an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 tilts the scales from dark to bright, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (1134 Hz) that opens on every note with some bite.",
-  "530 A1A2 · Open of Fold": "A nasal pulse against a narrow pulse shifted inside its cycle an octave below; the scale cutoff breathes, LFO 3 drifts the wavelet towards Daubechies 8, LFO 2 pulls the source wave between narrow and wide, and each note opens its scale filter on its own envelope.",
-  "533 A1A2B1 · Drift Pick": "A Haar saw read from the middle of its cycle against a glassy square a fifth above, and rough random atoms that clang and fade, slightly detuned; the filtered part of the cycle is swept along it, LFO 2 thins and thickens the atoms (sparsity), LFO 3 swells the resonance, and a 24 dB OTA low-pass (784 Hz) that opens on every note with some bite.",
-  "544 A1A2 · Hornet Chords": "A buzzing band-passed saw against a jagged Haar triangle an octave below; the filtered part of the cycle is swept along it, the scale cutoff breathes, LFO 3 swells the resonance, LFO 2 thins and thickens the atoms (sparsity), each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (968 Hz) that opens on every note.",
-  "547 A1A2 · Silk & Plink": "A saw thinned to a few atoms against a sine that dives in pitch an octave above; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Haar, LFO 2 widens and narrows the filtered window, each note opens its scale filter on its own envelope, a light vibrato, and a 24 dB ladder low-pass (1900 Hz) that opens on every note.",
-  "568 A1A2B1 · Drift of Anvil": "Low mirrored atoms against a breath chiff, and a rounded square sub an octave below; LFO 3 drifts the wavelet towards Daubechies 2.",
-  "573 A1A2 · Milk Sweep Growl": "A soft triangle against a sine sub two octaves below; LFO 2 sweeps the scale filter, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (235 Hz) that opens on every note with some bite.",
-  "577 A1A2 · Reed Beam Undertow": "A nasal pulse against a woody knock; the wavelet morphs towards Daubechies 20, the resonance of the scale filter pulses, LFO 3 carries the window of the scale filter round the cycle, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (234 Hz) that opens on every note with a singing resonance.",
-  "605 A1A2B1 · Crystal Signal": "A glassy square against a sine that dives in pitch two octaves above, and rough random atoms that clang and fade a fifth above; the resonance of the scale filter pulses, and LFO 3 widens and narrows the filtered window.",
-  "636 A1A2 · Fold & Moss": "A soft triangle against a jagged Haar triangle an octave above; the scale cutoff breathes, the wavelet morphs towards Haar, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (981 Hz) that opens on every note with a singing resonance.",
-  "697 A1B1 · Moss Hold Chords": "A soft triangle against random atoms that glitter a fifth above; the filtered part of the cycle is swept along it, LFO 2 changes how much of the upper scales survives the decay, and LFO 3 pulls the source wave between narrow and wide.",
-  "761 A1A2 · Sweep of Silk": "A saw thinned to a few atoms against a glassy square, slightly detuned; LFO 2 sweeps the scale filter, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (423 Hz) that opens on every note with some bite.",
-  "775 A1A2 · Slate & Honey": "A warm saw against a gritty Haar saw, slightly detuned; LFO 3 thins and thickens the atoms (sparsity), and LFO 2 swells the resonance.",
-  "776 A1A2 · Moon & Breath": "A pure sine against a veil of band-passed noise; LFO 2 carries the window of the scale filter round the cycle, and LFO 3 thins and thickens the atoms (sparsity).",
-  "777 A1B1 · Pearl Wash": "A pure sine against random atoms that glitter a fifth above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, a light vibrato, and a 24 dB ladder low-pass (1151 Hz) that opens on every note.",
-  "870 A1A2 · Tide Horns": "A warm saw against a veil of band-passed noise two octaves above; the filtered part of the cycle is swept along it, LFO 2 thins and thickens the atoms (sparsity), and LFO 3 changes how far each note's envelope opens the scale filter.",
-  "885 A1B1 · Sparkle Fanfare": "An organ made of single wavelet atoms against a bright Haar ping two octaves above; the scale cutoff breathes, LFO 3 drifts the wavelet towards Daubechies 20, LFO 2 thins and thickens the atoms (sparsity), and a light vibrato.",
-  "886 A1A2 · Dust Breath": "A jagged Haar triangle against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the scale cutoff breathes, LFO 3 sharpens and relaxes the edge of the scale filter, and a 24 dB OTA low-pass (1336 Hz) that opens on every note.",
-  "992 A1B1 · Open Mallets": "An organ made of single wavelet atoms against a breath chiff; LFO 2 thins and thickens the atoms (sparsity), LFO 3 carries the window of the scale filter round the cycle, and each note opens its scale filter on its own envelope.",
-  "1005 A1A2B1 · Chorale Blend": "Mirrored atoms that sing like a choir against a woody knock, and a veil of band-passed noise an octave above; the wavelet morphs towards Daubechies 2, LFO 2 widens and narrows the filtered window, LFO 3 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (962 Hz) that opens on every note with a singing resonance, driven hard.",
-  "1075 A1A2 · Beam Zap": "An electronic zap: a sine that dives through the octaves with a hiss on top; the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 carries the window of the scale filter round the cycle.",
-  "1113 A1A2B1 · Anvil Ripple": "A pure sine against a rounded square sub an octave below, and rough random atoms that clang and fade an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the scale cutoff breathes, LFO 2 swells the resonance, LFO 3 widens and narrows the filtered window, and a 24 dB OTA low-pass (1370 Hz) that opens on every note.",
-  "1114 A1A2 · Opal Rise Chords": "A pure sine against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (2525 Hz) that opens on every note.",
-  "1125 A1A2 · Wind Surge Horns": "A pure sine against a breath chiff; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 widens and narrows the filtered window, and a 24 dB ladder low-pass (699 Hz) that opens on every note.",
-  "1144 A1B1 · Nave Rise Keys": "Mirrored atoms that sing like a choir against a buzzing band-passed saw an octave below; the scale cutoff breathes, LFO 2 tilts the scales from dark to bright, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (1623 Hz) that opens on every note.",
-  "1148 A1B1 · Mist Sweep Piano": "Ramp atoms that open like a horn against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the wavelet morphs towards Daubechies 2, LFO 3 tilts the scales from dark to bright, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (2615 Hz) that opens on every note.",
-  "1156 A1A2 · Wind Storm": "A Haar saw read from the middle of its cycle against a breath chiff an octave above; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 swells the resonance, and LFO 2 widens and narrows the filtered window.",
-  "1167 A1A2 · Swirl Chimes": "A nasal pulse against a gritty Haar saw an octave below; the resonance of the scale filter pulses, each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, LFO 2 sweeps the scale filter, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (2543 Hz) that opens on every note.",
-  "1169 A1A2B1 · Halo Piano": "A soft triangle against a veil of band-passed noise an octave above, and a halo of high random atoms two octaves above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 widens and narrows the filtered window, LFO 3 carries the window of the scale filter round the cycle, and a light vibrato.",
-  "1170 A1B1 · Beam Lung Keys": "Wavelet drawbars like an organ against a saw whose filter works in one part of the cycle, slightly detuned; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the scale cutoff breathes, LFO 3 widens and narrows the filtered window, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (948 Hz) that opens on every note.",
-  "1175 A1A2 · Fold Pulse Piano": "A jagged Haar triangle against a bright Haar ping an octave above; each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, the resonance of the scale filter pulses, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 sweeps the scale filter, and a light vibrato.",
-  "1178 A1B1 · Rust Bloom Machine": "A soft triangle against rough random atoms that clang and fade a fifth above; the resonance of the scale filter pulses, each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 thins and thickens the atoms (sparsity), LFO 3 pulls the even scales in and out, and a 24 dB OTA low-pass (3812 Hz) with some bite, driven hard.",
-  "1181 A1A2 · Nasal Swell": "A nasal pulse against a veil of band-passed noise an octave above; the wavelet morphs towards Daubechies 2, the scale cutoff breathes, LFO 3 sharpens and relaxes the edge of the scale filter, and LFO 2 thins and thickens the atoms (sparsity).",
-  "1185 A1B1 · Pure Beam Keys": "A pure sine against random atoms that glitter an octave above; the wavelet morphs towards Daubechies 2, LFO 3 carries the window of the scale filter round the cycle, LFO 2 sweeps the scale filter, and a light vibrato.",
-  "1186 A1A2 · Tap & Slate": "A gritty Haar saw against a woody knock; the scale cutoff breathes, LFO 2 drifts the wavelet towards Daubechies 20, LFO 3 thins and thickens the atoms (sparsity), and each note opens its scale filter on its own envelope.",
-  "1193 A1B1 · Bloom of Timber": "Low mirrored atoms against a bright Haar ping; the wavelet morphs towards Daubechies 20, LFO 2 thins and thickens the atoms (sparsity), LFO 3 widens and narrows the filtered window, and a 24 dB OTA low-pass (1027 Hz) that opens on every note with some bite.",
-  "1195 A1A2 · Pixel Surge": "A warm saw against a gritty Haar saw an octave above; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 swells the resonance, a light vibrato, and a 24 dB OTA low-pass (4447 Hz) that opens on every note.",
-  "1198 A2B1 · Knock Lead": "Only the odd scales, hollow as a clarinet against a woody knock an octave above; the filtered part of the cycle is swept along it, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 3 tilts the scales from dark to bright.",
-  "1202 A1A2 · Morph of Flint": "A jagged Haar triangle against a glassy square an octave below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 drifts the wavelet towards Daubechies 20, and LFO 3 carries the window of the scale filter round the cycle.",
-  "1203 A1A2 · Pearl Chords": "A pure sine against a gritty Haar saw, slightly detuned; the filtered part of the cycle is swept along it, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 thins and thickens the atoms (sparsity), LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (963 Hz) that opens on every note.",
-  "1204 A2B1 · Fold Flip Harp": "A jagged Haar triangle against scales that die from the top, like a pluck; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the filtered part of the cycle is swept along it, LFO 2 changes how much of the upper scales survives the decay, and LFO 3 pulls the even scales in and out.",
-  "1208 A2B1 · Breath Bloom": "Only the odd scales, hollow as a clarinet against a veil of band-passed noise two octaves above; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, LFO 2 sweeps the scale filter, LFO 3 thins and thickens the atoms (sparsity), and a 24 dB OTA low-pass (1244 Hz) that opens on every note.",
-  "1212 A1B1 · Even of Amber": "A warm saw against a ringing bell of single atoms an octave above; the wavelet morphs towards Daubechies 20, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 pulls the even scales in and out, and LFO 3 carries the window of the scale filter round the cycle.",
-  "1223 A1A2B1 · Glint Atoms Strum": "A jagged Haar triangle against a saw whose filter works in one part of the cycle a fifth above, and random atoms that glitter a fifth above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 20, and LFO 2 pulls the even scales in and out.",
-  "1265 A1A2B1 · Lung of Marimba": "A warm saw against a jagged Haar triangle an octave below, and alternating atoms struck like a mallet an octave above; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 carries the window of the scale filter round the cycle, and each note opens its scale filter on its own envelope.",
-  "1275 A1B1 · Kalimba Lung Machine": "A warm saw against alternating atoms struck like a mallet; the scale cutoff breathes, LFO 3 carries the window of the scale filter round the cycle, LFO 2 thins and thickens the atoms (sparsity), and a light vibrato.",
-  "1307 A1B1 · Halo Float": "A saw thinned to a few atoms against a halo of high random atoms two octaves above; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 2 changes how much of the upper scales survives the decay, LFO 3 sharpens and relaxes the edge of the scale filter, and a light vibrato.",
-  "024 A1A2 · Whistle Lead": "a pure whistling sine with a breath of air, vibrato that opens after the attack",
-  "121 A1B1 · String Machine II": "a vintage polyphonic ensemble: saw and ramp atoms, a deep chorus",
-  "162 A1A2 · Wind Chimes": "chimes in a breeze: random bright notes that ring out whatever you play",
-  "200 A1B1 · Tambourine": "a tambourine: jingles of noise and metallic atoms, shaken and fading",
-  "203 A1A2 · Opal Morph Haze": "A pure sine against a woody knock; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 drifts the wavelet towards Haar.",
-  "279 A1B1 · Dust Resonance": "Wavelet drawbars like an organ against a veil of band-passed noise two octaves above; the resonance of the scale filter pulses, the wavelet morphs towards Daubechies 2, LFO 2 widens and narrows the filtered window, each note opens its filter on its own envelope, and a light vibrato.",
-  "351 A1A2 · Swing Signal": "A saw thinned to a few atoms against a buzzing band-passed saw, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, and a light vibrato.",
-  "362 A2B1 · Moon Ripple": "A pure sine against a halo of high random atoms; the sparsity swings between a rich tone and a few wavelet atoms, and the resonance of the scale filter pulses.",
-  "504 A1B1 · Taper & Vibes": "A nasal pulse against alternating atoms struck like a mallet; the scale cutoff breathes, the filtered part of the cycle is swept along it, LFO 2 swells the resonance, LFO 3 swells and drops the odd scales: hollow, then full, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (2303 Hz) that opens on every note.",
-  "509 A1B1 · Wah Sub": "A saw thinned to a few atoms against stepped Walsh atoms; the wavelet morphs towards Daubechies 20, the filtered part of the cycle is swept along it, LFO 3 swells the resonance, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (122 Hz) that opens on every note with some bite.",
-  "522 A1A2B1 · Clang Tide Signal": "A buzzing band-passed saw against a jagged Haar triangle a fifth above, and rough random atoms that clang and fade an octave below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 8, LFO 2 pulls the even scales in and out, and a 24 dB ladder low-pass (3698 Hz) with some bite, driven hard.",
-  "523 A1A2B1 · Hold of Gong": "A pure sine against a breath chiff two octaves above, and a ringing bell of single atoms; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how much of the upper scales survives the decay, and LFO 2 swells and drops the odd scales: hollow, then full.",
-  "525 A1A2 · Wasp Surge": "A warm saw against a buzzing band-passed saw an octave below; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, LFO 3 sweeps the scale filter, LFO 2 thins and thickens the atoms (sparsity), and a 24 dB OTA low-pass (1354 Hz) that opens on every note with some bite.",
-  "546 A1B1 · Origami Blend": "Ramp atoms that open like a horn against a jagged Haar triangle an octave above; the resonance of the scale filter pulses, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 drifts the wavelet towards Daubechies 2, and each note opens its scale filter on its own envelope.",
-  "559 A1B1 · Amber Morph": "A warm saw against stepped Walsh atoms; the wavelet morphs towards Daubechies 20, LFO 2 pulls the even scales in and out, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (266 Hz) that opens on every note.",
-  "561 A1B1 · Rise of Odd": "Only the odd scales, hollow as a clarinet against a jagged Haar triangle, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 sweeps the scale filter, and a light vibrato.",
-  "572 A1A2B1 · Stair & Tap": "A nasal pulse against a woody knock an octave below, and stepped Walsh atoms; LFO 2 sweeps the scale filter, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (282 Hz) that opens on every note.",
-  "677 A1A2 · Crystal Swirl": "A pure sine against a glassy square, slightly detuned; LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (1361 Hz) that opens on every note with some bite.",
-  "754 A1A2 · Morph of Brass": "A saw thinned to a few atoms against a buzzing band-passed saw an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 20, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (1241 Hz) that opens on every note with a singing resonance.",
-  "860 A1B1 · Ripple Reeds": "A pure sine against scales that die from the top, like a pluck; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 3 sweeps the scale filter, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (404 Hz) that opens on every note with a singing resonance.",
-  "1077 A2B1 · Sweep of Tin": "A cowbell: two clanking partials, a hard strike and a short metallic ring; the filtered part of the cycle is swept along it, LFO 2 swells and drops the odd scales: hollow, then full, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (6299 Hz) that opens on every note with some bite.",
-  "1085 A1A2B1 · Clack Wah": "A wood block: a hollow knock with a quick bright ring above it; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 swells the resonance, and a 24 dB OTA low-pass (6715 Hz) that opens on every note.",
-  "1086 A1A2 · Zap Laser": "An electronic zap: a sine that dives through the octaves with a hiss on top; LFO 2 changes how far each note's envelope opens the scale filter, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (5371 Hz) that opens on every note with some bite.",
-  "1111 A1A2B1 · Beam of Brass": "Stepped Walsh atoms against a veil of band-passed noise an octave above, and a buzzing band-passed saw an octave below; the sparsity swings between a rich tone and a few wavelet atoms, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 3 tilts the scales from dark to bright, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (3893 Hz) that closes on every note with a singing resonance.",
-  "1115 A1A2 · Tide Lute": "A pure sine against a veil of band-passed noise two octaves above; the filtered part of the cycle is swept along it, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB OTA low-pass (1632 Hz) that opens on every note with some bite.",
-  "1184 A1A2B1 · Moon Surge Clav": "A pure sine against a bright Haar ping, and rough random atoms that clang and fade an octave above; the filtered part of the cycle is swept along it, each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 sweeps the scale filter.",
-  "1190 A1A2 · Bloom of Bright": "A narrow pulse shifted inside its cycle against a bright Haar ping an octave above; each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, LFO 3 sweeps the scale filter, LFO 2 thins and thickens the atoms (sparsity), and a 24 dB ladder low-pass (3233 Hz) that opens on every note with some bite.",
-  "1250 A1B1 · Breath of Wood": "An organ made of single wavelet atoms against a woody knock; the scale cutoff breathes, the filtered part of the cycle is swept along it, LFO 2 widens and narrows the filtered window, and LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase).",
-  "1326 A1B1 · Spark Orbit Ensemble": "An organ made of single wavelet atoms against a gritty Haar saw an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (2443 Hz) that opens on every note with some bite.",
-  "1361 A1A2 · Milk Strum": "A soft triangle against a tick of noise an octave below; the resonance of the scale filter pulses, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 drifts the wavelet towards Daubechies 2.",
-  "020 A1A2 · Octave Square Lead": "a hollow square with another an octave above: a clear, penetrating lead",
-  "038 A1B1 · Cry Lead": "a resonant saw that cries: random atoms add a rough edge, the vibrato deepens with the note",
-  "160 A1A2 · Crotales": "tiny cymbals, struck: very high, with a shimmer from two almost equal partials",
-  "175 A1A2 · Rising Sweep": "a riser: filtered noise and a saw whose band-pass climbs for seconds, then falls away",
-  "177 A1A2 · Laser Zap": "a sci-fi laser shot: a saw and a square falling steeply in pitch in a tenth of a second",
-  "179 A1A2 · Robot Voice": "a robot talking: a band-pass saw whose cutoff jumps at random, with a noisy buzz above",
-  "202 A1A2 · Woodwind Growl": "A hollow square against a sine sub two octaves below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, and a light vibrato.",
-  "208 A1B1 · Fibre Sweep Rumble": "An organ made of single wavelet atoms against a rounded square sub an octave below; the scale cutoff breathes, the wavelet morphs towards Haar, LFO 2 carries the window of the filter round the cycle, each note opens its filter on its own envelope, and a light vibrato.",
-  "226 A1A2B1 · Blend Rumble": "A saw thinned to a few atoms against a round triangle sub an octave below, and stepped Walsh atoms a fifth above; the wavelet morphs towards Haar, the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, and LFO 2 drifts the wavelet towards Haar.",
-  "250 A1B1 · Shard & Soft": "A soft triangle against random atoms that glitter an octave above; the resonance of the scale filter pulses, the wavelet morphs towards Haar, and LFO 2 swells and drops the odd scales: hollow, then full.",
-  "284 A1A2B1 · Stone Blend Undertow": "Only the odd scales, hollow as a clarinet against a rounded square sub an octave below, and a jagged Haar triangle, slightly detuned; the wavelet morphs towards Haar, the resonance of the scale filter pulses, and LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase).",
-  "286 A1B1 · Step Surge Foundation": "A soft triangle against stepped Walsh atoms, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 changes how far each note's envelope opens the filter.",
-  "295 A1A2 · Flint Cloud": "A nasal pulse against a jagged Haar triangle an octave above; the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 drifts the wavelet towards Daubechies 2.",
-  "313 A1A2 · Edge of Moss": "A soft triangle against a rounded square sub an octave below; the filtered part of the cycle is swept along it, the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 sharpens and relaxes the edge of the scale filter.",
-  "360 A1B1 · Prism Atoms Signal": "Random atoms that glitter against a Haar saw read from the middle of its cycle an octave below; the sparsity swings between a rich tone and a few wavelet atoms, and the scale cutoff breathes.",
-  "380 A1A2B1 · Marimba Wah": "Wavelet drawbars like an organ against a sine that dives in pitch, and a woody knock an octave above; the resonance of the scale filter pulses, and a light vibrato.",
-  "393 A1A2B1 · Breath Cloud": "A saw thinned to a few atoms against a round triangle sub two octaves below, and rough random atoms that clang and fade an octave below; the scale cutoff breathes.",
-  "528 A1A2 · Pearl Bed": "A pure sine against a sine that dives in pitch an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 3 widens and narrows the filtered window, and LFO 2 changes how far each note's envelope opens the scale filter.",
-  "627 A1A2 · Open Call": "A pure sine against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 carries the window of the scale filter round the cycle, LFO 2 pulses the resonance of the low-pass filter, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (1430 Hz) that opens on every note with a singing resonance.",
-  "633 A2B1 · Drift Signal": "Wavelet drawbars like an organ against a Haar saw read from the middle of its cycle, slightly detuned; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 tilts the scales from dark to bright, and a 24 dB OTA low-pass (1951 Hz) that opens on every note with some bite.",
-  "648 A1A2 · Atoms of Dive": "A hollow square against a sine that dives in pitch an octave above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 3 thins and thickens the atoms (sparsity), LFO 2 sweeps the scale filter, and a light vibrato.",
-  "901 A1B1 · Ice Tide Strum": "A glassy square against rough random atoms that clang and fade an octave above; the sparsity swings between a rich tone and a few wavelet atoms, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 sweeps the scale filter, and a 24 dB OTA low-pass (988 Hz) that opens on every note with some bite.",
-  "980 A1B1 · Wood & Drawbar": "Wavelet drawbars like an organ against a woody knock an octave above; LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 drifts the wavelet towards Daubechies 20, and a 24 dB OTA low-pass (5505 Hz) that opens on every note.",
-  "1051 A1A2 · Tide of Boom": "A kick: a sine that falls from high to low in a blink, with a click on top; the sparsity swings between a rich tone and a few wavelet atoms, and LFO 3 widens and narrows the filtered window.",
-  "1053 A1A2 · Thud Shift": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 3 carries the window of the scale filter round the cycle, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (4325 Hz) that opens on every note.",
-  "1057 A1B1 · Temple Rise Drum": "A taiko: a very low sine that falls and a big skin that rings in a large room; LFO 2 sweeps the scale filter, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB OTA low-pass (4323 Hz) that opens on every note with some bite.",
-  "1061 A1A2 · Breathe Kick": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 2 widens and narrows the filtered window, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB ladder low-pass (5111 Hz) that opens on every note with some bite.",
-  "1062 A1A2 · Plasma Tom": "An electronic zap: a sine that dives through the octaves with a hiss on top; LFO 2 thins and thickens the atoms (sparsity), and LFO 3 carries the window of the scale filter round the cycle.",
-  "1068 A1A2 · Punch Rise Kick": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 2 thins and thickens the atoms (sparsity), LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB ladder low-pass (2900 Hz) that opens on every note.",
-  "1116 A1A2 · Deep Ripple": "A gritty Haar saw against a sine sub an octave below; the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 swells the resonance.",
-  "1117 A1B1 · Knock Wah": "Only the odd scales, hollow as a clarinet against a woody knock; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 thins and thickens the atoms (sparsity), LFO 3 swells the resonance, and a 24 dB ladder low-pass (1273 Hz) that opens on every note.",
-  "1182 A1A2B1 · Mosaic Strum": "A pure sine against a bright Haar ping, and stepped Walsh atoms an octave above; the filtered part of the cycle is swept along it, the scale cutoff breathes, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), each note opens its scale filter on its own envelope, and a 24 dB ladder low-pass (1558 Hz) that opens on every note.",
-  "1192 A1A2B1 · Static Open Reeds": "A jagged Haar triangle against a buzzing band-passed saw a fifth above, and alternating atoms struck like a mallet an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 pulls the even scales in and out, LFO 3 drifts the wavelet towards Haar, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (567 Hz) that opens on every note.",
-  "1199 A1A2 · Kite Swing": "A narrow pulse shifted inside its cycle against a tick of noise; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 3 carries the window of the scale filter round the cycle, and LFO 2 sweeps the scale filter.",
-  "1201 A1A2 · Taper Atoms": "A nasal pulse against a buzzing band-passed saw an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (4428 Hz) that opens on every note.",
-  "1206 A1A2B1 · Beam & Fanfare": "Ramp atoms that open like a horn against a saw whose filter works in one part of the cycle an octave below, and a jagged Haar triangle, slightly detuned; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 pulls the even scales in and out, LFO 3 swells the resonance, and a 24 dB OTA low-pass (1485 Hz) that opens on every note.",
-  "1231 A1B1 · Hollow & Drop": "Only the odd scales, hollow as a clarinet against a sine that dives in pitch; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sweeps the scale filter, LFO 2 swells and drops the odd scales: hollow, then full, and a 24 dB OTA low-pass (2381 Hz) that opens on every note.",
-  "1253 A1A2 · Drum & Moss": "A soft triangle against a soft thump; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 3 drifts the wavelet towards Haar, and LFO 2 sweeps the scale filter.",
-  "1254 A1B1 · Breathe Clav": "Mirrored atoms that sing like a choir against a saw whose filter works in one part of the cycle an octave above; the wavelet morphs towards Haar, the scale cutoff breathes, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 widens and narrows the filtered window.",
-  "1267 A1A2 · Ripple of Crystal": "A glassy square against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 swells the resonance, LFO 3 carries the window of the scale filter round the cycle, each note opens its scale filter on its own envelope, and a light vibrato.",
-  "1278 A1B1 · Sweep of Flute": "A soft triangle against a halo of high random atoms; the filtered part of the cycle is swept along it, the wavelet morphs towards Haar, LFO 2 swells the resonance, LFO 3 pulls the source wave between narrow and wide, and a 24 dB ladder low-pass (795 Hz) that opens on every note with some bite.",
-  "1300 A1A2 · Slope of Weave": "A narrow pulse shifted inside its cycle against a buzzing band-passed saw an octave above; the filtered part of the cycle is swept along it, the wavelet morphs towards Daubechies 8, LFO 3 sharpens and relaxes the edge of the scale filter, and LFO 2 thins and thickens the atoms (sparsity).",
-  "1305 A1B1 · Choir Breath Horns": "Mirrored atoms that sing like a choir against a bright Haar ping an octave below; the scale cutoff breathes, LFO 2 carries the window of the scale filter round the cycle, and LFO 3 thins and thickens the atoms (sparsity).",
-  "1336 A1B1 · Pixel Lean Pipes": "Mirrored atoms that sing like a choir against a gritty Haar saw a fifth above; the wavelet morphs towards Daubechies 20, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 tilts the scales from dark to bright, and LFO 3 widens and narrows the filtered window.",
-  "025 A1A2 · Talk Lead": "a band-pass saw moved by the LFO, with a bright saw above: a talking \"wah\" lead",
-  "026 A1A2 · Fifth Lead": "a saw with another a fifth above: a power-chord lead that sings in two voices",
-  "080 A1A2 · Tape Pad": "a warm saw over a layer of tape hiss",
-  "157 A1A2 · FM Bell": "a bright digital bell: a sine and a second sine at a ratio of 2.4 that fades first",
-  "371 A1B1 · Air Tide": "A pure sine against a halo of high random atoms two octaves above; the wavelet morphs towards Haar, LFO 2 thins and thickens the atoms (sparsity), and a light vibrato.",
-  "404 A1B1 · Orbit Cloud": "A saw thinned to a few atoms against random atoms that glitter an octave below; the scale cutoff breathes, LFO 2 carries the window of the filter round the cycle, and a light vibrato.",
-  "515 A1A2B1 · Abyss & Kalimba": "A buzzing band-passed saw against a sine sub two octaves below, and alternating atoms struck like a mallet; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), LFO 2 sweeps the scale filter, and a light vibrato.",
-  "538 A1B1 · Swirl of Odd": "Only the odd scales, hollow as a clarinet against a bright Haar ping an octave below; the filtered part of the cycle is swept along it, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 2 tilts the scales from dark to bright.",
-  "645 A1B1 · Sweep of Trumpet": "Ramp atoms that open like a horn against a woody knock; LFO 3 pulls the source wave between narrow and wide, LFO 2 sweeps the scale filter, and a 24 dB ladder low-pass (2661 Hz) that opens on every note.",
-  "678 A1B1 · Drawbar Shift": "Wavelet drawbars like an organ against a woody knock; the resonance of the scale filter pulses, LFO 3 pulls the even scales in and out, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (1283 Hz) that opens on every note.",
-  "689 A1B1 · Moon Resonance Clav": "A pure sine against a halo of high random atoms; the resonance of the scale filter pulses, and LFO 3 carries the window of the scale filter round the cycle.",
-  "693 A1B1 · Stair Pulse Tines": "A glassy square against stepped Walsh atoms an octave above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 swells the resonance, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB OTA low-pass (2283 Hz) that opens on every note with some bite.",
-  "1043 A1A2B1 · Hollow Scape": "Only the odd scales, hollow as a clarinet against a rounded square sub two octaves below, and a glassy square an octave below; the resonance of the scale filter pulses, LFO 3 carries the window of the scale filter round the cycle, and a light vibrato.",
-  "1052 A2B1 · Skin Swing Hand Drum": "A hand drum: a round open tone with a slap, the pitch settling down as it rings; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, and LFO 2 tilts the scales from dark to bright.",
-  "1180 A1A2B1 · Temple & Pixel": "A soft triangle against a gritty Haar saw a fifth above, and a ringing bell of single atoms an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sweeps the scale filter, LFO 2 drifts the wavelet towards Haar, a light vibrato, and a 24 dB OTA low-pass (558 Hz) that opens on every note with some bite.",
-  "1232 A1B1 · Beam of Cave": "Only the odd scales, hollow as a clarinet against a woody knock an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sweeps the scale filter, and LFO 2 carries the window of the scale filter round the cycle.",
-  "1255 A1A2 · Soft Blend Harp": "A soft triangle against a buzzing band-passed saw an octave above; the wavelet morphs towards Daubechies 20, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 carries the window of the scale filter round the cycle, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (758 Hz) that opens on every note with some bite.",
-  "1281 A1A2B1 · Tide of Chalk": "A soft triangle against a jagged Haar triangle, slightly detuned, and random atoms that glitter, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, and LFO 2 swells and drops the odd scales: hollow, then full.",
-  "1333 A1A2 · Rise of Slate": "A gritty Haar saw against a woody knock an octave below; each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 sweeps the scale filter.",
-  "1339 A1A2 · Wood Orbit Pluck": "A saw thinned to a few atoms against a woody knock an octave above; the wavelet morphs towards Daubechies 20, LFO 3 pulls the source wave between narrow and wide, and LFO 2 carries the window of the scale filter round the cycle.",
-  "1340 A1A2B1 · Open Pluck": "A saw whose filter works in one part of the cycle against a soft thump two octaves above, and a halo of high random atoms two octaves above; the resonance of the scale filter pulses, the filtered part of the cycle is swept along it, LFO 2 thins and thickens the atoms (sparsity), LFO 3 sweeps the scale filter, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (1893 Hz) that opens on every note with some bite.",
-  "1366 A1A2 · Swing of Chalk": "A warm saw against a jagged Haar triangle an octave below; the resonance of the scale filter pulses, each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 pulls the source wave between narrow and wide, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (2636 Hz) that opens on every note.",
-  "1374 A1B1 · Opal Atoms": "A pure sine against a halo of high random atoms two octaves above; the filtered part of the cycle is swept along it, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 2, and LFO 2 widens and narrows the filtered window."
+  "AA · Moss Tide": "A soft triangle against a sine that dives in pitch; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the scale cutoff breathes, LFO 2 thins and thickens the atoms (sparsity), and LFO 3 swells the resonance.",
+  "AA · Analog Cloud": "pulse and saw, three unison copies: a big soft cloud",
+  "AA · Salt Beam Strings": "A pure sine against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (2544 Hz) that opens on every note.",
+  "AA · Sweep of Pixel": "A pure sine against a gritty Haar saw, slightly detuned; the filtered part of the cycle is swept along it, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 sweeps the scale filter, and a 24 dB ladder low-pass (919 Hz) that opens on every note with some bite.",
+  "AA · Chalk Edge Call": "A jagged Haar triangle against a rounded square sub two octaves below; LFO 2 sharpens and relaxes the edge of the scale filter, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (2070 Hz) that opens on every note with some bite.",
+  "AB · Mosaic & Velvet": "A warm saw against stepped Walsh atoms an octave above; the wavelet morphs towards Haar, LFO 2 sweeps the scale filter, LFO 3 sweeps the cutoff of the low-pass filter, a light vibrato, and a 24 dB ladder low-pass (341 Hz) that opens on every note.",
+  "AB · Lean of Pure": "A pure sine against random atoms that glitter an octave below; the scale cutoff breathes, LFO 2 tilts the scales from dark to bright, and a 24 dB OTA low-pass (524 Hz) that opens on every note.",
+  "AA · Surge of Breath": "A pure sine against a veil of band-passed noise an octave above; LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 sweeps the cutoff of the low-pass filter, and a 24 dB OTA low-pass (1382 Hz) that opens on every note.",
+  "AA · Sizzle Surge": "An open hi-hat: bright, metallic noise and a thin pulse, left to ring; the wavelet morphs towards Daubechies 8, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (3111 Hz) that opens on every note with a singing resonance.",
+  "AB · Silk Cloud": "a saw and a choir of mirror atoms: a cloud with a human colour",
+  "AB · Resonance Storm": "Only the odd scales, hollow as a clarinet against a sine that dives in pitch two octaves above; the resonance of the scale filter pulses, LFO 2 tilts the scales from dark to bright, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (3331 Hz) that closes on every note with some bite.",
+  "AA · Orbit Pad": "A warm saw against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 2 sweeps the scale filter, LFO 3 swells the resonance, and a 24 dB OTA low-pass (1136 Hz) that opens on every note.",
+  "AA · Cavern Sweep Cloud": "A hollow square against a sine that dives in pitch; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 2 drifts the wavelet towards Daubechies 2, LFO 3 sweeps the scale filter, and a 24 dB ladder low-pass (1256 Hz) that opens on every note with some bite.",
+  "AB · Step Sub": "A soft triangle against stepped Walsh atoms; the filtered part of the cycle is swept along it, LFO 3 sweeps the scale filter, LFO 2 pulls the source wave between narrow and wide, and a light vibrato.",
+  "AAB · Resonance Keys": "A hollow square against a sine that dives in pitch an octave above, and stepped Walsh atoms, slightly detuned; the resonance of the scale filter pulses, LFO 2 carries the window of the scale filter round the cycle, LFO 3 pulses the resonance of the low-pass filter, a light vibrato, and a 24 dB OTA low-pass (1832 Hz) that opens on every note with some bite.",
+  "AB · Velvet Cloud": "A warm saw against random atoms that glitter an octave below; the resonance of the scale filter pulses, LFO 3 drifts the wavelet towards Daubechies 2, and a 24 dB OTA low-pass (499 Hz) that opens on every note with some bite.",
+  "AB · Sweep of Faint": "A saw thinned to a few atoms against a ringing bell of single atoms an octave above; LFO 3 sweeps the scale filter, and LFO 2 swells the resonance.",
+  "AAB · Rust Aurora": "A warm saw against a veil of band-passed noise, and rough random atoms that clang and fade an octave below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, a light vibrato, and a 24 dB OTA low-pass (1347 Hz) that opens on every note with some bite.",
+  "AB · Step Spiral": "A warm saw against stepped Walsh atoms an octave above; the scale cutoff breathes, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (1357 Hz) that opens on every note with a singing resonance.",
+  "AA · Drum Bloom": "A hollow square against a soft thump an octave above; the scale cutoff breathes, LFO 2 thins and thickens the atoms (sparsity), LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (4539 Hz) that closes on every note with some bite.",
+  "AA · Bloom of Soft": "A soft triangle against a glassy square a fifth above; the wavelet morphs towards Haar, the scale cutoff breathes, LFO 2 widens and narrows the filtered window, and LFO 3 thins and thickens the atoms (sparsity).",
+  "AAB · Sweep Call": "A pure sine against a bright Haar ping, and rough random atoms that clang and fade an octave below; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 2 carries the window of the scale filter round the cycle, LFO 3 changes how much of the upper scales survives the decay, and a 24 dB OTA low-pass (1185 Hz) that opens on every note with some bite.",
+  "AAB · Dive Texture": "Mirrored atoms that sing like a choir against a sine that dives in pitch, and a round triangle sub an octave below; the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 tilts the scales from dark to bright.",
+  "AAB · Ice & Halo": "A buzzing band-passed saw against a glassy square an octave above, and a halo of high random atoms two octaves above; the filtered part of the cycle is swept along it, the scale cutoff breathes, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 2 drifts the wavelet towards Daubechies 20, and each note opens its scale filter on its own envelope.",
+  "AAB · Pick & Soft": "A soft triangle against a saw whose filter works in one part of the cycle a fifth above, and scales that die from the top, like a pluck an octave above; the scale cutoff breathes, the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 swells the resonance.",
+  "AAB · Static & Fibre": "An organ made of single wavelet atoms against a veil of band-passed noise two octaves above, and a buzzing band-passed saw, slightly detuned; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 carries the window of the scale filter round the cycle, LFO 2 drifts the wavelet towards Daubechies 2, and a 24 dB OTA low-pass (821 Hz) that opens on every note with some bite.",
+  "AA · Chalk Drift": "A jagged Haar triangle against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 swells the resonance, LFO 2 drifts the wavelet towards Haar, and each note opens its scale filter on its own envelope.",
+  "AAB · Breath & Drift": "Only the odd scales, hollow as a clarinet against a Haar saw read from the middle of its cycle a fifth above, and a veil of band-passed noise; the resonance of the scale filter pulses, the wavelet morphs towards Daubechies 20, LFO 3 carries the window of the scale filter round the cycle, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (2056 Hz) that opens on every note.",
+  "AB · Hornet & Cello": "Low mirrored atoms against a buzzing band-passed saw, slightly detuned; the sparsity swings between a rich tone and a few wavelet atoms, and the wavelet morphs towards Daubechies 2.",
+  "AB · Pure Fog": "A pure sine against random atoms that glitter, slightly detuned; the resonance of the scale filter pulses, the sparsity swings between a rich tone and a few wavelet atoms, and a light vibrato.",
+  "AB · Moss Beam Strum": "A soft triangle against random atoms that glitter an octave above; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 2 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (1850 Hz) that opens on every note with some bite.",
+  "AAB · Lung of Quartz": "Mirrored atoms that sing like a choir against a glassy square a fifth above, and a buzzing band-passed saw, slightly detuned; the resonance of the scale filter pulses, the scale cutoff breathes, LFO 2 widens and narrows the filtered window, LFO 3 pulls the even scales in and out, and a 24 dB ladder low-pass (1199 Hz) that opens on every note.",
+  "AA · Breathe Pluck": "A pure sine against a tick of noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 widens and narrows the filtered window, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (2059 Hz) that opens on every note.",
+  "AA · Origami & Honey": "A warm saw against a jagged Haar triangle an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, and LFO 3 sweeps the scale filter.",
+  "AA · Hollow Bass": "A hollow square against a soft thump an octave below; the resonance of the scale filter pulses, LFO 2 sweeps the scale filter, LFO 3 pulses the resonance of the low-pass filter, each note opens its scale filter on its own envelope, and a 24 dB ladder low-pass (415 Hz) that opens on every note with a singing resonance.",
+  "AB · Ripple of Marimba": "A warm saw against alternating atoms struck like a mallet; LFO 3 changes how much of the upper scales survives the decay, and LFO 2 swells the resonance.",
+  "AA · Orbit Bloom": "A pure sine against a saw whose filter works in one part of the cycle, slightly detuned; LFO 2 thins and thickens the atoms (sparsity).",
+  "AB · Ghost Foundation": "A saw thinned to a few atoms against stepped Walsh atoms, slightly detuned; the resonance of the scale filter pulses, LFO 3 thins and thickens the atoms (sparsity), LFO 2 sweeps the cutoff of the low-pass filter, and a 24 dB OTA low-pass (154 Hz) that opens on every note with some bite.",
+  "AB · Atoms Signal": "A pure sine against a halo of high random atoms two octaves above; LFO 2 thins and thickens the atoms (sparsity), LFO 3 widens and narrows the filtered window, and a 24 dB ladder low-pass (2351 Hz) that opens on every note with some bite.",
+  "AA · Flint Line": "A buzzing band-passed saw against a jagged Haar triangle an octave below; LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 3 swells the resonance.",
+  "AAB · Ripple Signal": "A hollow square against a narrow pulse shifted inside its cycle an octave above, and stepped Walsh atoms an octave below; the resonance of the scale filter pulses, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (1780 Hz) that opens on every note with a singing resonance.",
+  "AB · Swing of Odd": "Only the odd scales, hollow as a clarinet against a veil of band-passed noise two octaves above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), a light vibrato, and a 24 dB OTA low-pass (1357 Hz) that opens on every note.",
+  "AB · Ice Chords": "An organ made of single wavelet atoms against a glassy square an octave below; the wavelet morphs towards Daubechies 2, LFO 3 carries the window of the scale filter round the cycle, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (1730 Hz) that opens on every note.",
+  "AB · Cave Pinch Keys": "Only the odd scales, hollow as a clarinet against a sine that dives in pitch an octave above; LFO 3 tilts the scales from dark to bright, LFO 2 widens and narrows the filtered window, and a 24 dB ladder low-pass (1694 Hz) that opens on every note with some bite.",
+  "AA · Velvet Aurora": "A warm saw against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 drifts the wavelet towards Haar, and a 24 dB OTA low-pass (850 Hz) that opens on every note.",
+  "AAB · Swell of Drop": "Low mirrored atoms against a buzzing band-passed saw, slightly detuned, and a sine that dives in pitch an octave above; the scale cutoff breathes, LFO 2 drifts the wavelet towards Daubechies 2, and LFO 3 tilts the scales from dark to bright.",
+  "AA · Knock Sweep": "A soft triangle against a woody knock an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 swells the resonance, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (1151 Hz) that opens on every note with some bite.",
+  "AA · Flint Ripple Haze": "A hollow square against a jagged Haar triangle an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 3 drifts the wavelet towards Daubechies 8, and a 24 dB ladder low-pass (1323 Hz) that opens on every note.",
+  "AB · Moss Tide Strings": "A soft triangle against stepped Walsh atoms a fifth above; LFO 2 thins and thickens the atoms (sparsity), LFO 3 drifts the wavelet towards Daubechies 2, and a 24 dB ladder low-pass (2998 Hz) that opens on every note.",
+  "AA · Ripple of Mist": "A warm saw against a veil of band-passed noise an octave above; the resonance of the scale filter pulses, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB ladder low-pass (1540 Hz) that opens on every note.",
+  "AA · Wood Rise Bows": "A nasal pulse against a woody knock an octave above; LFO 2 changes how far each note's envelope opens the scale filter, and LFO 3 sweeps the scale filter.",
+  "AA · Breath Section": "A warm saw against a veil of band-passed noise; the scale cutoff breathes, LFO 2 swells the resonance, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (1796 Hz) that opens on every note.",
+  "AA · Mist & Origami": "A jagged Haar triangle against a veil of band-passed noise; LFO 2 sweeps the scale filter.",
+  "AA · Orbit Drum": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 2 thins and thickens the atoms (sparsity), and LFO 3 carries the window of the scale filter round the cycle.",
+  "AA · Pure Tide Pad": "A pure sine against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 carries the window of the scale filter round the cycle, LFO 2 widens and narrows the filtered window, and a 24 dB ladder low-pass (445 Hz) that opens on every note with some bite.",
+  "AB · Atom Shapeshift": "An organ made of single wavelet atoms against a saw whose filter works in one part of the cycle an octave below; the wavelet morphs towards Daubechies 20, the resonance of the scale filter pulses, LFO 2 thins and thickens the atoms (sparsity), LFO 3 tilts the scales from dark to bright, and each note opens its scale filter on its own envelope.",
+  "AB · Breath of Hornet": "Only the odd scales, hollow as a clarinet against a buzzing band-passed saw an octave below; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the scale cutoff breathes, LFO 3 pulls the even scales in and out, and LFO 2 thins and thickens the atoms (sparsity).",
+  "AA · Lantern Signal": "A saw whose filter works in one part of the cycle against a jagged Haar triangle an octave above; the wavelet morphs towards Daubechies 8, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 sweeps the scale filter, and a light vibrato.",
+  "AA · Tremolo Strings": "a saw pair with a fast square LFO on the pitch and the filter: trembling bows",
+  "AA · Slow Violins": "a high, soft string line that blooms slowly",
+  "AB · Vintage Violas": "a mid-register saw and ramp atoms: a thick, mellow viola section",
+  "AB · Wind Tunnel": "a rushing tunnel: band-passed noise and a random-atom whistle, the filter breathing",
+  "AB · Spaceship": "a spaceship hum: a slow, deep saw wobbling in pitch and a mirror choir shimmering on top",
+  "AA · Kick": "a deep kick: a sine that falls from high to low in a blink, a short click on top",
+  "AA · Snare": "a snare: a tone that falls a little and a bright burst of noise with a short tail",
+  "AA · Closed Hat": "a closed hi-hat: bright, metallic noise and a thin pulse, a tight chick",
+  "AA · Open Hat": "an open hi-hat: the same shimmer, left to ring for most of a second",
+  "AA · Clap": "a handclap: band-passed noise with a slightly slower attack and a roomy tail",
+  "AB · Tom": "a tom: a round sine with a falling pitch and mirror atoms for the skin",
+  "AB · Rim Shot": "a rim shot: a sharp knock with a bright crack, dry and quick",
+  "AA · Abyss Sweep Signal": "A buzzing band-passed saw against a sine sub an octave below; the wavelet morphs towards Daubechies 20, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 2 sweeps the scale filter.",
+  "AAB · Cedar Aurora": "A warm saw against a breath chiff, and a halo of high random atoms; the filtered part of the cycle is swept along it, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (1379 Hz) that opens on every note.",
+  "AAB · Ice Rise Clav": "A buzzing band-passed saw against a glassy square an octave above, and a halo of high random atoms an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 tilts the scales from dark to bright, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (1134 Hz) that opens on every note with some bite.",
+  "AA · Open of Fold": "A nasal pulse against a narrow pulse shifted inside its cycle an octave below; the scale cutoff breathes, LFO 3 drifts the wavelet towards Daubechies 8, LFO 2 pulls the source wave between narrow and wide, and each note opens its scale filter on its own envelope.",
+  "AAB · Drift Pick": "A Haar saw read from the middle of its cycle against a glassy square a fifth above, and rough random atoms that clang and fade, slightly detuned; the filtered part of the cycle is swept along it, LFO 2 thins and thickens the atoms (sparsity), LFO 3 swells the resonance, and a 24 dB OTA low-pass (784 Hz) that opens on every note with some bite.",
+  "AA · Hornet Chords": "A buzzing band-passed saw against a jagged Haar triangle an octave below; the filtered part of the cycle is swept along it, the scale cutoff breathes, LFO 3 swells the resonance, LFO 2 thins and thickens the atoms (sparsity), each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (968 Hz) that opens on every note.",
+  "AA · Silk & Plink": "A saw thinned to a few atoms against a sine that dives in pitch an octave above; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Haar, LFO 2 widens and narrows the filtered window, each note opens its scale filter on its own envelope, a light vibrato, and a 24 dB ladder low-pass (1900 Hz) that opens on every note.",
+  "AAB · Drift of Anvil": "Low mirrored atoms against a breath chiff, and a rounded square sub an octave below; LFO 3 drifts the wavelet towards Daubechies 2.",
+  "AA · Milk Sweep Growl": "A soft triangle against a sine sub two octaves below; LFO 2 sweeps the scale filter, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (235 Hz) that opens on every note with some bite.",
+  "AA · Reed Beam Undertow": "A nasal pulse against a woody knock; the wavelet morphs towards Daubechies 20, the resonance of the scale filter pulses, LFO 3 carries the window of the scale filter round the cycle, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (234 Hz) that opens on every note with a singing resonance.",
+  "AAB · Crystal Signal": "A glassy square against a sine that dives in pitch two octaves above, and rough random atoms that clang and fade a fifth above; the resonance of the scale filter pulses, and LFO 3 widens and narrows the filtered window.",
+  "AA · Fold & Moss": "A soft triangle against a jagged Haar triangle an octave above; the scale cutoff breathes, the wavelet morphs towards Haar, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (981 Hz) that opens on every note with a singing resonance.",
+  "AB · Moss Hold Chords": "A soft triangle against random atoms that glitter a fifth above; the filtered part of the cycle is swept along it, LFO 2 changes how much of the upper scales survives the decay, and LFO 3 pulls the source wave between narrow and wide.",
+  "AA · Sweep of Silk": "A saw thinned to a few atoms against a glassy square, slightly detuned; LFO 2 sweeps the scale filter, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (423 Hz) that opens on every note with some bite.",
+  "AA · Slate & Honey": "A warm saw against a gritty Haar saw, slightly detuned; LFO 3 thins and thickens the atoms (sparsity), and LFO 2 swells the resonance.",
+  "AA · Moon & Breath": "A pure sine against a veil of band-passed noise; LFO 2 carries the window of the scale filter round the cycle, and LFO 3 thins and thickens the atoms (sparsity).",
+  "AB · Pearl Wash": "A pure sine against random atoms that glitter a fifth above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, a light vibrato, and a 24 dB ladder low-pass (1151 Hz) that opens on every note.",
+  "AA · Tide Horns": "A warm saw against a veil of band-passed noise two octaves above; the filtered part of the cycle is swept along it, LFO 2 thins and thickens the atoms (sparsity), and LFO 3 changes how far each note's envelope opens the scale filter.",
+  "AB · Sparkle Fanfare": "An organ made of single wavelet atoms against a bright Haar ping two octaves above; the scale cutoff breathes, LFO 3 drifts the wavelet towards Daubechies 20, LFO 2 thins and thickens the atoms (sparsity), and a light vibrato.",
+  "AA · Dust Breath": "A jagged Haar triangle against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the scale cutoff breathes, LFO 3 sharpens and relaxes the edge of the scale filter, and a 24 dB OTA low-pass (1336 Hz) that opens on every note.",
+  "AB · Open Mallets": "An organ made of single wavelet atoms against a breath chiff; LFO 2 thins and thickens the atoms (sparsity), LFO 3 carries the window of the scale filter round the cycle, and each note opens its scale filter on its own envelope.",
+  "AAB · Chorale Blend": "Mirrored atoms that sing like a choir against a woody knock, and a veil of band-passed noise an octave above; the wavelet morphs towards Daubechies 2, LFO 2 widens and narrows the filtered window, LFO 3 pulses the resonance of the low-pass filter, and a 24 dB ladder low-pass (962 Hz) that opens on every note with a singing resonance, driven hard.",
+  "AA · Beam Zap": "An electronic zap: a sine that dives through the octaves with a hiss on top; the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 carries the window of the scale filter round the cycle.",
+  "AAB · Anvil Ripple": "A pure sine against a rounded square sub an octave below, and rough random atoms that clang and fade an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the scale cutoff breathes, LFO 2 swells the resonance, LFO 3 widens and narrows the filtered window, and a 24 dB OTA low-pass (1370 Hz) that opens on every note.",
+  "AA · Opal Rise Chords": "A pure sine against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (2525 Hz) that opens on every note.",
+  "AA · Wind Surge Horns": "A pure sine against a breath chiff; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 widens and narrows the filtered window, and a 24 dB ladder low-pass (699 Hz) that opens on every note.",
+  "AB · Nave Rise Keys": "Mirrored atoms that sing like a choir against a buzzing band-passed saw an octave below; the scale cutoff breathes, LFO 2 tilts the scales from dark to bright, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (1623 Hz) that opens on every note.",
+  "AB · Mist Sweep Piano": "Ramp atoms that open like a horn against a veil of band-passed noise an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the wavelet morphs towards Daubechies 2, LFO 3 tilts the scales from dark to bright, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (2615 Hz) that opens on every note.",
+  "AA · Wind Storm": "A Haar saw read from the middle of its cycle against a breath chiff an octave above; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 swells the resonance, and LFO 2 widens and narrows the filtered window.",
+  "AA · Swirl Chimes": "A nasal pulse against a gritty Haar saw an octave below; the resonance of the scale filter pulses, each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, LFO 2 sweeps the scale filter, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (2543 Hz) that opens on every note.",
+  "AAB · Halo Piano": "A soft triangle against a veil of band-passed noise an octave above, and a halo of high random atoms two octaves above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 widens and narrows the filtered window, LFO 3 carries the window of the scale filter round the cycle, and a light vibrato.",
+  "AB · Beam Lung Keys": "Wavelet drawbars like an organ against a saw whose filter works in one part of the cycle, slightly detuned; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the scale cutoff breathes, LFO 3 widens and narrows the filtered window, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (948 Hz) that opens on every note.",
+  "AA · Fold Pulse Piano": "A jagged Haar triangle against a bright Haar ping an octave above; each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, the resonance of the scale filter pulses, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 sweeps the scale filter, and a light vibrato.",
+  "AB · Rust Bloom Machine": "A soft triangle against rough random atoms that clang and fade a fifth above; the resonance of the scale filter pulses, each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 thins and thickens the atoms (sparsity), LFO 3 pulls the even scales in and out, and a 24 dB OTA low-pass (3812 Hz) with some bite, driven hard.",
+  "AA · Nasal Swell": "A nasal pulse against a veil of band-passed noise an octave above; the wavelet morphs towards Daubechies 2, the scale cutoff breathes, LFO 3 sharpens and relaxes the edge of the scale filter, and LFO 2 thins and thickens the atoms (sparsity).",
+  "AB · Pure Beam Keys": "A pure sine against random atoms that glitter an octave above; the wavelet morphs towards Daubechies 2, LFO 3 carries the window of the scale filter round the cycle, LFO 2 sweeps the scale filter, and a light vibrato.",
+  "AA · Tap & Slate": "A gritty Haar saw against a woody knock; the scale cutoff breathes, LFO 2 drifts the wavelet towards Daubechies 20, LFO 3 thins and thickens the atoms (sparsity), and each note opens its scale filter on its own envelope.",
+  "AB · Bloom of Timber": "Low mirrored atoms against a bright Haar ping; the wavelet morphs towards Daubechies 20, LFO 2 thins and thickens the atoms (sparsity), LFO 3 widens and narrows the filtered window, and a 24 dB OTA low-pass (1027 Hz) that opens on every note with some bite.",
+  "AA · Pixel Surge": "A warm saw against a gritty Haar saw an octave above; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 swells the resonance, a light vibrato, and a 24 dB OTA low-pass (4447 Hz) that opens on every note.",
+  "AB · Knock Lead": "Only the odd scales, hollow as a clarinet against a woody knock an octave above; the filtered part of the cycle is swept along it, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 3 tilts the scales from dark to bright.",
+  "AA · Morph of Flint": "A jagged Haar triangle against a glassy square an octave below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 drifts the wavelet towards Daubechies 20, and LFO 3 carries the window of the scale filter round the cycle.",
+  "AA · Pearl Chords": "A pure sine against a gritty Haar saw, slightly detuned; the filtered part of the cycle is swept along it, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 thins and thickens the atoms (sparsity), LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (963 Hz) that opens on every note.",
+  "AB · Fold Flip Harp": "A jagged Haar triangle against scales that die from the top, like a pluck; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the filtered part of the cycle is swept along it, LFO 2 changes how much of the upper scales survives the decay, and LFO 3 pulls the even scales in and out.",
+  "AB · Breath Bloom": "Only the odd scales, hollow as a clarinet against a veil of band-passed noise two octaves above; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, LFO 2 sweeps the scale filter, LFO 3 thins and thickens the atoms (sparsity), and a 24 dB OTA low-pass (1244 Hz) that opens on every note.",
+  "AB · Even of Amber": "A warm saw against a ringing bell of single atoms an octave above; the wavelet morphs towards Daubechies 20, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 pulls the even scales in and out, and LFO 3 carries the window of the scale filter round the cycle.",
+  "AAB · Glint Atoms Strum": "A jagged Haar triangle against a saw whose filter works in one part of the cycle a fifth above, and random atoms that glitter a fifth above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 20, and LFO 2 pulls the even scales in and out.",
+  "AAB · Lung of Marimba": "A warm saw against a jagged Haar triangle an octave below, and alternating atoms struck like a mallet an octave above; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 carries the window of the scale filter round the cycle, and each note opens its scale filter on its own envelope.",
+  "AB · Kalimba Lung Machine": "A warm saw against alternating atoms struck like a mallet; the scale cutoff breathes, LFO 3 carries the window of the scale filter round the cycle, LFO 2 thins and thickens the atoms (sparsity), and a light vibrato.",
+  "AB · Halo Float": "A saw thinned to a few atoms against a halo of high random atoms two octaves above; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 2 changes how much of the upper scales survives the decay, LFO 3 sharpens and relaxes the edge of the scale filter, and a light vibrato.",
+  "AA · Whistle Lead": "a pure whistling sine with a breath of air, vibrato that opens after the attack",
+  "AB · String Machine II": "a vintage polyphonic ensemble: saw and ramp atoms, a deep chorus",
+  "AA · Wind Chimes": "chimes in a breeze: random bright notes that ring out whatever you play",
+  "AB · Tambourine": "a tambourine: jingles of noise and metallic atoms, shaken and fading",
+  "AA · Opal Morph Haze": "A pure sine against a woody knock; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 drifts the wavelet towards Haar.",
+  "AB · Dust Resonance": "Wavelet drawbars like an organ against a veil of band-passed noise two octaves above; the resonance of the scale filter pulses, the wavelet morphs towards Daubechies 2, LFO 2 widens and narrows the filtered window, each note opens its filter on its own envelope, and a light vibrato.",
+  "AA · Swing Signal": "A saw thinned to a few atoms against a buzzing band-passed saw, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, and a light vibrato.",
+  "AB · Moon Ripple": "A pure sine against a halo of high random atoms; the sparsity swings between a rich tone and a few wavelet atoms, and the resonance of the scale filter pulses.",
+  "AB · Taper & Vibes": "A nasal pulse against alternating atoms struck like a mallet; the scale cutoff breathes, the filtered part of the cycle is swept along it, LFO 2 swells the resonance, LFO 3 swells and drops the odd scales: hollow, then full, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (2303 Hz) that opens on every note.",
+  "AB · Wah Sub": "A saw thinned to a few atoms against stepped Walsh atoms; the wavelet morphs towards Daubechies 20, the filtered part of the cycle is swept along it, LFO 3 swells the resonance, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (122 Hz) that opens on every note with some bite.",
+  "AAB · Clang Tide Signal": "A buzzing band-passed saw against a jagged Haar triangle a fifth above, and rough random atoms that clang and fade an octave below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 8, LFO 2 pulls the even scales in and out, and a 24 dB ladder low-pass (3698 Hz) with some bite, driven hard.",
+  "AAB · Hold of Gong": "A pure sine against a breath chiff two octaves above, and a ringing bell of single atoms; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 changes how much of the upper scales survives the decay, and LFO 2 swells and drops the odd scales: hollow, then full.",
+  "AA · Wasp Surge": "A warm saw against a buzzing band-passed saw an octave below; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, LFO 3 sweeps the scale filter, LFO 2 thins and thickens the atoms (sparsity), and a 24 dB OTA low-pass (1354 Hz) that opens on every note with some bite.",
+  "AB · Origami Blend": "Ramp atoms that open like a horn against a jagged Haar triangle an octave above; the resonance of the scale filter pulses, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 drifts the wavelet towards Daubechies 2, and each note opens its scale filter on its own envelope.",
+  "AB · Amber Morph": "A warm saw against stepped Walsh atoms; the wavelet morphs towards Daubechies 20, LFO 2 pulls the even scales in and out, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (266 Hz) that opens on every note.",
+  "AB · Rise of Odd": "Only the odd scales, hollow as a clarinet against a jagged Haar triangle, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 3 changes how far each note's envelope opens the scale filter, LFO 2 sweeps the scale filter, and a light vibrato.",
+  "AAB · Stair & Tap": "A nasal pulse against a woody knock an octave below, and stepped Walsh atoms; LFO 2 sweeps the scale filter, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (282 Hz) that opens on every note.",
+  "AA · Crystal Swirl": "A pure sine against a glassy square, slightly detuned; LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (1361 Hz) that opens on every note with some bite.",
+  "AA · Morph of Brass": "A saw thinned to a few atoms against a buzzing band-passed saw an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 20, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (1241 Hz) that opens on every note with a singing resonance.",
+  "AB · Ripple Reeds": "A pure sine against scales that die from the top, like a pluck; the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, LFO 3 sweeps the scale filter, LFO 2 pulses the resonance of the low-pass filter, and a 24 dB OTA low-pass (404 Hz) that opens on every note with a singing resonance.",
+  "AB · Sweep of Tin": "A cowbell: two clanking partials, a hard strike and a short metallic ring; the filtered part of the cycle is swept along it, LFO 2 swells and drops the odd scales: hollow, then full, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB ladder low-pass (6299 Hz) that opens on every note with some bite.",
+  "AAB · Clack Wah": "A wood block: a hollow knock with a quick bright ring above it; the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 swells the resonance, and a 24 dB OTA low-pass (6715 Hz) that opens on every note.",
+  "AA · Zap Laser": "An electronic zap: a sine that dives through the octaves with a hiss on top; LFO 2 changes how far each note's envelope opens the scale filter, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (5371 Hz) that opens on every note with some bite.",
+  "AAB · Beam of Brass": "Stepped Walsh atoms against a veil of band-passed noise an octave above, and a buzzing band-passed saw an octave below; the sparsity swings between a rich tone and a few wavelet atoms, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 3 tilts the scales from dark to bright, LFO 2 carries the window of the scale filter round the cycle, and a 24 dB OTA low-pass (3893 Hz) that closes on every note with a singing resonance.",
+  "AA · Tide Lute": "A pure sine against a veil of band-passed noise two octaves above; the filtered part of the cycle is swept along it, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB OTA low-pass (1632 Hz) that opens on every note with some bite.",
+  "AAB · Moon Surge Clav": "A pure sine against a bright Haar ping, and rough random atoms that clang and fade an octave above; the filtered part of the cycle is swept along it, each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 sweeps the scale filter.",
+  "AA · Bloom of Bright": "A narrow pulse shifted inside its cycle against a bright Haar ping an octave above; each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, LFO 3 sweeps the scale filter, LFO 2 thins and thickens the atoms (sparsity), and a 24 dB ladder low-pass (3233 Hz) that opens on every note with some bite.",
+  "AB · Breath of Wood": "An organ made of single wavelet atoms against a woody knock; the scale cutoff breathes, the filtered part of the cycle is swept along it, LFO 2 widens and narrows the filtered window, and LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase).",
+  "AB · Spark Orbit Ensemble": "An organ made of single wavelet atoms against a gritty Haar saw an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 carries the window of the scale filter round the cycle, and a 24 dB ladder low-pass (2443 Hz) that opens on every note with some bite.",
+  "AA · Milk Strum": "A soft triangle against a tick of noise an octave below; the resonance of the scale filter pulses, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 drifts the wavelet towards Daubechies 2.",
+  "AA · Octave Square Lead": "a hollow square with another an octave above: a clear, penetrating lead",
+  "AB · Cry Lead": "a resonant saw that cries: random atoms add a rough edge, the vibrato deepens with the note",
+  "AA · Crotales": "tiny cymbals, struck: very high, with a shimmer from two almost equal partials",
+  "AA · Rising Sweep": "a riser: filtered noise and a saw whose band-pass climbs for seconds, then falls away",
+  "AA · Laser Zap": "a sci-fi laser shot: a saw and a square falling steeply in pitch in a tenth of a second",
+  "AA · Robot Voice": "a robot talking: a band-pass saw whose cutoff jumps at random, with a noisy buzz above",
+  "AA · Woodwind Growl": "A hollow square against a sine sub two octaves below; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, and a light vibrato.",
+  "AB · Fibre Sweep Rumble": "An organ made of single wavelet atoms against a rounded square sub an octave below; the scale cutoff breathes, the wavelet morphs towards Haar, LFO 2 carries the window of the filter round the cycle, each note opens its filter on its own envelope, and a light vibrato.",
+  "AAB · Blend Rumble": "A saw thinned to a few atoms against a round triangle sub an octave below, and stepped Walsh atoms a fifth above; the wavelet morphs towards Haar, the sparsity swings between a rich tone and a few wavelet atoms, the resonance of the scale filter pulses, and LFO 2 drifts the wavelet towards Haar.",
+  "AB · Shard & Soft": "A soft triangle against random atoms that glitter an octave above; the resonance of the scale filter pulses, the wavelet morphs towards Haar, and LFO 2 swells and drops the odd scales: hollow, then full.",
+  "AAB · Stone Blend Undertow": "Only the odd scales, hollow as a clarinet against a rounded square sub an octave below, and a jagged Haar triangle, slightly detuned; the wavelet morphs towards Haar, the resonance of the scale filter pulses, and LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase).",
+  "AB · Step Surge Foundation": "A soft triangle against stepped Walsh atoms, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 changes how far each note's envelope opens the filter.",
+  "AA · Flint Cloud": "A nasal pulse against a jagged Haar triangle an octave above; the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 drifts the wavelet towards Daubechies 2.",
+  "AA · Edge of Moss": "A soft triangle against a rounded square sub an octave below; the filtered part of the cycle is swept along it, the scale cutoff breathes, the sparsity swings between a rich tone and a few wavelet atoms, and LFO 2 sharpens and relaxes the edge of the scale filter.",
+  "AB · Prism Atoms Signal": "Random atoms that glitter against a Haar saw read from the middle of its cycle an octave below; the sparsity swings between a rich tone and a few wavelet atoms, and the scale cutoff breathes.",
+  "AAB · Marimba Wah": "Wavelet drawbars like an organ against a sine that dives in pitch, and a woody knock an octave above; the resonance of the scale filter pulses, and a light vibrato.",
+  "AAB · Breath Cloud": "A saw thinned to a few atoms against a round triangle sub two octaves below, and rough random atoms that clang and fade an octave below; the scale cutoff breathes.",
+  "AA · Pearl Bed": "A pure sine against a sine that dives in pitch an octave above; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 3 widens and narrows the filtered window, and LFO 2 changes how far each note's envelope opens the scale filter.",
+  "AA · Open Call": "A pure sine against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 carries the window of the scale filter round the cycle, LFO 2 pulses the resonance of the low-pass filter, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (1430 Hz) that opens on every note with a singing resonance.",
+  "AB · Drift Signal": "Wavelet drawbars like an organ against a Haar saw read from the middle of its cycle, slightly detuned; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 tilts the scales from dark to bright, and a 24 dB OTA low-pass (1951 Hz) that opens on every note with some bite.",
+  "AA · Atoms of Dive": "A hollow square against a sine that dives in pitch an octave above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 3 thins and thickens the atoms (sparsity), LFO 2 sweeps the scale filter, and a light vibrato.",
+  "AB · Ice Tide Strum": "A glassy square against rough random atoms that clang and fade an octave above; the sparsity swings between a rich tone and a few wavelet atoms, each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 sweeps the scale filter, and a 24 dB OTA low-pass (988 Hz) that opens on every note with some bite.",
+  "AB · Wood & Drawbar": "Wavelet drawbars like an organ against a woody knock an octave above; LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), LFO 3 drifts the wavelet towards Daubechies 20, and a 24 dB OTA low-pass (5505 Hz) that opens on every note.",
+  "AA · Tide of Boom": "A kick: a sine that falls from high to low in a blink, with a click on top; the sparsity swings between a rich tone and a few wavelet atoms, and LFO 3 widens and narrows the filtered window.",
+  "AA · Thud Shift": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 3 carries the window of the scale filter round the cycle, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB OTA low-pass (4325 Hz) that opens on every note.",
+  "AB · Temple Rise Drum": "A taiko: a very low sine that falls and a big skin that rings in a large room; LFO 2 sweeps the scale filter, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB OTA low-pass (4323 Hz) that opens on every note with some bite.",
+  "AA · Breathe Kick": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 2 widens and narrows the filtered window, LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB ladder low-pass (5111 Hz) that opens on every note with some bite.",
+  "AA · Plasma Tom": "An electronic zap: a sine that dives through the octaves with a hiss on top; LFO 2 thins and thickens the atoms (sparsity), and LFO 3 carries the window of the scale filter round the cycle.",
+  "AA · Punch Rise Kick": "A kick: a sine that falls from high to low in a blink, with a click on top; LFO 2 thins and thickens the atoms (sparsity), LFO 3 changes how far each note's envelope opens the scale filter, and a 24 dB ladder low-pass (2900 Hz) that opens on every note.",
+  "AA · Deep Ripple": "A gritty Haar saw against a sine sub an octave below; the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 swells the resonance.",
+  "AB · Knock Wah": "Only the odd scales, hollow as a clarinet against a woody knock; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 2 thins and thickens the atoms (sparsity), LFO 3 swells the resonance, and a 24 dB ladder low-pass (1273 Hz) that opens on every note.",
+  "AAB · Mosaic Strum": "A pure sine against a bright Haar ping, and stepped Walsh atoms an octave above; the filtered part of the cycle is swept along it, the scale cutoff breathes, LFO 3 sharpens and relaxes the edge of the scale filter, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), each note opens its scale filter on its own envelope, and a 24 dB ladder low-pass (1558 Hz) that opens on every note.",
+  "AAB · Static Open Reeds": "A jagged Haar triangle against a buzzing band-passed saw a fifth above, and alternating atoms struck like a mallet an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 pulls the even scales in and out, LFO 3 drifts the wavelet towards Haar, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (567 Hz) that opens on every note.",
+  "AA · Kite Swing": "A narrow pulse shifted inside its cycle against a tick of noise; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, LFO 3 carries the window of the scale filter round the cycle, and LFO 2 sweeps the scale filter.",
+  "AA · Taper Atoms": "A nasal pulse against a buzzing band-passed saw an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 widens and narrows the filtered window, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (4428 Hz) that opens on every note.",
+  "AAB · Beam & Fanfare": "Ramp atoms that open like a horn against a saw whose filter works in one part of the cycle an octave below, and a jagged Haar triangle, slightly detuned; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 pulls the even scales in and out, LFO 3 swells the resonance, and a 24 dB OTA low-pass (1485 Hz) that opens on every note.",
+  "AB · Hollow & Drop": "Only the odd scales, hollow as a clarinet against a sine that dives in pitch; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sweeps the scale filter, LFO 2 swells and drops the odd scales: hollow, then full, and a 24 dB OTA low-pass (2381 Hz) that opens on every note.",
+  "AA · Drum & Moss": "A soft triangle against a soft thump; the sparsity swings between a rich tone and a few wavelet atoms, the filtered part of the cycle is swept along it, LFO 3 drifts the wavelet towards Haar, and LFO 2 sweeps the scale filter.",
+  "AB · Breathe Clav": "Mirrored atoms that sing like a choir against a saw whose filter works in one part of the cycle an octave above; the wavelet morphs towards Haar, the scale cutoff breathes, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 widens and narrows the filtered window.",
+  "AA · Ripple of Crystal": "A glassy square against a veil of band-passed noise; the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 swells the resonance, LFO 3 carries the window of the scale filter round the cycle, each note opens its scale filter on its own envelope, and a light vibrato.",
+  "AB · Sweep of Flute": "A soft triangle against a halo of high random atoms; the filtered part of the cycle is swept along it, the wavelet morphs towards Haar, LFO 2 swells the resonance, LFO 3 pulls the source wave between narrow and wide, and a 24 dB ladder low-pass (795 Hz) that opens on every note with some bite.",
+  "AA · Slope of Weave": "A narrow pulse shifted inside its cycle against a buzzing band-passed saw an octave above; the filtered part of the cycle is swept along it, the wavelet morphs towards Daubechies 8, LFO 3 sharpens and relaxes the edge of the scale filter, and LFO 2 thins and thickens the atoms (sparsity).",
+  "AB · Choir Breath Horns": "Mirrored atoms that sing like a choir against a bright Haar ping an octave below; the scale cutoff breathes, LFO 2 carries the window of the scale filter round the cycle, and LFO 3 thins and thickens the atoms (sparsity).",
+  "AB · Pixel Lean Pipes": "Mirrored atoms that sing like a choir against a gritty Haar saw a fifth above; the wavelet morphs towards Daubechies 20, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 tilts the scales from dark to bright, and LFO 3 widens and narrows the filtered window.",
+  "AA · Talk Lead": "a band-pass saw moved by the LFO, with a bright saw above: a talking \"wah\" lead",
+  "AA · Fifth Lead": "a saw with another a fifth above: a power-chord lead that sings in two voices",
+  "AA · Tape Pad": "a warm saw over a layer of tape hiss",
+  "AA · FM Bell": "a bright digital bell: a sine and a second sine at a ratio of 2.4 that fades first",
+  "AB · Air Tide": "A pure sine against a halo of high random atoms two octaves above; the wavelet morphs towards Haar, LFO 2 thins and thickens the atoms (sparsity), and a light vibrato.",
+  "AB · Orbit Cloud": "A saw thinned to a few atoms against random atoms that glitter an octave below; the scale cutoff breathes, LFO 2 carries the window of the filter round the cycle, and a light vibrato.",
+  "AAB · Abyss & Kalimba": "A buzzing band-passed saw against a sine sub two octaves below, and alternating atoms struck like a mallet; each note's envelope pushes the wavelet towards Daubechies 20, by an amount the LFO swings, the filtered part of the cycle is swept along it, LFO 3 thins and thickens the atoms (sparsity), LFO 2 sweeps the scale filter, and a light vibrato.",
+  "AB · Swirl of Odd": "Only the odd scales, hollow as a clarinet against a bright Haar ping an octave below; the filtered part of the cycle is swept along it, LFO 3 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and LFO 2 tilts the scales from dark to bright.",
+  "AB · Sweep of Trumpet": "Ramp atoms that open like a horn against a woody knock; LFO 3 pulls the source wave between narrow and wide, LFO 2 sweeps the scale filter, and a 24 dB ladder low-pass (2661 Hz) that opens on every note.",
+  "AB · Drawbar Shift": "Wavelet drawbars like an organ against a woody knock; the resonance of the scale filter pulses, LFO 3 pulls the even scales in and out, LFO 2 slides the source inside its cycle, so the atoms meet other parts of the wave (source phase), and a 24 dB ladder low-pass (1283 Hz) that opens on every note.",
+  "AB · Moon Resonance Clav": "A pure sine against a halo of high random atoms; the resonance of the scale filter pulses, and LFO 3 carries the window of the scale filter round the cycle.",
+  "AB · Stair Pulse Tines": "A glassy square against stepped Walsh atoms an octave above; each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 swells the resonance, LFO 3 sweeps the cutoff of the low-pass filter, and a 24 dB OTA low-pass (2283 Hz) that opens on every note with some bite.",
+  "AAB · Hollow Scape": "Only the odd scales, hollow as a clarinet against a rounded square sub two octaves below, and a glassy square an octave below; the resonance of the scale filter pulses, LFO 3 carries the window of the scale filter round the cycle, and a light vibrato.",
+  "AB · Skin Swing Hand Drum": "A hand drum: a round open tone with a slap, the pitch settling down as it rings; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, and LFO 2 tilts the scales from dark to bright.",
+  "AAB · Temple & Pixel": "A soft triangle against a gritty Haar saw a fifth above, and a ringing bell of single atoms an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sweeps the scale filter, LFO 2 drifts the wavelet towards Haar, a light vibrato, and a 24 dB OTA low-pass (558 Hz) that opens on every note with some bite.",
+  "AB · Beam of Cave": "Only the odd scales, hollow as a clarinet against a woody knock an octave above; the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sweeps the scale filter, and LFO 2 carries the window of the scale filter round the cycle.",
+  "AA · Soft Blend Harp": "A soft triangle against a buzzing band-passed saw an octave above; the wavelet morphs towards Daubechies 20, the sparsity swings between a rich tone and a few wavelet atoms, LFO 2 carries the window of the scale filter round the cycle, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (758 Hz) that opens on every note with some bite.",
+  "AAB · Tide of Chalk": "A soft triangle against a jagged Haar triangle, slightly detuned, and random atoms that glitter, slightly detuned; each note's envelope pushes the wavelet towards Daubechies 2, by an amount the LFO swings, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 sharpens and relaxes the edge of the scale filter, and LFO 2 swells and drops the odd scales: hollow, then full.",
+  "AA · Rise of Slate": "A gritty Haar saw against a woody knock an octave below; each note's envelope pushes the wavelet towards Daubechies 8, by an amount the LFO swings, LFO 3 thins and thickens the atoms (sparsity), and LFO 2 sweeps the scale filter.",
+  "AA · Wood Orbit Pluck": "A saw thinned to a few atoms against a woody knock an octave above; the wavelet morphs towards Daubechies 20, LFO 3 pulls the source wave between narrow and wide, and LFO 2 carries the window of the scale filter round the cycle.",
+  "AAB · Open Pluck": "A saw whose filter works in one part of the cycle against a soft thump two octaves above, and a halo of high random atoms two octaves above; the resonance of the scale filter pulses, the filtered part of the cycle is swept along it, LFO 2 thins and thickens the atoms (sparsity), LFO 3 sweeps the scale filter, each note opens its scale filter on its own envelope, and a 24 dB OTA low-pass (1893 Hz) that opens on every note with some bite.",
+  "AA · Swing of Chalk": "A warm saw against a jagged Haar triangle an octave below; the resonance of the scale filter pulses, each note's envelope pushes the wavelet towards Haar, by an amount the LFO swings, LFO 2 pulls the source wave between narrow and wide, LFO 3 sweeps the scale filter, and a 24 dB OTA low-pass (2636 Hz) that opens on every note.",
+  "AB · Opal Atoms": "A pure sine against a halo of high random atoms two octaves above; the filtered part of the cycle is swept along it, the sparsity swings between a rich tone and a few wavelet atoms, LFO 3 drifts the wavelet towards Daubechies 2, and LFO 2 widens and narrows the filtered window."
  },
  "TOUR": [
   "A · Warm Pad",
   "A · Wavelet Lead",
   "A · Noise Wash Pad",
   "A · Wave Riser",
-  "508 A1A2 · Moss Tide",
+  "AA · Moss Tide",
   "B · Theatre Organ",
   "A · Siren Sweep",
   "B · Space Choir",
-  "079 A1A2 · Analog Cloud",
+  "AA · Analog Cloud",
   "A · Wavelet Lead",
-  "527 A1A2 · Salt Beam Strings",
+  "AA · Salt Beam Strings",
   "B · Flute Lead",
-  "545 A1A2 · Sweep of Pixel",
+  "AA · Sweep of Pixel",
   "B · Choir Pad",
-  "608 A1A2 · Chalk Edge Call",
+  "AA · Chalk Edge Call",
   "A · Wave Brass",
-  "095 A1B1 · Silk Cloud",
+  "AB · Silk Cloud",
   "A · Wave Attack Lead",
-  "762 A1B1 · Mosaic & Velvet",
+  "AB · Mosaic & Velvet",
   "A · Warm Pad",
-  "782 A1B1 · Lean of Pure",
+  "AB · Lean of Pure",
   "AB · Glass Choir",
-  "788 A1A2 · Surge of Breath",
+  "AA · Surge of Breath",
   "A · Dub Echo Lead",
-  "1067 A1A2 · Sizzle Surge",
+  "AA · Sizzle Surge",
   "A · Wave Pulse Lead",
   "B · Focus Sweep",
   "A · Cello Section",
@@ -3300,12 +3356,12 @@ var WS_SPEC = {
      "type": "logo",
      "x": 16,
      "y": 8,
-     "w": 200,
+     "w": 224,
      "h": 32
     },
     {
      "type": "zoom",
-     "x": 222,
+     "x": 248,
      "y": 14,
      "w": 50,
      "h": 20
@@ -5524,8 +5580,8 @@ var WS_SPEC = {
   {
    "name": "A · Wave Brass",
    "cat": "Brass & Wind",
+   "id": "A · Wave Brass",
    "rank": 0,
-   "stars": 10,
    "values": [
     0,
     6,
@@ -5707,8 +5763,8 @@ var WS_SPEC = {
   {
    "name": "A · Wave Riser",
    "cat": "FX",
+   "id": "A · Wave Riser",
    "rank": 1,
-   "stars": 10,
    "values": [
     0,
     6,
@@ -5890,8 +5946,8 @@ var WS_SPEC = {
   {
    "name": "A · Noise Wash Pad",
    "cat": "Pad",
+   "id": "A · Noise Wash Pad",
    "rank": 3,
-   "stars": 9,
    "values": [
     0,
     6,
@@ -6073,8 +6129,8 @@ var WS_SPEC = {
   {
    "name": "A · Siren Sweep",
    "cat": "FX",
+   "id": "A · Siren Sweep",
    "rank": 4,
-   "stars": 9,
    "values": [
     0,
     2,
@@ -6256,8 +6312,8 @@ var WS_SPEC = {
   {
    "name": "B · Choir Pad",
    "cat": "Pad",
+   "id": "B · Choir Pad",
    "rank": 5,
-   "stars": 9,
    "values": [
     2,
     6,
@@ -6439,8 +6495,8 @@ var WS_SPEC = {
   {
    "name": "A · Wave Attack Lead",
    "cat": "Lead",
+   "id": "A · Wave Attack Lead",
    "rank": 6,
-   "stars": 9,
    "values": [
     0,
     6,
@@ -6622,8 +6678,8 @@ var WS_SPEC = {
   {
    "name": "A · Cello Section",
    "cat": "Strings",
+   "id": "A · Cello Section",
    "rank": 7,
-   "stars": 9,
    "values": [
     0,
     6,
@@ -6805,8 +6861,8 @@ var WS_SPEC = {
   {
    "name": "AB · Silk Strings",
    "cat": "Strings",
+   "id": "AB · Silk Strings",
    "rank": 8,
-   "stars": 9,
    "values": [
     0,
     6,
@@ -6988,8 +7044,8 @@ var WS_SPEC = {
   {
    "name": "B · Theatre Organ",
    "cat": "Organ",
+   "id": "B · Theatre Organ",
    "rank": 17,
-   "stars": 8,
    "values": [
     2,
     4,
@@ -7171,8 +7227,8 @@ var WS_SPEC = {
   {
    "name": "B · Space Choir",
    "cat": "Pad",
+   "id": "B · Space Choir",
    "rank": 18,
-   "stars": 8,
    "values": [
     2,
     6,
@@ -7354,8 +7410,8 @@ var WS_SPEC = {
   {
    "name": "A · Wavelet Lead",
    "cat": "Lead",
+   "id": "A · Wavelet Lead",
    "rank": 19,
-   "stars": 8,
    "values": [
     0,
     3,
@@ -7537,8 +7593,8 @@ var WS_SPEC = {
   {
    "name": "B · Focus Sweep",
    "cat": "FX",
+   "id": "B · Focus Sweep",
    "rank": 20,
-   "stars": 8,
    "values": [
     2,
     0,
@@ -7720,8 +7776,8 @@ var WS_SPEC = {
   {
    "name": "A · Wave Pulse Lead",
    "cat": "Lead",
+   "id": "A · Wave Pulse Lead",
    "rank": 21,
-   "stars": 8,
    "values": [
     0,
     5,
@@ -7903,8 +7959,8 @@ var WS_SPEC = {
   {
    "name": "AB · Glass Choir",
    "cat": "Pad",
+   "id": "AB · Glass Choir",
    "rank": 22,
-   "stars": 8,
    "values": [
     2,
     1,
@@ -8086,8 +8142,8 @@ var WS_SPEC = {
   {
    "name": "A · Spiccato Strings",
    "cat": "Strings",
+   "id": "A · Spiccato Strings",
    "rank": 23,
-   "stars": 8,
    "values": [
     0,
     3,
@@ -8269,8 +8325,8 @@ var WS_SPEC = {
   {
    "name": "A · Shimmering Strings",
    "cat": "Strings",
+   "id": "A · Shimmering Strings",
    "rank": 24,
-   "stars": 8,
    "values": [
     0,
     6,
@@ -8452,8 +8508,8 @@ var WS_SPEC = {
   {
    "name": "A · Wave Robot",
    "cat": "FX",
+   "id": "A · Wave Robot",
    "rank": 25,
-   "stars": 8,
    "values": [
     0,
     0,
@@ -8635,8 +8691,8 @@ var WS_SPEC = {
   {
    "name": "A · Laser Sweep",
    "cat": "FX",
+   "id": "A · Laser Sweep",
    "rank": 26,
-   "stars": 8,
    "values": [
     0,
     1,
@@ -8818,8 +8874,8 @@ var WS_SPEC = {
   {
    "name": "B · Flute Lead",
    "cat": "Lead",
+   "id": "B · Flute Lead",
    "rank": 46,
-   "stars": 7,
    "values": [
     2,
     6,
@@ -9001,8 +9057,8 @@ var WS_SPEC = {
   {
    "name": "A · Dub Echo Lead",
    "cat": "Lead",
+   "id": "A · Dub Echo Lead",
    "rank": 47,
-   "stars": 7,
    "values": [
     0,
     2,
@@ -9184,8 +9240,8 @@ var WS_SPEC = {
   {
    "name": "A · Warm Pad",
    "cat": "Pad",
+   "id": "A · Warm Pad",
    "rank": 78,
-   "stars": 6,
    "values": [
     0,
     5,
@@ -9365,10 +9421,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "508 A1A2 · Moss Tide",
+   "name": "AA · Moss Tide",
    "cat": "SuperModulation",
+   "id": "508 A1A2 · Moss Tide",
    "rank": 2,
-   "stars": 10,
    "values": [
     0,
     6,
@@ -9548,10 +9604,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "079 A1A2 · Analog Cloud",
+   "name": "AA · Analog Cloud",
    "cat": "Pad",
+   "id": "079 A1A2 · Analog Cloud",
    "rank": 9,
-   "stars": 9,
    "values": [
     0,
     2,
@@ -9731,10 +9787,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "527 A1A2 · Salt Beam Strings",
+   "name": "AA · Salt Beam Strings",
    "cat": "SuperModulation",
+   "id": "527 A1A2 · Salt Beam Strings",
    "rank": 10,
-   "stars": 9,
    "values": [
     0,
     6,
@@ -9914,10 +9970,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "545 A1A2 · Sweep of Pixel",
+   "name": "AA · Sweep of Pixel",
    "cat": "SuperModulation",
+   "id": "545 A1A2 · Sweep of Pixel",
    "rank": 11,
-   "stars": 9,
    "values": [
     0,
     2,
@@ -10097,10 +10153,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "608 A1A2 · Chalk Edge Call",
+   "name": "AA · Chalk Edge Call",
    "cat": "Lead",
+   "id": "608 A1A2 · Chalk Edge Call",
    "rank": 12,
-   "stars": 9,
    "values": [
     0,
     0,
@@ -10280,10 +10336,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "762 A1B1 · Mosaic & Velvet",
+   "name": "AB · Mosaic & Velvet",
    "cat": "Pad",
+   "id": "762 A1B1 · Mosaic & Velvet",
    "rank": 13,
-   "stars": 9,
    "values": [
     0,
     3,
@@ -10463,10 +10519,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "782 A1B1 · Lean of Pure",
+   "name": "AB · Lean of Pure",
    "cat": "Pad",
+   "id": "782 A1B1 · Lean of Pure",
    "rank": 14,
-   "stars": 9,
    "values": [
     0,
     4,
@@ -10646,10 +10702,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "788 A1A2 · Surge of Breath",
+   "name": "AA · Surge of Breath",
    "cat": "Pad",
+   "id": "788 A1A2 · Surge of Breath",
    "rank": 15,
-   "stars": 9,
    "values": [
     0,
     3,
@@ -10829,10 +10885,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1067 A1A2 · Sizzle Surge",
+   "name": "AA · Sizzle Surge",
    "cat": "Drums & Perc",
+   "id": "1067 A1A2 · Sizzle Surge",
    "rank": 16,
-   "stars": 9,
    "values": [
     0,
     0,
@@ -11012,10 +11068,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "095 A1B1 · Silk Cloud",
+   "name": "AB · Silk Cloud",
    "cat": "Pad",
+   "id": "095 A1B1 · Silk Cloud",
    "rank": 27,
-   "stars": 8,
    "values": [
     0,
     6,
@@ -11195,10 +11251,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "502 A1B1 · Resonance Storm",
+   "name": "AB · Resonance Storm",
    "cat": "SuperModulation",
+   "id": "502 A1B1 · Resonance Storm",
    "rank": 28,
-   "stars": 8,
    "values": [
     0,
     1,
@@ -11378,10 +11434,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "506 A1A2 · Orbit Pad",
+   "name": "AA · Orbit Pad",
    "cat": "SuperModulation",
+   "id": "506 A1A2 · Orbit Pad",
    "rank": 29,
-   "stars": 8,
    "values": [
     0,
     4,
@@ -11561,10 +11617,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "539 A1A2 · Cavern Sweep Cloud",
+   "name": "AA · Cavern Sweep Cloud",
    "cat": "SuperModulation",
+   "id": "539 A1A2 · Cavern Sweep Cloud",
    "rank": 30,
-   "stars": 8,
    "values": [
     0,
     6,
@@ -11744,10 +11800,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "558 A2B1 · Step Sub",
+   "name": "AB · Step Sub",
    "cat": "Bass",
+   "id": "558 A2B1 · Step Sub",
    "rank": 31,
-   "stars": 8,
    "values": [
     1,
     2,
@@ -11927,10 +11983,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "669 A1A2B1 · Resonance Keys",
+   "name": "AAB · Resonance Keys",
    "cat": "Keyboard",
+   "id": "669 A1A2B1 · Resonance Keys",
    "rank": 32,
-   "stars": 8,
    "values": [
     0,
     4,
@@ -12110,10 +12166,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "774 A1B1 · Velvet Cloud",
+   "name": "AB · Velvet Cloud",
    "cat": "Pad",
+   "id": "774 A1B1 · Velvet Cloud",
    "rank": 33,
-   "stars": 8,
    "values": [
     0,
     4,
@@ -12293,10 +12349,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "786 A1B1 · Sweep of Faint",
+   "name": "AB · Sweep of Faint",
    "cat": "Pad",
+   "id": "786 A1B1 · Sweep of Faint",
    "rank": 34,
-   "stars": 8,
    "values": [
     0,
     3,
@@ -12476,10 +12532,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "799 A1A2B1 · Rust Aurora",
+   "name": "AAB · Rust Aurora",
    "cat": "Pad",
+   "id": "799 A1A2B1 · Rust Aurora",
    "rank": 35,
-   "stars": 8,
    "values": [
     2,
     4,
@@ -12659,10 +12715,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "800 A1B1 · Step Spiral",
+   "name": "AB · Step Spiral",
    "cat": "Pad",
+   "id": "800 A1B1 · Step Spiral",
    "rank": 36,
-   "stars": 8,
    "values": [
     0,
     4,
@@ -12842,10 +12898,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1006 A1A2 · Drum Bloom",
+   "name": "AA · Drum Bloom",
    "cat": "FX",
+   "id": "1006 A1A2 · Drum Bloom",
    "rank": 37,
-   "stars": 8,
    "values": [
     0,
     3,
@@ -13025,10 +13081,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1101 A1A2 · Bloom of Soft",
+   "name": "AA · Bloom of Soft",
    "cat": "SuperModulation",
+   "id": "1101 A1A2 · Bloom of Soft",
    "rank": 38,
-   "stars": 8,
    "values": [
     0,
     5,
@@ -13208,10 +13264,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1104 A1A2B1 · Sweep Call",
+   "name": "AAB · Sweep Call",
    "cat": "SuperModulation",
+   "id": "1104 A1A2B1 · Sweep Call",
    "rank": 39,
-   "stars": 8,
    "values": [
     0,
     2,
@@ -13391,10 +13447,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1129 A1A2B1 · Dive Texture",
+   "name": "AAB · Dive Texture",
    "cat": "SuperModulation",
+   "id": "1129 A1A2B1 · Dive Texture",
    "rank": 40,
-   "stars": 8,
    "values": [
     0,
     6,
@@ -13574,10 +13630,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1155 A1A2B1 · Ice & Halo",
+   "name": "AAB · Ice & Halo",
    "cat": "SuperModulation",
+   "id": "1155 A1A2B1 · Ice & Halo",
    "rank": 41,
-   "stars": 8,
    "values": [
     0,
     5,
@@ -13757,10 +13813,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1187 A1A2B1 · Pick & Soft",
+   "name": "AAB · Pick & Soft",
    "cat": "SuperModulation",
+   "id": "1187 A1A2B1 · Pick & Soft",
    "rank": 42,
-   "stars": 8,
    "values": [
     0,
     4,
@@ -13940,10 +13996,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1210 A1A2B1 · Static & Fibre",
+   "name": "AAB · Static & Fibre",
    "cat": "SuperModulation",
+   "id": "1210 A1A2B1 · Static & Fibre",
    "rank": 43,
-   "stars": 8,
    "values": [
     0,
     3,
@@ -14123,10 +14179,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1287 A1A2 · Chalk Drift",
+   "name": "AA · Chalk Drift",
    "cat": "SuperModulation",
+   "id": "1287 A1A2 · Chalk Drift",
    "rank": 44,
-   "stars": 8,
    "values": [
     0,
     3,
@@ -14306,10 +14362,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1355 A1A2B1 · Breath & Drift",
+   "name": "AAB · Breath & Drift",
    "cat": "SuperModulation",
+   "id": "1355 A1A2B1 · Breath & Drift",
    "rank": 45,
-   "stars": 8,
    "values": [
     0,
     1,
@@ -14489,10 +14545,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "377 A1B1 · Hornet & Cello",
+   "name": "AB · Hornet & Cello",
    "cat": "Keyboard",
+   "id": "377 A1B1 · Hornet & Cello",
    "rank": 48,
-   "stars": 7,
    "values": [
     0,
     3,
@@ -14672,10 +14728,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "401 A1B1 · Pure Fog",
+   "name": "AB · Pure Fog",
    "cat": "Pad",
+   "id": "401 A1B1 · Pure Fog",
    "rank": 49,
-   "stars": 7,
    "values": [
     2,
     4,
@@ -14855,10 +14911,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "513 A1B1 · Moss Beam Strum",
+   "name": "AB · Moss Beam Strum",
    "cat": "SuperModulation",
+   "id": "513 A1B1 · Moss Beam Strum",
    "rank": 50,
-   "stars": 7,
    "values": [
     0,
     0,
@@ -15038,10 +15094,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "514 A1A2B1 · Lung of Quartz",
+   "name": "AAB · Lung of Quartz",
    "cat": "SuperModulation",
+   "id": "514 A1A2B1 · Lung of Quartz",
    "rank": 51,
-   "stars": 7,
    "values": [
     0,
     5,
@@ -15221,10 +15277,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "529 A1A2 · Breathe Pluck",
+   "name": "AA · Breathe Pluck",
    "cat": "SuperModulation",
+   "id": "529 A1A2 · Breathe Pluck",
    "rank": 52,
-   "stars": 7,
    "values": [
     0,
     4,
@@ -15404,10 +15460,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "550 A1A2 · Origami & Honey",
+   "name": "AA · Origami & Honey",
    "cat": "SuperModulation",
+   "id": "550 A1A2 · Origami & Honey",
    "rank": 53,
-   "stars": 7,
    "values": [
     0,
     4,
@@ -15587,10 +15643,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "554 A1A2 · Hollow Bass",
+   "name": "AA · Hollow Bass",
    "cat": "Bass",
+   "id": "554 A1A2 · Hollow Bass",
    "rank": 54,
-   "stars": 7,
    "values": [
     0,
     2,
@@ -15770,10 +15826,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "562 A1B1 · Ripple of Marimba",
+   "name": "AB · Ripple of Marimba",
    "cat": "Bass",
+   "id": "562 A1B1 · Ripple of Marimba",
    "rank": 55,
-   "stars": 7,
    "values": [
     0,
     3,
@@ -15953,10 +16009,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "575 A1A2 · Orbit Bloom",
+   "name": "AA · Orbit Bloom",
    "cat": "Bass",
+   "id": "575 A1A2 · Orbit Bloom",
    "rank": 56,
-   "stars": 7,
    "values": [
     0,
     4,
@@ -16136,10 +16192,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "593 A1B1 · Ghost Foundation",
+   "name": "AB · Ghost Foundation",
    "cat": "Bass",
+   "id": "593 A1B1 · Ghost Foundation",
    "rank": 57,
-   "stars": 7,
    "values": [
     0,
     4,
@@ -16319,10 +16375,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "602 A1B1 · Atoms Signal",
+   "name": "AB · Atoms Signal",
    "cat": "Lead",
+   "id": "602 A1B1 · Atoms Signal",
    "rank": 58,
-   "stars": 7,
    "values": [
     0,
     6,
@@ -16502,10 +16558,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "603 A1A2 · Flint Line",
+   "name": "AA · Flint Line",
    "cat": "Lead",
+   "id": "603 A1A2 · Flint Line",
    "rank": 59,
-   "stars": 7,
    "values": [
     0,
     1,
@@ -16685,10 +16741,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "607 A1A2B1 · Ripple Signal",
+   "name": "AAB · Ripple Signal",
    "cat": "Lead",
+   "id": "607 A1A2B1 · Ripple Signal",
    "rank": 60,
-   "stars": 7,
    "values": [
     0,
     0,
@@ -16868,10 +16924,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "680 A2B1 · Swing of Odd",
+   "name": "AB · Swing of Odd",
    "cat": "Keyboard",
+   "id": "680 A2B1 · Swing of Odd",
    "rank": 61,
-   "stars": 7,
    "values": [
     1,
     2,
@@ -17051,10 +17107,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "692 A1B1 · Ice Chords",
+   "name": "AB · Ice Chords",
    "cat": "Keyboard",
+   "id": "692 A1B1 · Ice Chords",
    "rank": 62,
-   "stars": 7,
    "values": [
     0,
     1,
@@ -17234,10 +17290,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "694 A1B1 · Cave Pinch Keys",
+   "name": "AB · Cave Pinch Keys",
    "cat": "Keyboard",
+   "id": "694 A1B1 · Cave Pinch Keys",
    "rank": 63,
-   "stars": 7,
    "values": [
     0,
     6,
@@ -17417,10 +17473,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "768 A1A2 · Velvet Aurora",
+   "name": "AA · Velvet Aurora",
    "cat": "Pad",
+   "id": "768 A1A2 · Velvet Aurora",
    "rank": 64,
-   "stars": 7,
    "values": [
     0,
     3,
@@ -17600,10 +17656,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "773 A1A2B1 · Swell of Drop",
+   "name": "AAB · Swell of Drop",
    "cat": "Pad",
+   "id": "773 A1A2B1 · Swell of Drop",
    "rank": 65,
-   "stars": 7,
    "values": [
     0,
     1,
@@ -17783,10 +17839,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "781 A1A2 · Knock Sweep",
+   "name": "AA · Knock Sweep",
    "cat": "Pad",
+   "id": "781 A1A2 · Knock Sweep",
    "rank": 66,
-   "stars": 7,
    "values": [
     0,
     3,
@@ -17966,10 +18022,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "785 A1A2 · Flint Ripple Haze",
+   "name": "AA · Flint Ripple Haze",
    "cat": "Pad",
+   "id": "785 A1A2 · Flint Ripple Haze",
    "rank": 67,
-   "stars": 7,
    "values": [
     0,
     0,
@@ -18149,10 +18205,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "841 A1B1 · Moss Tide Strings",
+   "name": "AB · Moss Tide Strings",
    "cat": "Strings",
+   "id": "841 A1B1 · Moss Tide Strings",
    "rank": 68,
-   "stars": 7,
    "values": [
     0,
     6,
@@ -18332,10 +18388,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "844 A1A2 · Ripple of Mist",
+   "name": "AA · Ripple of Mist",
    "cat": "Strings",
+   "id": "844 A1A2 · Ripple of Mist",
    "rank": 69,
-   "stars": 7,
    "values": [
     0,
     3,
@@ -18515,10 +18571,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "845 A1A2 · Wood Rise Bows",
+   "name": "AA · Wood Rise Bows",
    "cat": "Strings",
+   "id": "845 A1A2 · Wood Rise Bows",
    "rank": 70,
-   "stars": 7,
    "values": [
     0,
     1,
@@ -18698,10 +18754,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "847 A1A2 · Breath Section",
+   "name": "AA · Breath Section",
    "cat": "Strings",
+   "id": "847 A1A2 · Breath Section",
    "rank": 71,
-   "stars": 7,
    "values": [
     0,
     3,
@@ -18881,10 +18937,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1035 A1A2 · Mist & Origami",
+   "name": "AA · Mist & Origami",
    "cat": "FX",
+   "id": "1035 A1A2 · Mist & Origami",
    "rank": 72,
-   "stars": 7,
    "values": [
     0,
     0,
@@ -19064,10 +19120,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1092 A1A2 · Orbit Drum",
+   "name": "AA · Orbit Drum",
    "cat": "Drums & Perc",
+   "id": "1092 A1A2 · Orbit Drum",
    "rank": 73,
-   "stars": 7,
    "values": [
     0,
     6,
@@ -19247,10 +19303,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1141 A1A2 · Pure Tide Pad",
+   "name": "AA · Pure Tide Pad",
    "cat": "SuperModulation",
+   "id": "1141 A1A2 · Pure Tide Pad",
    "rank": 74,
-   "stars": 7,
    "values": [
     0,
     6,
@@ -19430,10 +19486,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1205 A1B1 · Atom Shapeshift",
+   "name": "AB · Atom Shapeshift",
    "cat": "SuperModulation",
+   "id": "1205 A1B1 · Atom Shapeshift",
    "rank": 75,
-   "stars": 7,
    "values": [
     0,
     5,
@@ -19613,10 +19669,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1219 A1B1 · Breath of Hornet",
+   "name": "AB · Breath of Hornet",
    "cat": "SuperModulation",
+   "id": "1219 A1B1 · Breath of Hornet",
    "rank": 76,
-   "stars": 7,
    "values": [
     0,
     2,
@@ -19796,10 +19852,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1321 A1A2 · Lantern Signal",
+   "name": "AA · Lantern Signal",
    "cat": "SuperModulation",
+   "id": "1321 A1A2 · Lantern Signal",
    "rank": 77,
-   "stars": 7,
    "values": [
     0,
     5,
@@ -19979,10 +20035,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "109 A1A2 · Tremolo Strings",
+   "name": "AA · Tremolo Strings",
    "cat": "Strings",
+   "id": "109 A1A2 · Tremolo Strings",
    "rank": 79,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -20162,10 +20218,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "110 A1A2 · Slow Violins",
+   "name": "AA · Slow Violins",
    "cat": "Strings",
+   "id": "110 A1A2 · Slow Violins",
    "rank": 80,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -20345,10 +20401,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "122 A1B1 · Vintage Violas",
+   "name": "AB · Vintage Violas",
    "cat": "Strings",
+   "id": "122 A1B1 · Vintage Violas",
    "rank": 81,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -20528,10 +20584,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "186 A1B1 · Wind Tunnel",
+   "name": "AB · Wind Tunnel",
    "cat": "FX",
+   "id": "186 A1B1 · Wind Tunnel",
    "rank": 82,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -20711,10 +20767,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "187 A1B1 · Spaceship",
+   "name": "AB · Spaceship",
    "cat": "FX",
+   "id": "187 A1B1 · Spaceship",
    "rank": 83,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -20894,10 +20950,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "189 A1A2 · Kick",
+   "name": "AA · Kick",
    "cat": "Drums & Perc",
+   "id": "189 A1A2 · Kick",
    "rank": 84,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -21077,10 +21133,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "190 A1A2 · Snare",
+   "name": "AA · Snare",
    "cat": "Drums & Perc",
+   "id": "190 A1A2 · Snare",
    "rank": 85,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -21260,10 +21316,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "191 A1A2 · Closed Hat",
+   "name": "AA · Closed Hat",
    "cat": "Drums & Perc",
+   "id": "191 A1A2 · Closed Hat",
    "rank": 86,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -21443,10 +21499,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "192 A1A2 · Open Hat",
+   "name": "AA · Open Hat",
    "cat": "Drums & Perc",
+   "id": "192 A1A2 · Open Hat",
    "rank": 87,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -21626,10 +21682,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "193 A1A2 · Clap",
+   "name": "AA · Clap",
    "cat": "Drums & Perc",
+   "id": "193 A1A2 · Clap",
    "rank": 88,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -21809,10 +21865,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "198 A1B1 · Tom",
+   "name": "AB · Tom",
    "cat": "Drums & Perc",
+   "id": "198 A1B1 · Tom",
    "rank": 89,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -21992,10 +22048,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "199 A1B1 · Rim Shot",
+   "name": "AB · Rim Shot",
    "cat": "Drums & Perc",
+   "id": "199 A1B1 · Rim Shot",
    "rank": 90,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -22175,10 +22231,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "501 A1A2 · Abyss Sweep Signal",
+   "name": "AA · Abyss Sweep Signal",
    "cat": "SuperModulation",
+   "id": "501 A1A2 · Abyss Sweep Signal",
    "rank": 91,
-   "stars": 6,
    "values": [
     0,
     1,
@@ -22358,10 +22414,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "511 A1A2B1 · Cedar Aurora",
+   "name": "AAB · Cedar Aurora",
    "cat": "SuperModulation",
+   "id": "511 A1A2B1 · Cedar Aurora",
    "rank": 92,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -22541,10 +22597,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "526 A1A2B1 · Ice Rise Clav",
+   "name": "AAB · Ice Rise Clav",
    "cat": "SuperModulation",
+   "id": "526 A1A2B1 · Ice Rise Clav",
    "rank": 93,
-   "stars": 6,
    "values": [
     0,
     1,
@@ -22724,10 +22780,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "530 A1A2 · Open of Fold",
+   "name": "AA · Open of Fold",
    "cat": "SuperModulation",
+   "id": "530 A1A2 · Open of Fold",
    "rank": 94,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -22907,10 +22963,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "533 A1A2B1 · Drift Pick",
+   "name": "AAB · Drift Pick",
    "cat": "SuperModulation",
+   "id": "533 A1A2B1 · Drift Pick",
    "rank": 95,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -23090,10 +23146,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "544 A1A2 · Hornet Chords",
+   "name": "AA · Hornet Chords",
    "cat": "SuperModulation",
+   "id": "544 A1A2 · Hornet Chords",
    "rank": 96,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -23273,10 +23329,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "547 A1A2 · Silk & Plink",
+   "name": "AA · Silk & Plink",
    "cat": "SuperModulation",
+   "id": "547 A1A2 · Silk & Plink",
    "rank": 97,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -23456,10 +23512,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "568 A1A2B1 · Drift of Anvil",
+   "name": "AAB · Drift of Anvil",
    "cat": "Bass",
+   "id": "568 A1A2B1 · Drift of Anvil",
    "rank": 98,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -23639,10 +23695,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "573 A1A2 · Milk Sweep Growl",
+   "name": "AA · Milk Sweep Growl",
    "cat": "Bass",
+   "id": "573 A1A2 · Milk Sweep Growl",
    "rank": 99,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -23822,10 +23878,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "577 A1A2 · Reed Beam Undertow",
+   "name": "AA · Reed Beam Undertow",
    "cat": "Bass",
+   "id": "577 A1A2 · Reed Beam Undertow",
    "rank": 100,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -24005,10 +24061,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "605 A1A2B1 · Crystal Signal",
+   "name": "AAB · Crystal Signal",
    "cat": "Lead",
+   "id": "605 A1A2B1 · Crystal Signal",
    "rank": 101,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -24188,10 +24244,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "636 A1A2 · Fold & Moss",
+   "name": "AA · Fold & Moss",
    "cat": "Lead",
+   "id": "636 A1A2 · Fold & Moss",
    "rank": 102,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -24371,10 +24427,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "697 A1B1 · Moss Hold Chords",
+   "name": "AB · Moss Hold Chords",
    "cat": "Keyboard",
+   "id": "697 A1B1 · Moss Hold Chords",
    "rank": 103,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -24554,10 +24610,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "761 A1A2 · Sweep of Silk",
+   "name": "AA · Sweep of Silk",
    "cat": "Pad",
+   "id": "761 A1A2 · Sweep of Silk",
    "rank": 104,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -24737,10 +24793,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "775 A1A2 · Slate & Honey",
+   "name": "AA · Slate & Honey",
    "cat": "Pad",
+   "id": "775 A1A2 · Slate & Honey",
    "rank": 105,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -24920,10 +24976,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "776 A1A2 · Moon & Breath",
+   "name": "AA · Moon & Breath",
    "cat": "Pad",
+   "id": "776 A1A2 · Moon & Breath",
    "rank": 106,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -25103,10 +25159,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "777 A1B1 · Pearl Wash",
+   "name": "AB · Pearl Wash",
    "cat": "Pad",
+   "id": "777 A1B1 · Pearl Wash",
    "rank": 107,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -25286,10 +25342,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "870 A1A2 · Tide Horns",
+   "name": "AA · Tide Horns",
    "cat": "Brass & Wind",
+   "id": "870 A1A2 · Tide Horns",
    "rank": 108,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -25469,10 +25525,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "885 A1B1 · Sparkle Fanfare",
+   "name": "AB · Sparkle Fanfare",
    "cat": "Brass & Wind",
+   "id": "885 A1B1 · Sparkle Fanfare",
    "rank": 109,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -25652,10 +25708,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "886 A1A2 · Dust Breath",
+   "name": "AA · Dust Breath",
    "cat": "Brass & Wind",
+   "id": "886 A1A2 · Dust Breath",
    "rank": 110,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -25835,10 +25891,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "992 A1B1 · Open Mallets",
+   "name": "AB · Open Mallets",
    "cat": "Bells & Mallets",
+   "id": "992 A1B1 · Open Mallets",
    "rank": 111,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -26018,10 +26074,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1005 A1A2B1 · Chorale Blend",
+   "name": "AAB · Chorale Blend",
    "cat": "FX",
+   "id": "1005 A1A2B1 · Chorale Blend",
    "rank": 112,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -26201,10 +26257,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1075 A1A2 · Beam Zap",
+   "name": "AA · Beam Zap",
    "cat": "Drums & Perc",
+   "id": "1075 A1A2 · Beam Zap",
    "rank": 113,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -26384,10 +26440,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1113 A1A2B1 · Anvil Ripple",
+   "name": "AAB · Anvil Ripple",
    "cat": "SuperModulation",
+   "id": "1113 A1A2B1 · Anvil Ripple",
    "rank": 114,
-   "stars": 6,
    "values": [
     0,
     6,
@@ -26567,10 +26623,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1114 A1A2 · Opal Rise Chords",
+   "name": "AA · Opal Rise Chords",
    "cat": "SuperModulation",
+   "id": "1114 A1A2 · Opal Rise Chords",
    "rank": 115,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -26750,10 +26806,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1125 A1A2 · Wind Surge Horns",
+   "name": "AA · Wind Surge Horns",
    "cat": "SuperModulation",
+   "id": "1125 A1A2 · Wind Surge Horns",
    "rank": 116,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -26933,10 +26989,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1144 A1B1 · Nave Rise Keys",
+   "name": "AB · Nave Rise Keys",
    "cat": "SuperModulation",
+   "id": "1144 A1B1 · Nave Rise Keys",
    "rank": 117,
-   "stars": 6,
    "values": [
     0,
     1,
@@ -27116,10 +27172,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1148 A1B1 · Mist Sweep Piano",
+   "name": "AB · Mist Sweep Piano",
    "cat": "SuperModulation",
+   "id": "1148 A1B1 · Mist Sweep Piano",
    "rank": 118,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -27299,10 +27355,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1156 A1A2 · Wind Storm",
+   "name": "AA · Wind Storm",
    "cat": "SuperModulation",
+   "id": "1156 A1A2 · Wind Storm",
    "rank": 119,
-   "stars": 6,
    "values": [
     0,
     1,
@@ -27482,10 +27538,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1167 A1A2 · Swirl Chimes",
+   "name": "AA · Swirl Chimes",
    "cat": "SuperModulation",
+   "id": "1167 A1A2 · Swirl Chimes",
    "rank": 120,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -27665,10 +27721,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1169 A1A2B1 · Halo Piano",
+   "name": "AAB · Halo Piano",
    "cat": "SuperModulation",
+   "id": "1169 A1A2B1 · Halo Piano",
    "rank": 121,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -27848,10 +27904,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1170 A1B1 · Beam Lung Keys",
+   "name": "AB · Beam Lung Keys",
    "cat": "SuperModulation",
+   "id": "1170 A1B1 · Beam Lung Keys",
    "rank": 122,
-   "stars": 6,
    "values": [
     0,
     5,
@@ -28031,10 +28087,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1175 A1A2 · Fold Pulse Piano",
+   "name": "AA · Fold Pulse Piano",
    "cat": "SuperModulation",
+   "id": "1175 A1A2 · Fold Pulse Piano",
    "rank": 123,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -28214,10 +28270,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1178 A1B1 · Rust Bloom Machine",
+   "name": "AB · Rust Bloom Machine",
    "cat": "SuperModulation",
+   "id": "1178 A1B1 · Rust Bloom Machine",
    "rank": 124,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -28397,10 +28453,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1181 A1A2 · Nasal Swell",
+   "name": "AA · Nasal Swell",
    "cat": "SuperModulation",
+   "id": "1181 A1A2 · Nasal Swell",
    "rank": 125,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -28580,10 +28636,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1185 A1B1 · Pure Beam Keys",
+   "name": "AB · Pure Beam Keys",
    "cat": "SuperModulation",
+   "id": "1185 A1B1 · Pure Beam Keys",
    "rank": 126,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -28763,10 +28819,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1186 A1A2 · Tap & Slate",
+   "name": "AA · Tap & Slate",
    "cat": "SuperModulation",
+   "id": "1186 A1A2 · Tap & Slate",
    "rank": 127,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -28946,10 +29002,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1193 A1B1 · Bloom of Timber",
+   "name": "AB · Bloom of Timber",
    "cat": "SuperModulation",
+   "id": "1193 A1B1 · Bloom of Timber",
    "rank": 128,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -29129,10 +29185,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1195 A1A2 · Pixel Surge",
+   "name": "AA · Pixel Surge",
    "cat": "SuperModulation",
+   "id": "1195 A1A2 · Pixel Surge",
    "rank": 129,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -29312,10 +29368,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1198 A2B1 · Knock Lead",
+   "name": "AB · Knock Lead",
    "cat": "SuperModulation",
+   "id": "1198 A2B1 · Knock Lead",
    "rank": 130,
-   "stars": 6,
    "values": [
     1,
     2,
@@ -29495,10 +29551,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1202 A1A2 · Morph of Flint",
+   "name": "AA · Morph of Flint",
    "cat": "SuperModulation",
+   "id": "1202 A1A2 · Morph of Flint",
    "rank": 131,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -29678,10 +29734,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1203 A1A2 · Pearl Chords",
+   "name": "AA · Pearl Chords",
    "cat": "SuperModulation",
+   "id": "1203 A1A2 · Pearl Chords",
    "rank": 132,
-   "stars": 6,
    "values": [
     0,
     2,
@@ -29861,10 +29917,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1204 A2B1 · Fold Flip Harp",
+   "name": "AB · Fold Flip Harp",
    "cat": "SuperModulation",
+   "id": "1204 A2B1 · Fold Flip Harp",
    "rank": 133,
-   "stars": 6,
    "values": [
     1,
     2,
@@ -30044,10 +30100,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1208 A2B1 · Breath Bloom",
+   "name": "AB · Breath Bloom",
    "cat": "SuperModulation",
+   "id": "1208 A2B1 · Breath Bloom",
    "rank": 134,
-   "stars": 6,
    "values": [
     1,
     2,
@@ -30227,10 +30283,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1212 A1B1 · Even of Amber",
+   "name": "AB · Even of Amber",
    "cat": "SuperModulation",
+   "id": "1212 A1B1 · Even of Amber",
    "rank": 135,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -30410,10 +30466,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1223 A1A2B1 · Glint Atoms Strum",
+   "name": "AAB · Glint Atoms Strum",
    "cat": "SuperModulation",
+   "id": "1223 A1A2B1 · Glint Atoms Strum",
    "rank": 136,
-   "stars": 6,
    "values": [
     0,
     0,
@@ -30593,10 +30649,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1265 A1A2B1 · Lung of Marimba",
+   "name": "AAB · Lung of Marimba",
    "cat": "SuperModulation",
+   "id": "1265 A1A2B1 · Lung of Marimba",
    "rank": 137,
-   "stars": 6,
    "values": [
     0,
     3,
@@ -30776,10 +30832,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1275 A1B1 · Kalimba Lung Machine",
+   "name": "AB · Kalimba Lung Machine",
    "cat": "SuperModulation",
+   "id": "1275 A1B1 · Kalimba Lung Machine",
    "rank": 138,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -30959,10 +31015,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1307 A1B1 · Halo Float",
+   "name": "AB · Halo Float",
    "cat": "SuperModulation",
+   "id": "1307 A1B1 · Halo Float",
    "rank": 139,
-   "stars": 6,
    "values": [
     0,
     4,
@@ -31142,10 +31198,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "024 A1A2 · Whistle Lead",
+   "name": "AA · Whistle Lead",
    "cat": "Lead",
+   "id": "024 A1A2 · Whistle Lead",
    "rank": 140,
-   "stars": 5,
    "values": [
     0,
     6,
@@ -31325,10 +31381,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "121 A1B1 · String Machine II",
+   "name": "AB · String Machine II",
    "cat": "Strings",
+   "id": "121 A1B1 · String Machine II",
    "rank": 141,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -31508,10 +31564,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "162 A1A2 · Wind Chimes",
+   "name": "AA · Wind Chimes",
    "cat": "Bells & Mallets",
+   "id": "162 A1A2 · Wind Chimes",
    "rank": 142,
-   "stars": 5,
    "values": [
     0,
     6,
@@ -31691,10 +31747,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "200 A1B1 · Tambourine",
+   "name": "AB · Tambourine",
    "cat": "Drums & Perc",
+   "id": "200 A1B1 · Tambourine",
    "rank": 143,
-   "stars": 5,
    "values": [
     0,
     0,
@@ -31874,10 +31930,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "203 A1A2 · Opal Morph Haze",
+   "name": "AA · Opal Morph Haze",
    "cat": "SuperModulation",
+   "id": "203 A1A2 · Opal Morph Haze",
    "rank": 144,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -32057,10 +32113,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "279 A1B1 · Dust Resonance",
+   "name": "AB · Dust Resonance",
    "cat": "SuperModulation",
+   "id": "279 A1B1 · Dust Resonance",
    "rank": 145,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -32240,10 +32296,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "351 A1A2 · Swing Signal",
+   "name": "AA · Swing Signal",
    "cat": "Lead",
+   "id": "351 A1A2 · Swing Signal",
    "rank": 146,
-   "stars": 5,
    "values": [
     0,
     1,
@@ -32423,10 +32479,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "362 A2B1 · Moon Ripple",
+   "name": "AB · Moon Ripple",
    "cat": "Lead",
+   "id": "362 A2B1 · Moon Ripple",
    "rank": 147,
-   "stars": 5,
    "values": [
     1,
     2,
@@ -32606,10 +32662,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "504 A1B1 · Taper & Vibes",
+   "name": "AB · Taper & Vibes",
    "cat": "SuperModulation",
+   "id": "504 A1B1 · Taper & Vibes",
    "rank": 148,
-   "stars": 5,
    "values": [
     0,
     4,
@@ -32789,10 +32845,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "509 A1B1 · Wah Sub",
+   "name": "AB · Wah Sub",
    "cat": "SuperModulation",
+   "id": "509 A1B1 · Wah Sub",
    "rank": 149,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -32972,10 +33028,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "522 A1A2B1 · Clang Tide Signal",
+   "name": "AAB · Clang Tide Signal",
    "cat": "SuperModulation",
+   "id": "522 A1A2B1 · Clang Tide Signal",
    "rank": 150,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -33155,10 +33211,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "523 A1A2B1 · Hold of Gong",
+   "name": "AAB · Hold of Gong",
    "cat": "SuperModulation",
+   "id": "523 A1A2B1 · Hold of Gong",
    "rank": 151,
-   "stars": 5,
    "values": [
     0,
     3,
@@ -33338,10 +33394,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "525 A1A2 · Wasp Surge",
+   "name": "AA · Wasp Surge",
    "cat": "SuperModulation",
+   "id": "525 A1A2 · Wasp Surge",
    "rank": 152,
-   "stars": 5,
    "values": [
     0,
     3,
@@ -33521,10 +33577,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "546 A1B1 · Origami Blend",
+   "name": "AB · Origami Blend",
    "cat": "SuperModulation",
+   "id": "546 A1B1 · Origami Blend",
    "rank": 153,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -33704,10 +33760,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "559 A1B1 · Amber Morph",
+   "name": "AB · Amber Morph",
    "cat": "Bass",
+   "id": "559 A1B1 · Amber Morph",
    "rank": 154,
-   "stars": 5,
    "values": [
     0,
     4,
@@ -33887,10 +33943,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "561 A1B1 · Rise of Odd",
+   "name": "AB · Rise of Odd",
    "cat": "Bass",
+   "id": "561 A1B1 · Rise of Odd",
    "rank": 155,
-   "stars": 5,
    "values": [
     0,
     0,
@@ -34070,10 +34126,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "572 A1A2B1 · Stair & Tap",
+   "name": "AAB · Stair & Tap",
    "cat": "Bass",
+   "id": "572 A1A2B1 · Stair & Tap",
    "rank": 156,
-   "stars": 5,
    "values": [
     0,
     0,
@@ -34253,10 +34309,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "677 A1A2 · Crystal Swirl",
+   "name": "AA · Crystal Swirl",
    "cat": "Keyboard",
+   "id": "677 A1A2 · Crystal Swirl",
    "rank": 157,
-   "stars": 5,
    "values": [
     0,
     4,
@@ -34436,10 +34492,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "754 A1A2 · Morph of Brass",
+   "name": "AA · Morph of Brass",
    "cat": "Pad",
+   "id": "754 A1A2 · Morph of Brass",
    "rank": 158,
-   "stars": 5,
    "values": [
     0,
     4,
@@ -34619,10 +34675,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "860 A1B1 · Ripple Reeds",
+   "name": "AB · Ripple Reeds",
    "cat": "Brass & Wind",
+   "id": "860 A1B1 · Ripple Reeds",
    "rank": 159,
-   "stars": 5,
    "values": [
     0,
     6,
@@ -34802,10 +34858,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1077 A2B1 · Sweep of Tin",
+   "name": "AB · Sweep of Tin",
    "cat": "Drums & Perc",
+   "id": "1077 A2B1 · Sweep of Tin",
    "rank": 160,
-   "stars": 5,
    "values": [
     1,
     2,
@@ -34985,10 +35041,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1085 A1A2B1 · Clack Wah",
+   "name": "AAB · Clack Wah",
    "cat": "Drums & Perc",
+   "id": "1085 A1A2B1 · Clack Wah",
    "rank": 161,
-   "stars": 5,
    "values": [
     0,
     3,
@@ -35168,10 +35224,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1086 A1A2 · Zap Laser",
+   "name": "AA · Zap Laser",
    "cat": "Drums & Perc",
+   "id": "1086 A1A2 · Zap Laser",
    "rank": 162,
-   "stars": 5,
    "values": [
     0,
     6,
@@ -35351,10 +35407,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1111 A1A2B1 · Beam of Brass",
+   "name": "AAB · Beam of Brass",
    "cat": "SuperModulation",
+   "id": "1111 A1A2B1 · Beam of Brass",
    "rank": 163,
-   "stars": 5,
    "values": [
     0,
     3,
@@ -35534,10 +35590,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1115 A1A2 · Tide Lute",
+   "name": "AA · Tide Lute",
    "cat": "SuperModulation",
+   "id": "1115 A1A2 · Tide Lute",
    "rank": 164,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -35717,10 +35773,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1184 A1A2B1 · Moon Surge Clav",
+   "name": "AAB · Moon Surge Clav",
    "cat": "SuperModulation",
+   "id": "1184 A1A2B1 · Moon Surge Clav",
    "rank": 165,
-   "stars": 5,
    "values": [
     0,
     3,
@@ -35900,10 +35956,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1190 A1A2 · Bloom of Bright",
+   "name": "AA · Bloom of Bright",
    "cat": "SuperModulation",
+   "id": "1190 A1A2 · Bloom of Bright",
    "rank": 166,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -36083,10 +36139,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1250 A1B1 · Breath of Wood",
+   "name": "AB · Breath of Wood",
    "cat": "SuperModulation",
+   "id": "1250 A1B1 · Breath of Wood",
    "rank": 167,
-   "stars": 5,
    "values": [
     0,
     1,
@@ -36266,10 +36322,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1326 A1B1 · Spark Orbit Ensemble",
+   "name": "AB · Spark Orbit Ensemble",
    "cat": "SuperModulation",
+   "id": "1326 A1B1 · Spark Orbit Ensemble",
    "rank": 168,
-   "stars": 5,
    "values": [
     0,
     3,
@@ -36449,10 +36505,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1361 A1A2 · Milk Strum",
+   "name": "AA · Milk Strum",
    "cat": "SuperModulation",
+   "id": "1361 A1A2 · Milk Strum",
    "rank": 169,
-   "stars": 5,
    "values": [
     0,
     2,
@@ -36632,10 +36688,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "020 A1A2 · Octave Square Lead",
+   "name": "AA · Octave Square Lead",
    "cat": "Lead",
+   "id": "020 A1A2 · Octave Square Lead",
    "rank": 170,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -36815,10 +36871,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "038 A1B1 · Cry Lead",
+   "name": "AB · Cry Lead",
    "cat": "Lead",
+   "id": "038 A1B1 · Cry Lead",
    "rank": 171,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -36998,10 +37054,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "160 A1A2 · Crotales",
+   "name": "AA · Crotales",
    "cat": "Bells & Mallets",
+   "id": "160 A1A2 · Crotales",
    "rank": 172,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -37181,10 +37237,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "175 A1A2 · Rising Sweep",
+   "name": "AA · Rising Sweep",
    "cat": "FX",
+   "id": "175 A1A2 · Rising Sweep",
    "rank": 173,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -37364,10 +37420,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "177 A1A2 · Laser Zap",
+   "name": "AA · Laser Zap",
    "cat": "FX",
+   "id": "177 A1A2 · Laser Zap",
    "rank": 174,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -37547,10 +37603,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "179 A1A2 · Robot Voice",
+   "name": "AA · Robot Voice",
    "cat": "FX",
+   "id": "179 A1A2 · Robot Voice",
    "rank": 175,
-   "stars": 4,
    "values": [
     0,
     0,
@@ -37730,10 +37786,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "202 A1A2 · Woodwind Growl",
+   "name": "AA · Woodwind Growl",
    "cat": "SuperModulation",
+   "id": "202 A1A2 · Woodwind Growl",
    "rank": 176,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -37913,10 +37969,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "208 A1B1 · Fibre Sweep Rumble",
+   "name": "AB · Fibre Sweep Rumble",
    "cat": "SuperModulation",
+   "id": "208 A1B1 · Fibre Sweep Rumble",
    "rank": 177,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -38096,10 +38152,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "226 A1A2B1 · Blend Rumble",
+   "name": "AAB · Blend Rumble",
    "cat": "SuperModulation",
+   "id": "226 A1A2B1 · Blend Rumble",
    "rank": 178,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -38279,10 +38335,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "250 A1B1 · Shard & Soft",
+   "name": "AB · Shard & Soft",
    "cat": "SuperModulation",
+   "id": "250 A1B1 · Shard & Soft",
    "rank": 179,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -38462,10 +38518,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "284 A1A2B1 · Stone Blend Undertow",
+   "name": "AAB · Stone Blend Undertow",
    "cat": "SuperModulation",
+   "id": "284 A1A2B1 · Stone Blend Undertow",
    "rank": 180,
-   "stars": 4,
    "values": [
     0,
     0,
@@ -38645,10 +38701,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "286 A1B1 · Step Surge Foundation",
+   "name": "AB · Step Surge Foundation",
    "cat": "SuperModulation",
+   "id": "286 A1B1 · Step Surge Foundation",
    "rank": 181,
-   "stars": 4,
    "values": [
     0,
     3,
@@ -38828,10 +38884,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "295 A1A2 · Flint Cloud",
+   "name": "AA · Flint Cloud",
    "cat": "SuperModulation",
+   "id": "295 A1A2 · Flint Cloud",
    "rank": 182,
-   "stars": 4,
    "values": [
     0,
     3,
@@ -39011,10 +39067,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "313 A1A2 · Edge of Moss",
+   "name": "AA · Edge of Moss",
    "cat": "SuperModulation",
+   "id": "313 A1A2 · Edge of Moss",
    "rank": 183,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -39194,10 +39250,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "360 A1B1 · Prism Atoms Signal",
+   "name": "AB · Prism Atoms Signal",
    "cat": "Lead",
+   "id": "360 A1B1 · Prism Atoms Signal",
    "rank": 184,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -39377,10 +39433,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "380 A1A2B1 · Marimba Wah",
+   "name": "AAB · Marimba Wah",
    "cat": "Keyboard",
+   "id": "380 A1A2B1 · Marimba Wah",
    "rank": 185,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -39560,10 +39616,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "393 A1A2B1 · Breath Cloud",
+   "name": "AAB · Breath Cloud",
    "cat": "Pad",
+   "id": "393 A1A2B1 · Breath Cloud",
    "rank": 186,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -39743,10 +39799,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "528 A1A2 · Pearl Bed",
+   "name": "AA · Pearl Bed",
    "cat": "SuperModulation",
+   "id": "528 A1A2 · Pearl Bed",
    "rank": 187,
-   "stars": 4,
    "values": [
     0,
     4,
@@ -39926,10 +39982,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "627 A1A2 · Open Call",
+   "name": "AA · Open Call",
    "cat": "Lead",
+   "id": "627 A1A2 · Open Call",
    "rank": 188,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -40109,10 +40165,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "633 A2B1 · Drift Signal",
+   "name": "AB · Drift Signal",
    "cat": "Lead",
+   "id": "633 A2B1 · Drift Signal",
    "rank": 189,
-   "stars": 4,
    "values": [
     1,
     2,
@@ -40292,10 +40348,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "648 A1A2 · Atoms of Dive",
+   "name": "AA · Atoms of Dive",
    "cat": "Lead",
+   "id": "648 A1A2 · Atoms of Dive",
    "rank": 190,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -40475,10 +40531,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "901 A1B1 · Ice Tide Strum",
+   "name": "AB · Ice Tide Strum",
    "cat": "Keyboard",
+   "id": "901 A1B1 · Ice Tide Strum",
    "rank": 191,
-   "stars": 4,
    "values": [
     0,
     5,
@@ -40658,10 +40714,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "980 A1B1 · Wood & Drawbar",
+   "name": "AB · Wood & Drawbar",
    "cat": "Bells & Mallets",
+   "id": "980 A1B1 · Wood & Drawbar",
    "rank": 192,
-   "stars": 4,
    "values": [
     0,
     1,
@@ -40841,10 +40897,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1051 A1A2 · Tide of Boom",
+   "name": "AA · Tide of Boom",
    "cat": "Drums & Perc",
+   "id": "1051 A1A2 · Tide of Boom",
    "rank": 193,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -41024,10 +41080,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1053 A1A2 · Thud Shift",
+   "name": "AA · Thud Shift",
    "cat": "Drums & Perc",
+   "id": "1053 A1A2 · Thud Shift",
    "rank": 194,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -41207,10 +41263,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1057 A1B1 · Temple Rise Drum",
+   "name": "AB · Temple Rise Drum",
    "cat": "Drums & Perc",
+   "id": "1057 A1B1 · Temple Rise Drum",
    "rank": 195,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -41390,10 +41446,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1061 A1A2 · Breathe Kick",
+   "name": "AA · Breathe Kick",
    "cat": "Drums & Perc",
+   "id": "1061 A1A2 · Breathe Kick",
    "rank": 196,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -41573,10 +41629,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1062 A1A2 · Plasma Tom",
+   "name": "AA · Plasma Tom",
    "cat": "Drums & Perc",
+   "id": "1062 A1A2 · Plasma Tom",
    "rank": 197,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -41756,10 +41812,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1068 A1A2 · Punch Rise Kick",
+   "name": "AA · Punch Rise Kick",
    "cat": "Drums & Perc",
+   "id": "1068 A1A2 · Punch Rise Kick",
    "rank": 198,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -41939,10 +41995,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1116 A1A2 · Deep Ripple",
+   "name": "AA · Deep Ripple",
    "cat": "SuperModulation",
+   "id": "1116 A1A2 · Deep Ripple",
    "rank": 199,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -42122,10 +42178,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1117 A1B1 · Knock Wah",
+   "name": "AB · Knock Wah",
    "cat": "SuperModulation",
+   "id": "1117 A1B1 · Knock Wah",
    "rank": 200,
-   "stars": 4,
    "values": [
     0,
     4,
@@ -42305,10 +42361,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1182 A1A2B1 · Mosaic Strum",
+   "name": "AAB · Mosaic Strum",
    "cat": "SuperModulation",
+   "id": "1182 A1A2B1 · Mosaic Strum",
    "rank": 201,
-   "stars": 4,
    "values": [
     0,
     0,
@@ -42488,10 +42544,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1192 A1A2B1 · Static Open Reeds",
+   "name": "AAB · Static Open Reeds",
    "cat": "SuperModulation",
+   "id": "1192 A1A2B1 · Static Open Reeds",
    "rank": 202,
-   "stars": 4,
    "values": [
     0,
     0,
@@ -42671,10 +42727,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1199 A1A2 · Kite Swing",
+   "name": "AA · Kite Swing",
    "cat": "SuperModulation",
+   "id": "1199 A1A2 · Kite Swing",
    "rank": 203,
-   "stars": 4,
    "values": [
     0,
     0,
@@ -42854,10 +42910,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1201 A1A2 · Taper Atoms",
+   "name": "AA · Taper Atoms",
    "cat": "SuperModulation",
+   "id": "1201 A1A2 · Taper Atoms",
    "rank": 204,
-   "stars": 4,
    "values": [
     0,
     3,
@@ -43037,10 +43093,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1206 A1A2B1 · Beam & Fanfare",
+   "name": "AAB · Beam & Fanfare",
    "cat": "SuperModulation",
+   "id": "1206 A1A2B1 · Beam & Fanfare",
    "rank": 205,
-   "stars": 4,
    "values": [
     0,
     4,
@@ -43220,10 +43276,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1231 A1B1 · Hollow & Drop",
+   "name": "AB · Hollow & Drop",
    "cat": "SuperModulation",
+   "id": "1231 A1B1 · Hollow & Drop",
    "rank": 206,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -43403,10 +43459,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1253 A1A2 · Drum & Moss",
+   "name": "AA · Drum & Moss",
    "cat": "SuperModulation",
+   "id": "1253 A1A2 · Drum & Moss",
    "rank": 207,
-   "stars": 4,
    "values": [
     0,
     3,
@@ -43586,10 +43642,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1254 A1B1 · Breathe Clav",
+   "name": "AB · Breathe Clav",
    "cat": "SuperModulation",
+   "id": "1254 A1B1 · Breathe Clav",
    "rank": 208,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -43769,10 +43825,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1267 A1A2 · Ripple of Crystal",
+   "name": "AA · Ripple of Crystal",
    "cat": "SuperModulation",
+   "id": "1267 A1A2 · Ripple of Crystal",
    "rank": 209,
-   "stars": 4,
    "values": [
     0,
     3,
@@ -43952,10 +44008,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1278 A1B1 · Sweep of Flute",
+   "name": "AB · Sweep of Flute",
    "cat": "SuperModulation",
+   "id": "1278 A1B1 · Sweep of Flute",
    "rank": 210,
-   "stars": 4,
    "values": [
     0,
     6,
@@ -44135,10 +44191,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1300 A1A2 · Slope of Weave",
+   "name": "AA · Slope of Weave",
    "cat": "SuperModulation",
+   "id": "1300 A1A2 · Slope of Weave",
    "rank": 211,
-   "stars": 4,
    "values": [
     0,
     2,
@@ -44318,10 +44374,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1305 A1B1 · Choir Breath Horns",
+   "name": "AB · Choir Breath Horns",
    "cat": "SuperModulation",
+   "id": "1305 A1B1 · Choir Breath Horns",
    "rank": 212,
-   "stars": 4,
    "values": [
     0,
     4,
@@ -44501,10 +44557,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1336 A1B1 · Pixel Lean Pipes",
+   "name": "AB · Pixel Lean Pipes",
    "cat": "SuperModulation",
+   "id": "1336 A1B1 · Pixel Lean Pipes",
    "rank": 213,
-   "stars": 4,
    "values": [
     0,
     0,
@@ -44684,10 +44740,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "025 A1A2 · Talk Lead",
+   "name": "AA · Talk Lead",
    "cat": "Lead",
+   "id": "025 A1A2 · Talk Lead",
    "rank": 214,
-   "stars": 3,
    "values": [
     0,
     3,
@@ -44867,10 +44923,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "026 A1A2 · Fifth Lead",
+   "name": "AA · Fifth Lead",
    "cat": "Lead",
+   "id": "026 A1A2 · Fifth Lead",
    "rank": 215,
-   "stars": 3,
    "values": [
     0,
     3,
@@ -45050,10 +45106,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "080 A1A2 · Tape Pad",
+   "name": "AA · Tape Pad",
    "cat": "Pad",
+   "id": "080 A1A2 · Tape Pad",
    "rank": 216,
-   "stars": 3,
    "values": [
     0,
     2,
@@ -45233,10 +45289,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "157 A1A2 · FM Bell",
+   "name": "AA · FM Bell",
    "cat": "Bells & Mallets",
+   "id": "157 A1A2 · FM Bell",
    "rank": 217,
-   "stars": 3,
    "values": [
     0,
     6,
@@ -45416,10 +45472,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "371 A1B1 · Air Tide",
+   "name": "AB · Air Tide",
    "cat": "Keyboard",
+   "id": "371 A1B1 · Air Tide",
    "rank": 218,
-   "stars": 3,
    "values": [
     0,
     4,
@@ -45599,10 +45655,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "404 A1B1 · Orbit Cloud",
+   "name": "AB · Orbit Cloud",
    "cat": "Pad",
+   "id": "404 A1B1 · Orbit Cloud",
    "rank": 219,
-   "stars": 3,
    "values": [
     0,
     3,
@@ -45782,10 +45838,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "515 A1A2B1 · Abyss & Kalimba",
+   "name": "AAB · Abyss & Kalimba",
    "cat": "SuperModulation",
+   "id": "515 A1A2B1 · Abyss & Kalimba",
    "rank": 220,
-   "stars": 3,
    "values": [
     0,
     3,
@@ -45965,10 +46021,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "538 A1B1 · Swirl of Odd",
+   "name": "AB · Swirl of Odd",
    "cat": "SuperModulation",
+   "id": "538 A1B1 · Swirl of Odd",
    "rank": 221,
-   "stars": 3,
    "values": [
     0,
     0,
@@ -46148,10 +46204,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "645 A1B1 · Sweep of Trumpet",
+   "name": "AB · Sweep of Trumpet",
    "cat": "Lead",
+   "id": "645 A1B1 · Sweep of Trumpet",
    "rank": 222,
-   "stars": 3,
    "values": [
     0,
     1,
@@ -46331,10 +46387,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "678 A1B1 · Drawbar Shift",
+   "name": "AB · Drawbar Shift",
    "cat": "Keyboard",
+   "id": "678 A1B1 · Drawbar Shift",
    "rank": 223,
-   "stars": 3,
    "values": [
     0,
     0,
@@ -46514,10 +46570,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "689 A1B1 · Moon Resonance Clav",
+   "name": "AB · Moon Resonance Clav",
    "cat": "Keyboard",
+   "id": "689 A1B1 · Moon Resonance Clav",
    "rank": 224,
-   "stars": 3,
    "values": [
     0,
     6,
@@ -46697,10 +46753,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "693 A1B1 · Stair Pulse Tines",
+   "name": "AB · Stair Pulse Tines",
    "cat": "Keyboard",
+   "id": "693 A1B1 · Stair Pulse Tines",
    "rank": 225,
-   "stars": 3,
    "values": [
     0,
     5,
@@ -46880,10 +46936,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1043 A1A2B1 · Hollow Scape",
+   "name": "AAB · Hollow Scape",
    "cat": "FX",
+   "id": "1043 A1A2B1 · Hollow Scape",
    "rank": 226,
-   "stars": 3,
    "values": [
     0,
     6,
@@ -47063,10 +47119,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1052 A2B1 · Skin Swing Hand Drum",
+   "name": "AB · Skin Swing Hand Drum",
    "cat": "Drums & Perc",
+   "id": "1052 A2B1 · Skin Swing Hand Drum",
    "rank": 227,
-   "stars": 3,
    "values": [
     1,
     2,
@@ -47246,10 +47302,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1180 A1A2B1 · Temple & Pixel",
+   "name": "AAB · Temple & Pixel",
    "cat": "SuperModulation",
+   "id": "1180 A1A2B1 · Temple & Pixel",
    "rank": 228,
-   "stars": 3,
    "values": [
     0,
     6,
@@ -47429,10 +47485,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1232 A1B1 · Beam of Cave",
+   "name": "AB · Beam of Cave",
    "cat": "SuperModulation",
+   "id": "1232 A1B1 · Beam of Cave",
    "rank": 229,
-   "stars": 3,
    "values": [
     0,
     3,
@@ -47612,10 +47668,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1255 A1A2 · Soft Blend Harp",
+   "name": "AA · Soft Blend Harp",
    "cat": "SuperModulation",
+   "id": "1255 A1A2 · Soft Blend Harp",
    "rank": 230,
-   "stars": 3,
    "values": [
     0,
     2,
@@ -47795,10 +47851,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1281 A1A2B1 · Tide of Chalk",
+   "name": "AAB · Tide of Chalk",
    "cat": "SuperModulation",
+   "id": "1281 A1A2B1 · Tide of Chalk",
    "rank": 231,
-   "stars": 3,
    "values": [
     0,
     3,
@@ -47978,10 +48034,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1333 A1A2 · Rise of Slate",
+   "name": "AA · Rise of Slate",
    "cat": "SuperModulation",
+   "id": "1333 A1A2 · Rise of Slate",
    "rank": 232,
-   "stars": 3,
    "values": [
     0,
     2,
@@ -48161,10 +48217,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1339 A1A2 · Wood Orbit Pluck",
+   "name": "AA · Wood Orbit Pluck",
    "cat": "SuperModulation",
+   "id": "1339 A1A2 · Wood Orbit Pluck",
    "rank": 233,
-   "stars": 3,
    "values": [
     0,
     1,
@@ -48344,10 +48400,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1340 A1A2B1 · Open Pluck",
+   "name": "AAB · Open Pluck",
    "cat": "SuperModulation",
+   "id": "1340 A1A2B1 · Open Pluck",
    "rank": 234,
-   "stars": 3,
    "values": [
     0,
     2,
@@ -48527,10 +48583,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1366 A1A2 · Swing of Chalk",
+   "name": "AA · Swing of Chalk",
    "cat": "SuperModulation",
+   "id": "1366 A1A2 · Swing of Chalk",
    "rank": 235,
-   "stars": 3,
    "values": [
     0,
     6,
@@ -48710,10 +48766,10 @@ var WS_SPEC = {
    ]
   },
   {
-   "name": "1374 A1B1 · Opal Atoms",
+   "name": "AB · Opal Atoms",
    "cat": "SuperModulation",
+   "id": "1374 A1B1 · Opal Atoms",
    "rank": 236,
-   "stars": 3,
    "values": [
     0,
     6,

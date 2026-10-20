@@ -3,6 +3,35 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth 1.0 — 2026-10-20 (the final version: the 237 presets he kept, the interface he chose, the manual)
+
+The **official release**. It keeps what OktoPierre kept after his listening, opens on his best sound, sorts every list from the best to the least rated, takes out what he does not need any more, and has the interface he chose among the mock-ups.
+
+**In short**
+- **237 presets, the ones he rated 3 or more out of 10** (his export of 2026-10-20, 17:03; the 1182 of beta 0.3.3 were 945 more: unrated, 0 to 2 stars). They are 21 of the 22 TOP Sounds of beta 0.7 (one was unrated) and 216 numbered ones; the 19 presets he had adjusted (SAVE PRESET) carry his values. **No new preset**: the 250 made after his listening (filter and favourites-inspired ones, `tools/presets_filter.js`, `presets_fav.js`) are not in the instrument, they have no rating.
+- **Every list is sorted from the best to the least rated.** TOP Sounds (54 in the plug-in: the 21 of beta 0.7 and the 33 rated above 7; the web app shows the 21) and each section. **The synth opens on the first TOP Sound**, *A · Wave Brass*.
+- **Sections of the preset browser**: **PAD comes second** (right after TOP Sounds), and **Keys and Pluck are one section, KEYBOARD** (13 sounds): TOP Sounds, Pad, SuperModulation, Bass, Lead, Keyboard, Organ, Strings, Brass & Wind, Bells & Mallets, FX, Drums & Perc. The presets' own category names in the data files and the user bank sections (My presets) are unchanged; `SECTION_OF` in `tools/spec.js` maps them.
+- **Preset names by type, no numbers**: `A` (one subtractive oscillator), `AA` (two), `AB` (one subtractive + the additive one), `AAB` (two + the additive one), `B` (the additive one alone), then a title, with the A in yellow and the B in blue in the browsers, as in the Wavelet Synthesizer ("1129 A1A2B1 · Dive Texture" is now "AAB · Dive Texture"). `id` in the web spec keeps the old numbered name for the tools.
+- **The stars start at zero**: the rating system stays (five stars with half stars in the plug-in's browser, click to rate, the presets file, EXPORT / IMPORT) but no sound has a built-in vote any more, and the stars of the presets file of an older version are not carried over (the lists are still sorted by his ratings at the time).
+- **The header** at the top left reads **OKTOWAVE / FRACTAL WAVELET SYNTHESIZER**.
+- **Removed**: EVALUATE SOUNDS (the button, the window, the plug-in's vote code: 520 lines; `vote_data.h` is no longer generated), the seven extra demo songs and the song menu next to DEMO (the demo is Beethoven's *Appassionata* alone; the arrow beside DEMO is gone) and the loading of a MIDI file in the web app.
+- **The interface of the mock-ups he chose** (P6 + Q1 + R6): LFO 1's wave selector (SINE TRI SAW SQR S&H) underlined at the right of its title; LFO 2 and LFO 3 as two tabs of one card (a lit dot says an LFO is on), with a stepped **SHAPE knob** (the name of the wave in the accent colour under it, a click steps to the next shape), TARGET narrower (80 px), SYNC at the end of the tab bar (plug-in); the VOICE knobs on the same line as the knobs of the cards at the left; the big **WIDTH / SPARSITY knobs smaller and better centred** (disc 42 px) and the SOURCE CYCLE picture larger; with **TUNING ARAB or TURK**, the PLAY card changes colour code (terracotta for the subtractive oscillators, turquoise for the additive one, grey cards) and shows an oriental tiling pattern. The panel is 1100 x 944.
+- **The manual** opens on a new chapter, "What this synthesizer is, and what wavelets are": what a wavelet is, the seven wavelets, how the synthesizer works (one cycle split into 11 bands, resynthesised), the modulation and how to play and choose sounds, with three figures; the presets chapter lists the 237 sounds with their stars (`tools/manual/mw.js`).
+- **The engine**: the CPU optimisation of the `cpu-opt` branch (bit-identical output, **35 to 39 % less CPU**, the heaviest preset from 27 to 11 %; `Revue_CPU.md`) and the crackle fix of beta 0.3.2 (peak guard, chord compensation), and the per-preset master calibration redone for the final list (`tools/master_adjust.js`).
+
+**Checked** (the whole campaign, `node tests/full.js --parallel`, two lanes)
+- The quick suite: generated files, the 237 presets sound (finite, under 0 dBFS), the VST3 host (99 checks), the web app loads and plays.
+- The C++ engine against the JavaScript reference: **323 cases, worst difference 2.1e-7**.
+- The 18 TOP Sounds of beta 0.7 that are in the list sound as they did (worst difference 8.8e-8 of the peak).
+- The engine tests (idle skip, filter, SuperModulation, live display), the presets file (`library_test`: the stars of an older file are not carried over), the VST2 entry point (41 checks), the plug-in window in a host (tabs, CHORD MODE, the LFO tabs, the oriental colours, the fit to the screen, the browser).
+- The crackle of a loud chord (three chords at velocity 1, all 237 presets): **none above 1 %** (HF residual).
+- The web app: the smoke test and the demo tour (67 checks) pass; the full web run on every preset (`test_web`) was still running when this was published.
+
+**Known limits**
+- macOS: no build is made or tested here (the code is portable; `editor_mac.mm` follows the Windows editor but is not compiled).
+- The user bank sections (My presets) keep their old names (Keys, Pluck, ...): they are the player's own.
+- Small differences from the mock-ups, kept on purpose: the cards' inside is not shifted by the 8 px of the mock-up, the dark bar of the vertical titles and the outer halo of the PLAY card are not drawn, the TARGET text is in the accent colour.
+
 ## Okto MultiWave Synth beta 0.3.3 — 2026-10-20 (the compact panel V1, the new presets 2 dB lower)
 
 A **test version**: the panel layout the owner chose among five mock-ups, and a simple volume trim of the new presets while he has not chosen the good ones.

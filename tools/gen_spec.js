@@ -20,15 +20,15 @@ const defaultPresetIndex = PRESETS.findIndex(p => p.name === DEFAULT_PRESET);
 const presetValues = PRESETS.map(pr => ({
   name: pr.name,
   cat: pr.cat,
+  id: pr.id,   // version 1.0: the name the preset had with its number (the tools that read the number)
   rank: pr.rank,   // beta 0.5: its place in its category's list (the preset browsers' default order)
-  ...(pr.stars ? { stars: pr.stars } : {}),   // beta 0.3: OktoPierre's vote in his listening test (the browsers' marks)
   values: PARAMS.map(p => (pr.v[p.key] !== undefined ? pr.v[p.key] : p.def)),
 }));
 const wavelets = wav.order.map((n, i) => ({ id: n, name: PARAMS[INDEX.wavelet].choices[i], h: wav.h[n] }));
 
 // ---------------------------------------------------------------- web
 const web = {
-  DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, TOP_EXTRA, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
+  DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, TOP_EXTRA, TOP_LIST, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
   PRESETS: presetValues,
   LFO2_TARGETS: LFO2_TARGETS.map(k => INDEX[k]),   // beta 0.3: the parameters LFO 2 can move (lfo2_target order, the parameters of A1)
   MICRO: MICRO_TABLES,   // beta 0.2: the oriental tunings: [Arabic, Turkish][scale][semitone above the tonic] = cents from the equal-tempered key
@@ -133,7 +133,8 @@ h += `inline constexpr int kNumTop = ${TOP};   // beta 0.5: the first presets ar
 h += `inline constexpr int kTopExtra[] = { ${TOP_EXTRA.length ? TOP_EXTRA.join(', ') : '0'} };\ninline constexpr int kNumTopExtra = ${TOP_EXTRA.length};\n`;
 h += `// beta 1.0: the TOP Sounds list in its order (best rated first): the TOP Sounds of beta 0.7 and the presets rated above 7\ninline constexpr int kTopList[] = { ${TOP_LIST.join(', ')} };\ninline constexpr int kNumTopList = ${TOP_LIST.length};\n`;
 h += `// beta 0.3: OktoPierre's vote of each preset in his listening test (0 = none; a mark in the browser)\n`;
-h += `inline constexpr int kPresetStars[] = { ${PRESETS.map(p => p.stars || 0).join(', ')} };\n`;
+// version 1.0: the built-in votes are reset, every sound starts with no stars (the star system stays: the player rates in the browser; the lists are sorted by the votes at the time, tools/spec.js)
+h += `inline constexpr int kPresetStars[] = { ${PRESETS.map(() => 0).join(', ')} };\n`;
 h += `// beta 0.5: each preset's place in its category's list (the preset browser's default order)\n`;
 h += `inline constexpr int kPresetRank[] = { ${PRESETS.map(p => p.rank).join(', ')} };\n`;
 h += `// the factory categories, in browser and menu order (after TOP Sounds)\n`;

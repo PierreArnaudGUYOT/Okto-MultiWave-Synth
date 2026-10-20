@@ -37,6 +37,8 @@ struct Events { int32_t numEvents; intptr_t reserved; void* events[8]; };
 struct Rect { int16_t top, left, bottom, right; };
 
 int fails = 0, passes = 0;
+// the program names of the VST2 host: the middle dot of a name is written as a hyphen
+static std::string asciiName(const char* n) { std::string s; for (const char* p = n; *p; p++) { if ((unsigned char)p[0] == 0xC2 && (unsigned char)p[1] == 0xB7) { s += '-'; p++; } else s += *p; } return s; }
 void check(bool ok, const char* what, const char* detail = "") {
   std::printf("  [%s] %s%s%s\n", ok ? "PASS" : "FAIL", what, *detail ? "  -- " : "", detail);
   (ok ? passes : fails)++;
@@ -100,8 +102,8 @@ int main(int argc, char** argv) {
   check(D(fx, 51, 0, 0, (void*)"receiveVstMidiEvent") == 1, "canDo receiveVstMidiEvent");
   std::memset(buf, 0, sizeof buf); D(fx, 8, P_F_CUTOFF, 0, buf); check(buf[0] != 0 && std::strlen(buf) < 24, "parameter name (cutoff)", buf);
   std::memset(buf, 0, sizeof buf); D(fx, 7, P_F_CUTOFF, 0, buf); check(buf[0] != 0 && std::strlen(buf) < 24, "parameter display (cutoff)", buf);
-  std::memset(buf, 0, sizeof buf); D(fx, 5, 0, 0, buf); check(!std::strcmp(buf, "A - Warm Pad"), "starts on program 'A - Warm Pad'", buf);
-  std::memset(buf, 0, sizeof buf); D(fx, 29, 0, 0, buf); check(!std::strcmp(buf, "B - Mirror Sub Bass"), "program 0 name (beta 0.5: the first TOP Sound)", buf);
+  std::memset(buf, 0, sizeof buf); D(fx, 5, 0, 0, buf); check(!std::strcmp(buf, asciiName(kPresets[kDefaultPreset].name).c_str()), "starts on the default program (the first TOP Sound)", buf);
+  std::memset(buf, 0, sizeof buf); D(fx, 29, 0, 0, buf); check(!std::strcmp(buf, asciiName(kPresets[0].name).c_str()), "program 0 name (the first TOP Sound)", buf);
   check(D(fx, 29, kNumPresets, 0, buf) == 0, "program name out of range is refused");
 
   D(fx, 10, 0, 0, nullptr, 48000.0f); D(fx, 11, 0, 512); D(fx, 12, 0, 1);

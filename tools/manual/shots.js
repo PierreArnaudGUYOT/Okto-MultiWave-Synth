@@ -24,7 +24,7 @@ const WELCOME = { x: 222, y: 309, width: 680, height: 338 };
 const set = o => Object.entries(o).map(([k, v]) => `WS_TEST.setParam('${k}', ${v});`).join('');
 // every parameter at its default (A1 alone at 100 %): there is no Init preset in Okto MultiWave Synth
 const NEUTRAL = "WS_SPEC.PARAMS.filter(p => !p.hidden).forEach(p => WS_TEST.setParam(p.key, p.def));";
-const presetOf = title => SPEC.PRESETS.findIndex(p => p.name === title || p.name.slice(4).split(' · ')[1] === title);
+const presetOf = title => SPEC.PRESETS.findIndex(p => p.name === title || p.name.split(' · ').slice(1).join(' · ') === title);
 
 const jobs = [
   { url: `${APP}#nobrowser&noaudio&preset=${pre('A · Warm Pad')}`, out: 'panel-a.png' },

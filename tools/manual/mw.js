@@ -19,7 +19,7 @@ const VST_URL = (() => {
 })();
 const CREDIT = `${SPEC.APP.panelCredit} · ${SPEC.APP.version} · ${SPEC.APP.license}`;
 const NEW = SPEC.PRESETS.slice(SPEC.NEW_FIRST);   // beta 0.3: the 600 of beta 0.3 (501-1100), the presets of beta 0.2 (201-500), then those of beta 0.1 (001-200) that do not use B2 (removed)
-const numOf = p => parseInt(p.name, 10);   // the number written first in a new preset's name (3 or 4 digits)
+const numOf = p => parseInt(p.id || p.name, 10);   // the number written first in a new preset's name (3 or 4 digits)
 const N03 = NEW.filter(p => numOf(p) >= 501).length, N02 = NEW.filter(p => numOf(p) >= 201 && numOf(p) < 501).length, N01 = NEW.length - N03 - N02;   // presets of beta 0.3, of beta 0.2 and of beta 0.1 (left)
 const SUPER = SPEC.PRESETS.filter(p => p.cat === 'SuperModulation');
 const firstNo03 = String(Math.min(...NEW.map(numOf).filter(n => n >= 501))), lastNo03 = String(Math.max(...NEW.map(numOf)));
@@ -30,23 +30,21 @@ const pv = (p, key) => p.values[IDX[key]];                                   // 
 const uses = (p, s) => pv(p, SLK[s].lvl) > 0;                                 // oscillator s plays in preset p
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const nameB = p => `<b>${esc(p.name)}</b>`;
-// the best rated first (the owner's stars), then the factory order
-const byStars = (a, b) => (b.stars || 0) - (a.stars || 0) || a.rank - b.rank;
+// the factory order is the best rated first (the owner's stars at the time of the listening; the sounds start with no stars now)
+const byStars = (a, b) => a.rank - b.rank;
 const pick = (what, n, pred) => {
   const l = SPEC.PRESETS.filter(pred).sort(byStars).slice(0, n);
   if (!l.length) throw new Error('manual: no preset in the final list for "' + what + '"');
   return l.map(nameB).join(', ');
 };
 // the TOP Sounds list in its order: the TOP Sounds of the Wavelet Synthesizer he kept, then the sounds he rated above 7 and his favourites; the best rated first (same rule as tools/spec.js TOP_LIST)
-const TOP_LIST = [...SPEC.PRESETS.slice(0, SPEC.TOP).map((p, i) => i), ...SPEC.TOP_EXTRA].sort((a, b) => (SPEC.PRESETS[b].stars || 0) - (SPEC.PRESETS[a].stars || 0) || a - b);
-if (TOP_LIST[0] !== SPEC.DEFAULT_PRESET) throw new Error('manual: the first TOP Sound is not the default preset any more: check TOP_LIST in tools/manual/mw.js against tools/spec.js');
+const TOP_LIST = SPEC.TOP_LIST;
+if (TOP_LIST[0] !== SPEC.DEFAULT_PRESET) throw new Error('manual: the first TOP Sound is not the default preset any more: check TOP_LIST in tools/spec.js');
 const TOP_NAMES = new Set(TOP_LIST.map(i => SPEC.PRESETS[i].name));
 const SUPERMOD = SPEC.PRESETS.filter(p => p.cat === 'SuperModulation');   // the SuperModulation category
 const lfo23 = p => pv(p, 'lfo2_amt') > 0 || pv(p, 'lfo3_amt') > 0;   // LFO 2 and / or LFO 3 move a control
 const N_LFO23 = SPEC.PRESETS.filter(lfo23).length, N_SM_LFO23 = SUPERMOD.filter(lfo23).length;
-const N_ABOVE7 = SPEC.TOP_EXTRA.filter(i => SPEC.PRESETS[i].stars > 7).length, N_FAV = SPEC.TOP_EXTRA.length - N_ABOVE7;
-// the owner's stars as the preset browser draws them: five stars with half stars (1 to 10)
-const starsOf = p => { const n = p.stars || 0; return `<span class="stars" title="${n} of 10">${'★'.repeat(Math.floor(n / 2))}${n % 2 ? '½' : ''}</span>`; };
+const N_EXTRA = SPEC.TOP_EXTRA.length;
 // the Shape control of LFO 2 and LFO 3: the five waveforms of LFO 1 (a choice), or a knob
 const lfoShape = key => PK[key].fmt === 'choice' ? 'The same five waveforms as LFO 1.' : 'The waveform of the LFO, from the same family as LFO 1 (sine, triangle, saw, square, sample &amp; hold).';
 // the number of vanishing moments of a wavelet: how many of the moments of its high-pass filter are zero (centred, relative to their size)
@@ -237,7 +235,7 @@ function oscillatorsChapter(E) {
 <ul>
 <li><b>One panel at a time.</b> The folder tabs ${ctl('OSC1 A1')} ${ctl('OSC2 A2')} ${ctl('OSC3 B1')} under the header choose the oscillator: they show one oscillator's cards on the plate (yellow for A1 and A2, blue for B1) while the other two keep their settings and keep sounding. A lit dot on a folder tab says its oscillator is heard (its level is above 0). Switching a tab never changes the sound and never marks a preset as modified. <b>OSC MIX</b> and the <b>SCOPE</b> are common to every oscillator, so they stay in place at the top right whatever tab is shown; the scope and the scalogram draw one cycle of the <em>whole</em> sound (every oscillator that plays, and the sub oscillator, at C4).</li>
 <li><b>Levels cost nothing at 0.</b> An oscillator whose level is 0 is not computed and its wave tables are not even built, so presets that use two oscillators cost about twice one — not three times. A level is smoothed over 20 ms, so it can be moved while playing.</li>
-<li><b>Most presets use two oscillators or more</b> (the ${SPEC.TOP} TOP Sounds that come from the Wavelet Synthesizer have one or two). The letters in the names of the other presets — <code>A1A2</code>, <code>A1B1</code>, <code>A2B1</code>, <code>A1A2B1</code> — say which.</li>
+<li><b>Most presets use two oscillators or more</b> (the ${SPEC.TOP} TOP Sounds that come from the Wavelet Synthesizer have one or two). The type at the start of the name of the other presets — <code>AA</code>, <code>AB</code>, <code>AAB</code> — says which.</li>
 </ul>
 <h3 id="mix">OSC MIX and SUB OSC</h3>
 ${controls(mix)}
@@ -526,27 +524,27 @@ function presetTable() {
   const opens = p => (p.name === SPEC.PRESETS[SPEC.DEFAULT_PRESET].name ? ' <span class="small muted">(the synth opens here)</span>' : '');
   const th = h => `<thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead>`;
   // TOP Sounds, in their order
-  const topRows = TOP_LIST.map(i => { const p = SPEC.PRESETS[i]; return `<tr><td>${esc(p.name)}${opens(p)}</td><td class="small">${p.cat}</td><td class="small">${oscOf(p)}</td><td>${starsOf(p)}</td></tr>`; }).join('');
+  const topRows = TOP_LIST.map(i => { const p = SPEC.PRESETS[i]; return `<tr><td>${esc(p.name)}${opens(p)}</td><td class="small">${p.cat}</td><td class="small">${oscOf(p)}</td></tr>`; }).join('');
   // the categories, in the factory order: the sounds of the Wavelet Synthesizer first, then the others from the best rated to the least rated
   let body = '';
   for (const cat of SPEC.CATEGORIES) {
     const list = SPEC.PRESETS.filter(p => p.cat === cat);
     if (!list.length) continue;
-    body += `<tr class="cat"><td colspan="4">${cat} · ${list.length}</td></tr>`;
-    for (const p of list) body += `<tr><td>${star(p)}${esc(p.name)}${opens(p)}</td><td class="small">${oscOf(p)}</td><td>${starsOf(p)}</td><td>${descOf(p)}</td></tr>`;
+    body += `<tr class="cat"><td colspan="3">${cat} · ${list.length}</td></tr>`;
+    for (const p of list) body += `<tr><td>${star(p)}${esc(p.name)}${opens(p)}</td><td class="small">${oscOf(p)}</td><td>${descOf(p)}</td></tr>`;
   }
   return `<h4 id="top-list">TOP Sounds · ${TOP_LIST.length}</h4>
-<div class="tbl"><table class="presets toplist">${th(['Preset', 'Category', 'Oscillators', 'Stars'])}<tbody>${topRows}</tbody></table></div>
+<div class="tbl"><table class="presets toplist">${th(['Preset', 'Category', 'Oscillators'])}<tbody>${topRows}</tbody></table></div>
 <h4 id="category-list">The ${SPEC.CATEGORIES.length} categories · ${SPEC.PRESETS.length} presets</h4>
-<div class="tbl"><table class="presets rated">${th(['Preset', 'Oscillators', 'Stars', 'Sound'])}<tbody>${body}</tbody></table></div>`;
+<div class="tbl"><table class="presets rated">${th(['Preset', 'Oscillators', 'Sound'])}<tbody>${body}</tbody></table></div>`;
 }
 function presetsChapter(E) {
   const first = SPEC.PRESETS[SPEC.DEFAULT_PRESET], cats = SPEC.CATEGORIES.map(c => `${c} (${SPEC.PRESETS.filter(p => p.cat === c).length})`).filter(x => !/\(0\)$/.test(x));
   return `<p>Okto MultiWave Synth has <b>${SPEC.PRESETS.length} factory presets</b>. They are the sounds that its author, OktoPierre, kept after listening to the candidates and rating them: only the presets he rated more than one star (3 or more on his scale of 1 to 10) are in the instrument.</p>
 <ul>
-<li><b>TOP Sounds</b> come first (${TOP_LIST.length}): the ${SPEC.TOP} sounds of the Wavelet Synthesizer beta 0.7 that he kept (they sound exactly as there; one or two oscillators), the ${N_ABOVE7} sounds he rated above 7 and ${N_FAV} favourites he named, sorted from the best to the least rated. <b>The synth opens on the first of them, ${esc(first.name)}.</b></li>
+<li><b>TOP Sounds</b> come first (${TOP_LIST.length}): the ${SPEC.TOP} sounds of the Wavelet Synthesizer beta 0.7 that he kept (they sound exactly as there; one or two oscillators), ${N_EXTRA} more of his best rated sounds and favourites, sorted from the best to the least rated. <b>The synth opens on the first of them, ${esc(first.name)}.</b></li>
 <li>Then come the <b>${SPEC.CATEGORIES.length} categories</b>: ${cats.slice(0, -1).join(', ')} and ${cats[cats.length - 1]}. A category lists all its sounds (the TOP Sounds that belong to it are marked ★) from the best rated to the least rated.</li>
-<li>A name that begins with a number, such as <code>${esc(SPEC.PRESETS[SPEC.TOP].name)}</code>, is a sound made for Okto MultiWave Synth: its number, the oscillators it uses (<code>A1A2</code>, <code>A1B1</code>, <code>A2B1</code>, <code>A1A2B1</code>) and a title. The numbers have gaps, because the sounds that were not kept are gone. The Wavelet Synthesizer sounds are named like <code>${esc(SPEC.PRESETS[0].name)}</code>.</li>
+<li>The name of a sound starts with its <b>type</b>, the letters in the colours of the oscillators (A yellow, B blue): <code>A</code> one subtractive oscillator, <code>AA</code> two, <code>AB</code> one subtractive and the additive one, <code>AAB</code> two and the additive one, <code>B</code> the additive one alone; then a title, for example <code>${esc(SPEC.PRESETS[SPEC.TOP].name)}</code>.</li>
 </ul>
 <p>The <b>SuperModulation</b> category (${SUPERMOD.length} sounds) holds the sounds whose life is the LFOs moving the scale filter, the sparsity, the window, the source phase, the morph and the additive scales (see <a href="#supermod">SuperModulation</a>).</p>
 <p><b>Choosing a sound.</b> The preset box shows the name of the sound; ◀ ▶ step through the factory presets and clicking the name opens the <b>preset browser</b> at the right of the panel: TOP Sounds and the categories, one click plays a sound, the arrow keys ${kbd('↑')} ${kbd('↓')} ${kbd('←')} ${kbd('→')} too. The browser follows the preset box: it shows the category of the sound and the sound itself. In the plug-in the browser also shows the author's <b>stars</b> at the right of every sound (five stars, with half stars: 1 to 10); click to give your own rating, click the same rating to clear it. The ratings are saved in the presets file, and EXPORT carries them.</p>
@@ -556,7 +554,7 @@ function presetsChapter(E) {
 <li><b>Plug-in.</b> See <a href="#plugin">The plug-in</a>: SAVE PRESET, the user bank, the presets file. You can also keep sounds with Live (a device preset, an Instrument Rack, the Live Set).</li>
 </ul>
 <h3 id="preset-list">All the presets</h3>
-<p class="small muted">★ = in TOP Sounds. Stars: the author's rating, from ½ to 5 stars (hover a rating for its value from 1 to 10). The oscillators are the ones whose level is above 0.</p>
+<p class="small muted">★ = in TOP Sounds. Each list is sorted from the best to the least rated by the author. The oscillators are the ones whose level is above 0.</p>
 ${presetTable()}`;
 }
 
@@ -578,7 +576,7 @@ function pluginChapter() {
 <li><b>SAVE PRESET</b> (left of MANUAL) overwrites the preset playing: a factory preset is <em>adjusted</em> in place, optionally under a new name (RESTORE brings the original back); a sound of the user bank is replaced.</li>
 <li><b>The presets file</b>: everything above lives in one readable text file, <code>OKTOMULTIWAVE presets.txt</code>, kept next to the <code>.vst3</code> folder (the folder must allow writing: <code>C:\\Program Files\\Common Files\\VST3</code> needs administrator rights, so install into a folder you own, or run Live as administrator once). It is written atomically after every edit and read again when another instance changes it. A file longer than 16 MB is never written over.</li>
 <li><b>Automation</b>: every sound parameter and the chord harp's six settings can be automated; the oscillator tabs (OSC) are a panel choice, not part of a sound.</li>
-<li><b>Stars</b>: the preset browser shows five stars (half stars: 1 to 10) at the right of every sound; click to rate, click the same rating to clear it. The ratings are saved in the presets file and <b>EXPORT carries them</b>.</li>
+<li><b>Stars</b>: the preset browser shows five stars (half stars: 1 to 10) at the right of every sound; click to rate, click the same rating to clear it. <b>Every sound starts with no stars</b>: the ratings are yours, saved in the presets file, and <b>EXPORT carries them</b>.</li>
 </ul>`;
 }
 

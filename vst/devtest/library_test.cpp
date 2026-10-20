@@ -185,6 +185,8 @@ int wmain(int argc, wchar_t** argv) {
   {
     e = lib.setTop(kA, true);   // a list the player changed ...
     check(e.empty() && lib.inTop(kA), "a player's TOP Sounds addition is written", u8(e));
+    lib.setStars(kA, 7);   // ... and a rating
+    check(lib.stars(kA) == 7, "the rating is kept in the file");
     std::string t = readAll(file);
     const size_t lo = t.find("######## LIST ORDER v5");
     check(lo != std::string::npos, "the file says LIST ORDER v5");
@@ -194,6 +196,7 @@ int wmain(int argc, wchar_t** argv) {
       sleepMs(30);
       lib.refresh();
       check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTopList, "the v4 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
+      check(lib.stars(kA) == 0, "the stars of that older file are not carried over: every sound starts with none", std::to_string(lib.stars(kA)));
     }
     lib.setTop(kA, false);
   }
@@ -202,8 +205,8 @@ int wmain(int argc, wchar_t** argv) {
   {
     int kv = -1; for (int k = kFirstNew; k < kNumPresets; k++) if (kPresetStars[k] > 0 && kPresetStars[k] < 10) { kv = k; break; }
     const int kn = plain(kFirstNew);
-    check(kv >= 0 && lib.stars(kv) == kPresetStars[kv], "a preset with a built-in vote shows it", std::to_string(kv >= 0 ? lib.stars(kv) : -1));
-    check(lib.stars(kn) == 0, "an unrated preset has no stars");
+    check(kv < 0 || lib.stars(kv) == kPresetStars[kv], "a preset with a built-in vote shows it (none in version 1.0)", std::to_string(kv >= 0 ? lib.stars(kv) : -1));
+    check(lib.stars(kn) == 0, "an unrated preset has no stars (version 1.0: no sound has a built-in vote)");
     // (the built-in votes of the rated presets are in the file too: the lines are counted)
     lib.setStars(kn, 1);   // writes the file
     const int c7 = countOf(readAll(file), "Stars: 7\r\n");
@@ -211,14 +214,16 @@ int wmain(int argc, wchar_t** argv) {
     check(e.empty() && lib.stars(kn) == 7 && countOf(readAll(file), "Stars: 7\r\n") == c7 + 1, "setStars writes 'Stars: 7' in the file", u8(e));
     lib.setStars(kn, 0);
     check(lib.stars(kn) == 0 && countOf(readAll(file), "Stars: 7\r\n") == c7, "clearing a rating removes its line");
-    const int def = kv >= 0 ? kPresetStars[kv] : 5, other = def == 6 ? 7 : 6;
-    const int cOther = countOf(readAll(file), "Stars: " + std::to_string(other) + "\r\n");
-    lib.setStars(kv, other);
-    check(lib.stars(kv) == other && countOf(readAll(file), "Stars: " + std::to_string(other) + "\r\n") == cOther + 1, "a rating replaces the built-in vote");
-    lib.setStars(kv, 0);
-    check(lib.stars(kv) == 0 && has(readAll(file), "Stars: 0\r\n"), "a built-in vote the player cleared is written as 'Stars: 0'");
-    lib.setStars(kv, def);
-    check(lib.stars(kv) == def, "the built-in vote again");
+    if (kv >= 0) {   // (version 1.0 has no built-in vote: these three checks need one)
+      const int def = kPresetStars[kv], other = def == 6 ? 7 : 6;
+      const int cOther = countOf(readAll(file), "Stars: " + std::to_string(other) + "\r\n");
+      lib.setStars(kv, other);
+      check(lib.stars(kv) == other && countOf(readAll(file), "Stars: " + std::to_string(other) + "\r\n") == cOther + 1, "a rating replaces the built-in vote");
+      lib.setStars(kv, 0);
+      check(lib.stars(kv) == 0 && has(readAll(file), "Stars: 0\r\n"), "a built-in vote the player cleared is written as 'Stars: 0'");
+      lib.setStars(kv, def);
+      check(lib.stars(kv) == def, "the built-in vote again");
+    } else std::printf("  (no built-in vote in this version: the checks on a built-in vote are skipped)\n");
     lib.setStars(kn, 9);
     e = lib.exportTo(exported);
     const std::string ex = readAll(exported);

@@ -72,7 +72,7 @@ function worker() {
   };
   const out = [];
   SPEC.PRESETS.forEach((p, i) => {
-    const num = parseInt(p.name, 10) || 0;
+    const num = parseInt(p.id || p.name, 10) || 0;
     if (i % of !== part || (FIRST && num < FIRST) || (ONE && !p.name.includes(ONE)) || (NUMS && !NUMS.has(num))) return;
     const m = measure(p.values);
     out.push({ i, name: p.name, cat: p.cat, num, master: p.values[P.master], d: m.d, d2: m.d2, d3: m.d3, peak: m.peak, outPeak: m.outPeak, over: m.over });

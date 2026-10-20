@@ -509,6 +509,7 @@ class Library {
       else if (cur) parseParamLine(line, cur->v);
     }
     endFb();
+    if (!v2) std::fill(t.stars.begin(), t.stars.end(), (signed char)-1);   // version 1.0: the stars of a file of an older version are not carried over: every sound starts with none (the user bank keeps its own)
     if (!v2) return;   // a beta 0.3 / 0.4 / 0.5 file: the default lists of this version
     // beta 0.5: each list holds what the file names, in its order (a preset in one category only: the first named);
     // a preset the file does not know, or a list it does not have, takes the default places; a known preset that no

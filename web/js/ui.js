@@ -447,7 +447,7 @@ class SynthUI {
     const mark = el('div', 'mark', box);
     mark.innerHTML = '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M3 16h5l3-9 4 18 4-13 3 7h7" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
     const t = el('div', 'txt', box);
-    t.innerHTML = '<b>OKTOMULTIWAVE</b><span>WAVELET SYNTHESIZER</span>';   // Okto MultiWave Synth
+    t.innerHTML = '<b>OKTOWAVE</b><span>FRACTAL WAVELET SYNTHESIZER</span>';   // version 1.0 (the product's name in the header)
   }
 
   presets(box) {

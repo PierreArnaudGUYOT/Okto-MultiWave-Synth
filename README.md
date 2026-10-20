@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3.3**, a test version (2026-10-20), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **version 1.0**, the final version (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -20,6 +20,20 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What version 1.0 changes
+
+- **237 presets: the ones OktoPierre rated 3 or more out of 10** (21 of the 22 TOP Sounds of beta 0.7 and 216 numbered ones; the 19 he adjusted carry his values; no new preset).
+  Every list is **sorted from the best to the least rated**, and the synth **opens on the first TOP Sound**, *A · Wave Brass*.
+- **Sections of the preset browser**: TOP Sounds, **Pad** (second), SuperModulation, Bass, Lead, **Keyboard** (Keys and Pluck together), Organ, Strings, Brass & Wind,
+  Bells & Mallets, FX, Drums & Perc.
+- **Names by type, no numbers**: A, AA, AB, AAB, B and a title (A yellow, B blue); **the stars start at zero** (the rating system stays); **OKTOWAVE / FRACTAL WAVELET SYNTHESIZER** at the top left.
+- **Removed**: EVALUATE SOUNDS, the seven extra demo songs, the song menu next to DEMO and the loading of a MIDI file in the web app.
+- **The interface of the chosen mock-ups** (P6, Q1, R6): the wave selector of LFO 1 underlined beside its title; LFO 2 and LFO 3 as two tabs of one card with a stepped SHAPE
+  knob; the VOICE knobs on the line of the other cards; smaller, better centred WIDTH / SPARSITY knobs and a larger SOURCE CYCLE; an oriental colour code and pattern in the PLAY
+  card while TUNING is ARAB or TURK. The panel is 1100 x 944.
+- **The manual** opens on "What this synthesizer is, and what wavelets are", and lists the 237 presets.
+- **The engine**: 35 to 39 % less CPU (bit-identical output) and no crackle on a loud chord (beta 0.3.2), calibrated again for the final list.
 
 ## What beta 0.3.3 changes
 
@@ -116,9 +130,8 @@ Beta 0.3.1 applies the first ratings of OktoPierre (80 of the new presets rated 
   the original's.
 - **OSC MIX** (the card next to the scope): three level knobs, one per oscillator, replace the A/B MIX knob. A1 plays at 100 %
   on a new patch, the others at 0. The sub oscillator is in the same card.
-- **930 presets: the 22 TOP Sounds** (OktoPierre's favourites, unchanged: they sound exactly as in beta 0.7), **600 new ones of beta 0.3**
-  (`501`–`1100`), **175 of beta 0.2** (`202`–`500`) **and 133 of beta 0.1** (`001`–`200`, unchanged), in 12 categories (SuperModulation, Bass, Lead,
-  Keys, Organ, Pad, Strings, Brass & Wind, Pluck, Bells & Mallets, FX, Drums & Perc). Every new preset uses at least two
+- **237 presets** (version 1.0: the ones OktoPierre kept; earlier betas had 930 and then 1182): **21 TOP Sounds** (unchanged: they sound exactly as in beta 0.7) and 216 numbered ones
+  (`020`–`1374`, from the betas 0.1 to 0.3.4), in 11 sections (Pad, SuperModulation, Bass, Lead, Keyboard, Organ, Strings, Brass & Wind, Bells & Mallets, FX, Drums & Perc). Every new preset uses at least two
   oscillators; the letters of its name say which (`A1A2`, `A1B1`, `A1A2B1` …); an oscillator is often the attack (a click, a
   breath, a pluck) of another.
 

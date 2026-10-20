@@ -1022,8 +1022,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     fillRR(g, m, 8, rgb(kInset)); strokeRR(g, m, 8, rgb(0x2a303a));
     const Pt pts[] = {{m.x + 3, m.y + 15}, {m.x + 8, m.y + 15}, {m.x + 11, m.y + 7}, {m.x + 15, m.y + 23}, {m.x + 19, m.y + 11}, {m.x + 22, m.y + 17}, {m.x + 27, m.y + 17}};
     g.lines(pts, 7, Pen(rgb(accent()), 2.2f).join().caps());
-    text(g, L"OKTOMULTIWAVE", R{r.x + 40, r.y + 1, 160, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // Okto MultiWave Synth
-    text(g, L"WAVELET SYNTHESIZER", R{r.x + 40, r.y + 17, 180, 14}, 9, true, rgb(accent()), 0);
+    text(g, L"OKTOWAVE", R{r.x + 40, r.y + 1, 180, 18}, 13.5f, true, rgb(0xeef2f7), 0);   // version 1.0 (the product's name in the header)
+    text(g, L"FRACTAL WAVELET SYNTHESIZER", R{r.x + 40, r.y + 17, 196, 14}, 9, true, rgb(accent()), 0);
   }
 
   void drawPresets(Canvas& g, R r) {
@@ -1935,8 +1935,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   // a preset name with its engine letters coloured as in the panel (A teal, B orange)
   void nameText(Canvas& g, const std::string& name, R r, float px, bool bold, Col rest, int alpha) {
     const size_t dot = name.find(" \xC2\xB7 ");
-    std::string pre = dot != std::string::npos && dot <= 2 ? name.substr(0, dot) : "";
-    if (pre != "A" && pre != "B" && pre != "AB") pre.clear();
+    std::string pre = dot != std::string::npos && dot >= 1 && dot <= 3 ? name.substr(0, dot) : "";   // A, AA, AB, AAB, B (version 1.0: the types, no numbers)
+    if (pre.find_first_not_of("AB") != std::string::npos) pre.clear();
     float x = r.x;
     auto part = [&](const std::wstring& s, Col c) {
       const float bw = g.textWidth(s, px, bold);

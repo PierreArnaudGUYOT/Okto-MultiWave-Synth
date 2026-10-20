@@ -740,9 +740,9 @@ async function stepPanel() {
   const unlinked = await ev('WS_TEST.midiMap()');
   check(/MIDI learn/.test(learnTxt) && /Delay Time/.test(learnTxt) && map[21] === 'fx_dtime' && !Object.values(unlinked).includes('fx_dtime'),
     'right-click on the delay TIME knob starts MIDI learn; a CC links it; Backspace unlinks it', `status '${learnTxt}', map ${JSON.stringify(map)}, after ${JSON.stringify(unlinked)}`);
-  // TOP Sounds = exactly OktoPierre's 22 sounds, the categories in the spec order (Bass ... Drums & Perc): in the preset browser
-  // (its sound types and their numbers) and in the preset menu (its groups)
-  const TOP_N = 22;
+  // TOP Sounds = the sounds of beta 0.7 that OktoPierre kept (21 in the final list), the categories in the spec order (Pad ... Drums & Perc): in the preset browser
+  // (its sound types and their numbers) and in the preset menu (its groups: the categories that hold a sound that is not a TOP Sound)
+  const TOP_N = SPEC.TOP;
   const topNames = SPEC.PRESETS.slice(0, SPEC.TOP).map((p) => p.name);
   const lastCat = SPEC.CATEGORIES[SPEC.CATEGORIES.length - 1];
   check(SPEC.TOP === TOP_N && SPEC.PRESETS.length === TOP_N + SPEC.NEW_COUNT && lastCat === 'Drums & Perc', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets; ${lastCat} is the last category`,
@@ -765,7 +765,7 @@ async function stepPanel() {
     const g = m ? [...m.querySelectorAll('.grp')].map((h) => { const c = h.querySelector('.cnt'); return { name: h.textContent.replace(/^[▾▸]/, '').replace(c ? c.textContent : '', '').trim(), n: c ? +c.textContent : NaN }; }) : null;
     if (m) n.click(); return g; })()`);
   const factoryGroups = (groups || []).filter((g) => g.name !== 'USER PRESETS');
-  const grpWant = ['★ TOP SOUNDS', ...SPEC.CATEGORIES.map((c) => c.toUpperCase())];
+  const grpWant = ['★ TOP SOUNDS', ...SPEC.CATEGORIES.filter((c) => SPEC.PRESETS.slice(SPEC.TOP).some((p) => p.cat === c)).map((c) => c.toUpperCase())];
   log(`  preset menu groups: ${(groups || []).map((g) => `${g.name} ${g.n}`).join(' | ')}`);
   check(!!groups && JSON.stringify(factoryGroups.map((g) => g.name)) === JSON.stringify(grpWant) && factoryGroups[0].n === TOP_N &&
     factoryGroups[factoryGroups.length - 1].name === lastCat.toUpperCase() && !(await ev(`!!document.querySelector('.pmenu')`)),

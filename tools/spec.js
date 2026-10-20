@@ -379,8 +379,8 @@ const row = (keys, x0, y) => keys.map((k, i) => kn(k, x0 + i * 52, y));
 const CHORD_H = 120;   // the chord card (shown by CHORD MODE) adds this much to the panel's height
 
 section('header', '', 0, 0, 1100, 48, -1, [
-  { type: 'logo', x: 16, y: 8, w: 200, h: 32 },
-  { type: 'zoom', x: 222, y: 14, w: 50, h: 20 },
+  { type: 'logo', x: 16, y: 8, w: 224, h: 32 },   // version 1.0: OKTOWAVE / FRACTAL WAVELET SYNTHESIZER
+  { type: 'zoom', x: 248, y: 14, w: 50, h: 20 },
   { type: 'presets', x: 384, y: 9, w: 296, h: 30 },   // beta 0.3: narrower (the oscillator tabs left the header: they are the folder tabs under it)
   { type: 'download', only: 'web', x: 862, y: 9, w: 68, h: 30 },   // the plug-in has SAVE PRESET there
   { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
@@ -678,6 +678,15 @@ const TOP_EXTRA = PRESETS.map((p, i) => i).filter(i => i >= TOP_COUNT && (PRESET
 // the TOP Sounds list of the plug-in (and the sound the synth opens on): the TOP Sounds of beta 0.7 and the presets rated above 7, the best rated first (a tie: the earlier one)
 const TOP_LIST = [...PRESETS.slice(0, TOP_COUNT).map((p, i) => i), ...TOP_EXTRA].sort((a, b) => (PRESETS[b].stars || 0) - (PRESETS[a].stars || 0) || a - b);
 for (const p of PRESETS) if (SECTION_OF[p.cat]) p.cat = SECTION_OF[p.cat];
+// version 1.0: the numbers are gone from the names and the oscillators are written as in the Wavelet Synthesizer, by type: A (one subtractive oscillator), AA (two), AB (one subtractive +
+// the additive one), AAB (two + the additive one), B (the additive one alone): "1129 A1A2B1 · Dive Texture" -> "AAB · Dive Texture" (the browsers colour the A and the B). `id` keeps the old
+// name, with its number: the tools that read it (the web spec carries it); the plug-in knows the new name only.
+{
+  const typeOf = n => { const m = /^\d+ ((?:[AB][12]?)+) · /.exec(n); if (!m) return null; const a = (m[1].match(/A/g) || []).length, b = (m[1].match(/B/g) || []).length; return 'A'.repeat(a) + (b ? 'B' : ''); };
+  const renamed = new Map();
+  for (const p of PRESETS) { p.id = p.name; const t = typeOf(p.name); if (t) p.name = t + ' · ' + p.name.split(' · ').slice(1).join(' · '); renamed.set(p.id, p.name); }
+  for (const k of Object.keys(DESCRIPTIONS)) { const n = renamed.get(k); if (n && n !== k) { DESCRIPTIONS[n] = DESCRIPTIONS[k]; delete DESCRIPTIONS[k]; } }
+}
 // the factory order is each category's order too: every section lists its presets from the best to the least rated (the owner's stars; a tie: TOP Sounds first, then by number)
 PRESETS.map((p, i) => i).sort((x, y) => (PRESETS[y].stars || 0) - (PRESETS[x].stars || 0) || x - y).forEach((i, rank) => { PRESETS[i].rank = rank; });
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
@@ -697,7 +706,7 @@ const TOUR_PICKS = ['A · Warm Pad', 'A · Wavelet Lead',
 const SPARE = TOP_LIST.map(i => PRESETS[i].name).filter(n => !TOUR_PICKS.includes(n)).concat(TOP_LIST.map(i => PRESETS[i].name).filter(n => TOUR_PICKS.includes(n)));
 let spareAt = 0;
 const TOUR = TOUR_PICKS.map(n => {
-  const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.slice(4).split(' · ')[1] === n.slice(4)) : PRESETS.find(q => q.name === n);
+  const p = n.startsWith('new:') ? PRESETS.slice(TOP_COUNT).find(q => q.name.split(' · ').slice(1).join(' · ') === n.slice(4)) : PRESETS.find(q => q.name === n);
   if (!p) {
     if (spareAt >= SPARE.length) throw new Error('TOUR: preset not found: ' + n);
     return SPARE[spareAt++];
