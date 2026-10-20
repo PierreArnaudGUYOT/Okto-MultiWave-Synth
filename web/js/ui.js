@@ -356,7 +356,7 @@ class SynthUI {
     box.classList.add('lfotabs');
     el('div', 'tabbar', box);
     const tabs = [0, 1].map(k => {
-      const b = el('button', 'otab ltab', box, { left: (6 + k * 60) + 'px' });
+      const b = el('button', 'ltab', box, { left: (6 + k * 60) + 'px' });
       el('span', 'dot', b);
       el('span', 'tx', b).innerHTML = '<span class="t1">LFO ' + (k + 2) + '</span>';
       b.title = 'Show LFO ' + (k + 2) + ' (a lit dot: its amount is not 0)';

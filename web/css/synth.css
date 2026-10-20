@@ -128,12 +128,16 @@ svg.oscframe { position: absolute; left: 0; top: 0; overflow: visible; pointer-e
 .section.tabbed .title { display: none; }
 .lfotabs { z-index: 3; }
 .lfotabs .tabbar { position: absolute; left: 0; top: 0; right: 0; height: 25px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid var(--card-edge); border-radius: 10px 10px 0 0; }
-.otab.ltab { top: 3px; width: 58px; height: 22px; gap: 4px; padding: 0 5px; z-index: 3; }
-.otab.ltab .t1 { font-size: 10px; letter-spacing: 0.06em; line-height: 1.1; white-space: nowrap; }
-.otab.ltab.on { height: 22px; z-index: 4; background: var(--accent); border-color: var(--accent); }
-.otab.ltab.heard .dot { background: var(--accent); }
-.otab.ltab.on .dot { background: #0c1117; opacity: 0.3; }
-.otab.ltab.on.heard .dot { opacity: 1; }
+.ltab { position: absolute; top: 3px; width: 58px; height: 22px; display: flex; align-items: center; gap: 4px; padding: 0 5px; box-sizing: border-box; z-index: 3;
+  border: 2px solid #3a4452; border-bottom: 0; border-radius: 10px 10px 0 0; background: #1a1f27; color: var(--dim); cursor: pointer; }
+.ltab:hover { color: var(--text); background: #20262f; }
+.ltab .tx { display: flex; flex-direction: column; text-align: left; }
+.ltab .t1 { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; line-height: 1.1; white-space: nowrap; }
+.ltab .dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #3a4452; }
+.ltab.heard .dot { background: var(--accent); }
+.ltab.on { z-index: 4; color: #0c1117; background: var(--accent); border-color: var(--accent); }
+.ltab.on .dot { background: #0c1117; opacity: 0.3; }
+.ltab.on.heard .dot { opacity: 1; }
 /* beta 0.3.4: a wave selector drawn underlined (LFO 1): no frame, the wave shown is written in the accent colour with a line under it */
 .seg.uline { background: transparent; border: 0; border-bottom: 1px solid var(--card-edge); border-radius: 0; padding: 0; gap: 0; }
 .seg.uline button { border-radius: 0; background: transparent; border-bottom: 2px solid transparent; margin-bottom: -1px; box-shadow: none; }

@@ -324,7 +324,7 @@ ${controls([
 
 // ---------------------------------------------------------------- 7. LFOs
 function lfoChapter() {
-  return `<p>Three LFOs: <b>LFO 1</b>, and <b>LFO 2</b> and <b>LFO 3</b>, which share a card (the small ${ctl('2 | 3')} switch next to its title shows one or the other). They are shared by all voices and oscillators and run freely (not restarted by new notes): in a chord every voice moves together. For a movement that starts with each note use the MOD ENVELOPE.</p>
+  return `<p>Three LFOs: <b>LFO 1</b>, and <b>LFO 2</b> and <b>LFO 3</b>, which share a card (its two tabs, ${ctl('LFO 2')} and ${ctl('LFO 3')}, show one or the other; a lit dot on a tab says that LFO is on, its AMOUNT is not 0). They are shared by all voices and oscillators and run freely (not restarted by new notes): in a chord every voice moves together. For a movement that starts with each note use the MOD ENVELOPE.</p>
 <h3 id="lfo1">LFO 1</h3>
 ${controls([
     ['lfo_shape', `${ctl('SINE')}, ${ctl('TRI')}, ${ctl('SAW')}, ${ctl('SQR')} or ${ctl('S&amp;H')} (sample &amp; hold: a new random value per cycle).`, ''],
@@ -340,8 +340,8 @@ ${controls([
 <h3 id="lfo2">LFO 2 and LFO 3</h3>
 <p>LFO 2 and LFO 3 are the same LFO twice: each moves <b>one control, in every oscillator at once</b>, by the same amount: the one chosen in its ${ctl('TARGET')} menu — ${ctl('CUTOFF')}, ${ctl('SLOPE')}, ${ctl('RESO')}, ${ctl('KEY TRK')}, ${ctl('ENV AMT')} or ${ctl('VEL AMT')} of the scale filters, ${ctl('POSITION')}, ${ctl('WIDTH')} or ${ctl('DEPTH')} of the windows, the ${ctl('PHASE')}, ${ctl('SPARSITY')} or ${ctl('SRC WIDTH')} of the subtractive oscillators, the ${ctl('TILT')}, ${ctl('ODD BARS')}, ${ctl('EVEN BARS')} or ${ctl('SCALE SUS')} of the additive ones, the ${ctl('MORPH')} between two wavelets, or the ${ctl('FILTER CUTOFF')} or ${ctl('FILTER RESONANCE')} of the voice FILTER: every control of the wavelet oscillators, of the scale filter and of the voice filter. Each oscillator keeps its own base value; the LFO moves them in step. The two LFOs can aim at different controls (two independent movements) or at the same one (their moves add up). A target acts on <em>every</em> oscillator that has the control, and cannot be limited to one: aim it at a control that only one kind has (SPARSITY, PHASE or SRC WIDTH for the subtractive oscillators; TILT, ODD BARS, EVEN BARS or SCALE SUS for the additive one) to move that kind only.</p>
 ${controls([
-    ['lfo2_target', 'What LFO 2 moves (the menu next to its title; the mouse wheel steps through it). LFO 3 has the same menu.', 'LFO 1 already has CUTOFF and POSITION: give LFO 2 another target for two independent movements.'],
-    ['lfo2_shape', 'The same five shapes as LFO 1.', ''],
+    ['lfo2_target', 'What LFO 2 moves (the menu at the right of the three knobs; the mouse wheel steps through it). LFO 3 has the same menu.', 'LFO 1 already has CUTOFF and POSITION: give LFO 2 another target for two independent movements.'],
+    ['lfo2_shape', 'The same five shapes as LFO 1, on a knob with five positions after AMOUNT (SINE, TRI, SAW, SQR, S&amp;H; the name of the shape is under the knob; a click steps to the next shape).', ''],
     ['lfo2_rate', 'Speed, independent of LFO 1; note values with SYNC in the plug-in.', 'A rate that does not divide LFO 1\'s makes the two drift against each other.'],
     ['lfo2_amt', 'How far the target moves: up to ± this share of half its range, kept in range (FILTER CUTOFF: half of its ten octaves, so 30 % is about ± 1.5 octaves). 0 % (the default) switches LFO 2 off.', 'Start around 20–30 %.'],
     ['lfo3_target', 'What LFO 3 moves: the same menu as LFO 2. When both aim at the same control their moves add.', 'Use LFO 3 for a second control of the wavelet oscillators: LFO 2 on SPARSITY, LFO 3 on the WINDOW position, for instance.'],
@@ -425,6 +425,7 @@ function orientalChapter() {
 <ul>
 <li>Every note follows the tuning: the keys, the chord harp's notes (a chord on Rast has its half-flat third), the sub oscillator, the notes a MIDI file plays — except the <b>demo</b> and <b>EVALUATE SOUNDS</b>, which always play in equal temperament so that they are not out of tune with the music.</li>
 <li>TUNING, MAQAM and TONIC are <em>playing</em> settings, like CHORD MODE: they are automatable parameters, saved with the Live Set, and never part of a preset.</li>
+<li>Outside WEST the panel changes its colours: the accent (knob rings, tabs, scope, buttons) is <b>terracotta</b> for the subtractive oscillators and <b>turquoise</b> for the additive one, and the PLAY card has a pattern of octagons and eight-pointed stars.</li>
 <li>Examples. <b>Rast on C, Arabic</b>: play C D E F G A B C — E and B are a quarter tone low, the rest is as on the piano. <b>Bayati on D</b>: D then E, a quarter tone flat, F G A B♭ C. <b>Hicaz on D, Turkish</b>: D E♭ F♯ G A B♭ C with the commas of the Turkish system.</li>
 </ul>
 <p class="small muted">The tunings are the usual approximations of keyboards (half-flat = −50 cents; Turkish values rounded to a comma): they do not replace an oud or a ney, but they make the characteristic intervals playable on a piano keyboard. In the Arabic tuning Rast retunes the third and the seventh, Bayati and Saba the second degree, and Hijaz and Nahawand use the piano's semitones (nothing to retune); the Turkish tuning gives all five their commas.</p>`;
