@@ -91,7 +91,7 @@ function introChapter(E) {
   const a = isA(E);
   if (WAVELET_LINES.length !== SPEC.WAVELETS.length) throw new Error('manual: WAVELET_LINES does not match SPEC.WAVELETS');
   const hrefA = a ? '#tone' : 'manual-a.html#tone', hrefB = a ? 'manual-b.html#tone' : '#tone';
-  const wtable = table(['Wavelet', 'Taps', 'Vanishing moments', 'What you hear'], SPEC.WAVELETS.map((w, i) => [`<b>${w.name}</b>`, String(w.h.length), String(vanishing(w.h)), WAVELET_LINES[i]]), 'compact');
+  const wtable = table(['Wavelet', 'Taps', 'Vanishing moments', 'What you hear'], SPEC.WAVELETS.map((w, i) => [`<b>${w.name}</b>`, String(w.h.length), String(vanishing(w.h)), WAVELET_LINES[i]]), 'compact wavelets');
   return `<p><b>Okto MultiWave Synth</b> is a polyphonic synthesizer whose sounds are made of <b>wavelets</b> instead of sine waves. If you know subtractive synthesis — oscillator, filter, envelope — you already know the shape of its signal path; what is new is what an oscillator is made of, and what its filter takes away. This chapter explains both in plain words, then follows a note from the oscillators to the output. The chapters after it are the hands-on guide and the reference.</p>
 <h3 id="intro-wavelets">What is a wavelet?</h3>
 <p>A steady sound repeats a cycle, and the classic way to describe a cycle is <b>Fourier's</b>: a sum of sine waves, the harmonics, each lasting the whole cycle. Additive synthesis adds such sines, and an ordinary filter is a gain for each frequency. A sine knows exactly <em>which</em> frequency it is, but not <em>where</em> in the cycle: it is everywhere at once.</p>

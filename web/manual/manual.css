@@ -279,3 +279,4 @@ table.presets.toplist th:nth-child(2) { width: 24%; }
 table.presets.toplist th:nth-child(3) { width: 20%; }
 table.presets.toplist th:nth-child(4) { width: 20%; }
 .stars { color: #c98a00; white-space: nowrap; letter-spacing: .04em; }
+table.wavelets { min-width: 560px; }
