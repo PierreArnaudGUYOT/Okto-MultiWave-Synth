@@ -628,7 +628,7 @@ async function stepPanel() {
   if (!r) { rec('WARN', 'device element (panel aspect) found on the page', 'panel checks skipped'); return; }
   const P = (x, y) => [r.x + (x * r.w) / 1100, r.y + (y * r.h) / DEV_H];
   const all = [];
-  for (const s of SPEC.SECTIONS) for (const w of s.widgets) all.push(Object.assign({ sx: s.x + w.x, sy: s.y + w.y }, w));
+  for (const s of SPEC.SECTIONS) for (const w of s.widgets) all.push(Object.assign({ sx: s.x + w.x, sy: s.y + w.y, lfoPage: s.vis === 'lfo_view' ? (s.visOn ? 1 : 0) : -1 }, w));
   // cards and captions follow the spec (no CHORUS card, no 'SCOPE · SCALOGRAM', LFO 1 / LFO 2, the TARGET caption)
   const ui = await ev(`({ cards: [...document.querySelectorAll('#device .section .title')].map((e) => e.textContent),
     labels: [...document.querySelectorAll('#device .wlabel')].map((e) => e.textContent),
@@ -663,11 +663,20 @@ async function stepPanel() {
   // tempo SYNC is the plug-in's: neither its buttons nor its note-value knobs here; the hertz / seconds knobs at their place
   const vstOnly = all.filter((w) => w.only === 'vst' && w.param).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
   // (the widgets of beta 0.2 that show with a playing setting — BASS with CHORD MODE, MAQAM and TONIC with TUNING — are not sync twins)
-  const shown = all.filter((w) => w.vis && w.only !== 'vst' && w.param && !SPEC_BY_KEY[w.vis].perf).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2 }));
+  const shown = all.filter((w) => w.vis && w.only !== 'vst' && w.param && !SPEC_BY_KEY[w.vis].perf).map((w) => ({ name: SPEC_BY_KEY[w.param].name, x: w.sx + w.w / 2, y: w.sy + w.h / 2, lfoPage: w.lfoPage }));
   const probe = (list) => ev(`(() => { const d = document.getElementById('device').getBoundingClientRect();
     return ${JSON.stringify(list)}.map((w) => { const e = document.elementFromPoint(d.left + w.x * d.width / 1100, d.top + w.y * d.height / ${DEV_H});
       const k = e && e.closest('.w'); return { want: w.name, at: k ? (k.title || '').split(' — ')[0] || k.className : (e ? e.tagName : null), text: k ? k.textContent.trim() : '' }; }); })()`);
-  const atVst = await probe(vstOnly), atShown = await probe(shown);
+  const atVst = await probe(vstOnly), atShown = [];
+  // beta 0.3: the LFO 2 and LFO 3 pages share one place (sub-tab LFO 2 | LFO 3): each page is probed while it is shown
+  const lfoView0 = await ev(`WS_TEST.getParam('lfo_view')`);
+  for (const pg of [0, 1]) {
+    await ev(`WS_TEST.setParam('lfo_view', ${pg}); true`);
+    await sleep(250);
+    atShown.push(...(await probe(shown.filter((x) => (pg === 1 ? x.lfoPage === 1 : x.lfoPage !== 1)))));
+  }
+  await ev(`WS_TEST.setParam('lfo_view', ${lfoView0}); true`);
+  await sleep(150);
   const syncEls = await ev(`[...document.querySelectorAll('#device *')].filter((e) => /\\(sync\\)|^(Delay|LFO \\d) Sync/.test(e.title || '') || (e.children.length === 0 && /^SYNC$/.test(e.textContent.trim()))).length`);
   log(`  plug-in-only places: ${atVst.map((x) => `${x.want} -> ${x.at}${x.text ? ' "' + x.text + '"' : ''}`).join('; ')}`);
   check(syncEls === 0 && atVst.every((x) => x.at !== x.want && x.text !== 'SYNC'), `no SYNC button and no note-value knob (${vstOnly.length} plug-in-only widgets)`,
