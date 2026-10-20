@@ -248,6 +248,7 @@ int wmain(int argc, wchar_t** argv) {
   CreateDirectoryW(out.c_str(), nullptr); CreateDirectoryW(votesDir.c_str(), nullptr);
   DeleteFileW(votes.c_str());
   DeleteFileW((votesDir + L"\\ratings-location.txt").c_str());
+  SetEnvironmentVariableW(L"MW_WORKAREA", L"3840x2160");   // beta 0.3.2: the window fits the screen; the tests click at 100 %, so the screen is a large one (the fit is tested below)
   SetEnvironmentVariableW(L"MW_VOTES_DIR", votesDir.c_str());   // before loading: the plug-in's C runtime copies it
   const std::wstring presetsFile = votesDir + L"\\presets.txt";   // beta 0.3.1: the library file (the stars of the browser): never the player's own file
   DeleteFileW(presetsFile.c_str());
@@ -460,6 +461,22 @@ int wmain(int argc, wchar_t** argv) {
     h.view->getSize(&vr);
     check(h.plain(P_CHORD_MODE) == 0 && vr.getHeight() == kDeviceH, "CHORD MODE off: back to the panel's height", fmt("%.0f", vr.getHeight()));
     h.shot(out + L"\\11_chord_off.png");
+    {   // beta 0.3.2: while the zoom is "fit", the window is scaled to the screen (MW_WORKAREA = the size of a screen, developer tests): the whole panel, the chord card included, is on it
+      SetEnvironmentVariableW(L"MW_WORKAREA", L"1366x728");
+      h.ctrl->setParamNormalized(P_CHORD_MODE, 1.0); h.run(0.4);
+      ViewRect v1; h.view->getSize(&v1);
+      check(v1.getHeight() <= 728 - 100 && v1.getHeight() >= 500 && v1.getWidth() <= 1366 - 30, "fit: a 1366 x 728 screen shows the whole panel with the chord card", fmt("%.0f x %.0f (100 %% is 1100 x 1170)", (double)v1.getWidth(), (double)v1.getHeight()));
+      h.shot(out + L"\\12_fit_1366x728_chord.png");
+      h.ctrl->setParamNormalized(P_CHORD_MODE, 0.0); h.run(0.4);
+      ViewRect v2; h.view->getSize(&v2);
+      check(v2.getHeight() <= 728 - 100 && v2.getHeight() >= 500, "fit: the same screen with the panel alone", fmt("%.0f x %.0f", (double)v2.getWidth(), (double)v2.getHeight()));
+      h.shot(out + L"\\12_fit_1366x728.png");
+      SetEnvironmentVariableW(L"MW_WORKAREA", L"3840x2160");
+      h.ctrl->setParamNormalized(P_CHORD_MODE, 1.0); h.run(0.4);
+      h.ctrl->setParamNormalized(P_CHORD_MODE, 0.0); h.run(0.4);
+      ViewRect v3; h.view->getSize(&v3);
+      check(v3.getHeight() == kDeviceH && v3.getWidth() == 1100 + 420, "fit: a large screen keeps the panel at 100 % (with the browser: 1520 wide)", fmt("%.0f x %.0f", (double)v3.getWidth(), (double)v3.getHeight()));
+    }
   }
   std::printf("9. beta 0.2: the preset browser follows the preset box (the screenshot shows the browser on SuperModulation, the sound selected)\n");
   {

@@ -106,6 +106,8 @@ struct EditorWindow {
 const char* editorPlatformType();   // kPlatformTypeHWND / kPlatformTypeNSView
 double windowScaleOf(void* parent);   // Windows: the window's DPI / 96; macOS: 1 (the system scales points)
 double systemScale();
+// beta 0.3.2: the usable size in pixels (the taskbar left out) of the screen the host's window is on (parent null: the main screen); false when it is not known
+bool workAreaOf(void* parent, int& w, int& h);
 EditorWindow* createEditorWindow(EditorEvents* e, void* parent, int w, int h);
 
 }  // namespace ws

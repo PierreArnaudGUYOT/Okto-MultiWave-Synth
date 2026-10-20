@@ -408,6 +408,15 @@ bool WinWindow::saveDialog(SaveDlg& d, const wchar_t* title, bool withSection, c
 const char* editorPlatformType() { return Steinberg::kPlatformTypeHWND; }
 double windowScaleOf(void* parent) { return windowDpi((HWND)parent); }
 double systemScale() { return systemDpi(); }
+bool workAreaOf(void* parent, int& w, int& h) {
+  MONITORINFO mi = {}; mi.cbSize = sizeof mi;
+  HMONITOR mon = parent ? MonitorFromWindow((HWND)parent, MONITOR_DEFAULTTONEAREST) : MonitorFromPoint(POINT{0, 0}, MONITOR_DEFAULTTOPRIMARY);
+  RECT rc = {};
+  if (mon && GetMonitorInfoW(mon, &mi)) rc = mi.rcWork;
+  else if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &rc, 0)) return false;
+  w = (int)(rc.right - rc.left); h = (int)(rc.bottom - rc.top);
+  return w > 0 && h > 0;
+}
 EditorWindow* createEditorWindow(EditorEvents* e, void* parent, int w, int h) { return new WinWindow(e, (HWND)parent, w, h); }
 
 }  // namespace ws

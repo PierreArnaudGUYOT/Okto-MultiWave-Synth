@@ -98,5 +98,12 @@ module.exports = function cases(SPEC, C) {
   va('oriental Arabic Rast on C, notes', { mt_mode: 1, mt_scale: 0, mt_tonic: 0 });
   va('oriental Turkish Hicaz on D, glide', { mt_mode: 2, mt_scale: 2, mt_tonic: 2, v_glide: 0.15, v_porta: 1, sub_level: 0.3 });
   va('oriental Arabic Bayati on D with chord keyboard', { mt_mode: 1, mt_scale: 1, mt_tonic: 2, chord_mode: 1, chord_bass: 1 }, { kind: 'chord' });
+  // beta 0.3.2: loud dense chords played with MIDI notes (LOUD_SCRIPT: a triad, then five and eight notes at velocity 1, then the notes released in two steps): the chord compensation
+  // (core.js polyComp) and the peak guard act. The presets are the loudest ones of the crackle measure (tools/crackle.js) and a few of every age; two variants change the voices and the unison.
+  [3, 40, 120, 200, 360, 500, 641, 700, 900, 1105, 1170, 1181].forEach(i => add('loud chord: ' + SPEC.PRESETS[i].name, SPEC.PRESETS[i].values, { kind: 'loud' }));
+  variant('loud chord, 16 voices, unison 4, wide', { v_voices: 16, v_unison: 4, v_detune: 0.3, v_width: 1, fx_rmix: 0.3, ch_mix: 0.5 }, { kind: 'loud' }, 20);
+  variant('loud chord, 3 voices (no compensation)', { v_voices: 3 }, { kind: 'loud' }, 90);
+  variant('loud chord, master +6 dB: the peak guard rides the gain', { master: 6 }, { kind: 'loud' }, 5);
+  variant('loud chord, master +6 dB, slow attack: the guard and the soft limiter', { master: 6, amp_a: 0.2 }, { kind: 'loud' }, 600);
   return out;
 };

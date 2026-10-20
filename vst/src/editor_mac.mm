@@ -487,6 +487,7 @@ static id menuTarget() {
 const char* editorPlatformType() { return Steinberg::kPlatformTypeNSView; }
 double windowScaleOf(void*) { return 1; }
 double systemScale() { return 1; }
+bool workAreaOf(void*, int&, int&) { return false; }   // beta 0.3.2: the window keeps its size (macOS is not built in this version)
 EditorWindow* createEditorWindow(EditorEvents* e, void* parent, int w, int h) { return new MacWindow(e, (__bridge NSView*)parent, w, h); }
 
 }  // namespace ws

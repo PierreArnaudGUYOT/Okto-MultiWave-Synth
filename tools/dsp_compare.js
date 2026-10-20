@@ -32,6 +32,10 @@ const LIVE_SCRIPT = [
   [0, 0, 48, 1], [0, 0, 67, 0.9], [12800, 0, 51, 1], [25600, 0, 50, 1], [38400, 0, 59, 1], [51200, 0, 53, 1],
   [64000, 5, 'chord_bass', 0], [70400, 5, 'chord_bass', 1], [76800, 0, 56, 1], [83200, 5, 'chord_voicing', 0], [89600, 0, 49, 1],
   [96000, 1, 67, 0], [100000, 4, 0, 0]];
+// kind 'loud' (beta 0.3.2): dense chords played with MIDI notes at velocity 1: [offset, 1 on / 0 off, note, velocity]
+const LOUD_SCRIPT = [
+  [0, 1, 72, 1], [0, 1, 76, 1], [0, 1, 79, 1], [19200, 1, 84, 1], [19200, 1, 88, 1], [38400, 1, 60, 1], [38400, 1, 64, 1], [38400, 1, 67, 1],
+  [72000, 0, 72, 0], [72000, 0, 76, 0], [72000, 0, 79, 0], [72000, 0, 84, 0], [72000, 0, 88, 0], [96000, 0, 60, 0], [96000, 0, 64, 0], [96000, 0, 67, 0]];
 let worst = 0, fails = 0;
 cases.forEach((c, idx) => {
   const params = Float64Array.from(c.values);
@@ -44,6 +48,8 @@ cases.forEach((c, idx) => {
       for (const [eo, kind, note, vel] of LIVE_SCRIPT) if (eo === o) {
         if (kind === 0) eng.keyOn(note, vel); else if (kind === 1) eng.keyOff(note); else if (kind === 4) eng.allNotesOff(); else eng.setParam(C.P[note], vel);
       }
+    } else if (c.kind === 'loud') {
+      for (const [eo, on, note, vel] of LOUD_SCRIPT) if (eo === o) { if (on) eng.noteOn(note, vel); else eng.noteOff(note); }
     } else if (c.kind === 'chord') {
       for (const [eo, kind, note, vel] of CHORD_SCRIPT) if (eo === o) {
         if (kind === 0) eng.keyOn(note, vel); else if (kind === 1) eng.keyOff(note);

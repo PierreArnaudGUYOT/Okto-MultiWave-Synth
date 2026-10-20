@@ -82,6 +82,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   tresult PLUGIN_API attached(void* parent, FIDString type) override {
     if (!parent || isPlatformTypeSupported(type) != kResultTrue || win) return kResultFalse;
     if (!hostScale) dpiScale = windowScaleOf(parent);
+    parentWin = parent; updateAuto();
     int W = pxW(), H = pxH();
     win = createEditorWindow(this, parent, W, H);
     if (!win) return kResultFalse;
@@ -109,6 +110,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   tresult PLUGIN_API getSize(ViewRect* size) override {
     if (!size) return kInvalidArgument;
     if (!win && !hostScale) dpiScale = systemScale();
+    if (!win) updateAuto();
     reportedW = pxW(); reportedH = pxH();
     *size = ViewRect(0, 0, reportedW, reportedH);
     return kResultOk;
@@ -143,6 +145,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   IPlugFrame* frame = nullptr;
   EditorWindow* win = nullptr;   // the system window while attached
   double dpiScale = 1; bool hostScale = false;
+  void* parentWin = nullptr;   // the host's window (the screen it is on)
+  double autoZ = 1;            // beta 0.3.2: the zoom that fits the window to the screen (the zoom chosen is 0 = fit)
   int reportedW = 0, reportedH = 0;
   std::vector<Item> items;
   // state
@@ -166,13 +170,29 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   int hover = -1, drag = -1; float dragY = 0; double dragNorm = 0; bool dragShift = false, dragMoved = false;   // hover -2 = SAVE PRESET
   int mouseNote = -1; int wheelDrag = -1;  // 0 bend, 1 mod
 
-  double scale() const override { return dpiScale * host->zoom(); }
+  double effZoom() const { const double z = host->zoom(); return z > 0 ? z : autoZ; }
+  double scale() const override { return dpiScale * effZoom(); }
+  // beta 0.3.2 (the panel did not fit on a 1080-pixel screen): while the zoom is "fit", the window is scaled down so that the whole panel (with the chord card when
+  // CHORD MODE is on) is on the screen: 100 pixels of the screen's height are left for the window's bar and the host's own, never more than 100 % (a larger window is
+  // the player's choice), never less than 50 %. MW_WORKAREA=WxH: developer tests (a screen of that size).
+  void updateAuto() {
+    if (host->zoom() > 0) return;
+    int w = 0, h = 0;
+    const std::wstring ov = envPath(L"MW_WORKAREA");
+    if (!ov.empty()) { if (std::swscanf(ov.c_str(), L"%dx%d", &w, &h) != 2) w = h = 0; }
+    else if (!workAreaOf(parentWin, w, h)) w = h = 0;
+    if (w < 300 || h < 300) { autoZ = 1; return; }
+    const double ds = dpiScale > 0 ? dpiScale : 1;
+    double z = std::min({1.0, (h - 100 * ds) / (devH() * ds), (w - 30 * ds) / (kDeviceW * ds)});
+    autoZ = std::max(0.5, std::floor(z * 100) / 100);
+  }
   int pxW() const { return (int)std::lround((kDeviceW + (host->browserOpen() ? kBrowserW : 0)) * scale()); }   // + the browser
   float devH() const { return kDeviceH + (chordOn ? kChordH : 0); }   // the panel's logical height: CHORD MODE adds the chord card
   int pxH() const { return (int)std::lround(devH() * scale()); }
   uint32_t accent() const { return mode == 0 ? kAccentA : kAccentB; }
 
   void requestResize() {
+    updateAuto();
     ViewRect r(0, 0, pxW(), pxH());
     reportedW = r.getWidth(); reportedH = r.getHeight();
     if (frame) frame->resizeView(this, &r);
@@ -924,7 +944,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
 
   void drawZoom(Canvas& g, R r) {
     inset(g, r, 5);
-    text(g, std::to_wstring((int)std::lround(host->zoom() * 100)) + L"%", r, 9.5f, true, rgb(kDim));
+    text(g, (host->zoom() > 0 ? L"" : L"FIT ") + std::to_wstring((int)std::lround(effZoom() * 100)) + L"%", r, 9.5f, true, rgb(kDim));
   }
 
   // ---------------------------------------------------------------- interaction
@@ -2492,12 +2512,16 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   void zoomMenu(const Item& it) {
-    const int z[] = {70, 80, 90, 100, 115, 130, 150};
+    const int z[] = {50, 60, 70, 80, 90, 100, 115, 130, 150};
     std::vector<MenuItem> m;
-    int cur = (int)std::lround(host->zoom() * 100);
+    const bool fit = host->zoom() <= 0;
+    const int cur = fit ? 0 : (int)std::lround(host->zoom() * 100);
+    m.push_back(MenuItem::item(L"Fit the window to the screen (" + std::to_wstring((int)std::lround(autoZ * 100)) + L"%)", 1, fit));
+    m.push_back(MenuItem::sep());
     for (int k : z) m.push_back(MenuItem::item(L"Window size " + std::to_wstring(k) + L"%", k, k == cur));
     const int cmd = win ? win->popupMenu(m, it.r.x, it.r.y + it.r.h) : 0;
-    if (cmd > 0 && cmd != cur) { host->setZoom(cmd / 100.0); requestResize(); }
+    if (cmd == 1 && !fit) { host->setZoom(0); requestResize(); }
+    else if (cmd > 1 && cmd != cur) { host->setZoom(cmd / 100.0); requestResize(); }
   }
 
   void openManual(const wchar_t* file) {

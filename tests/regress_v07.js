@@ -17,7 +17,7 @@ function render(Core, values) {
   for (let o = 0; o < n; o += blk) {
     if (o === 0) eng.noteOn(60, 0.9);
     if (o === 36000) eng.noteOff(60);
-    if (o === 48000) { eng.noteOn(57, 0.8); eng.noteOn(64, 0.8); eng.noteOn(67, 0.8); }
+    if (o === 48000) { eng.noteOn(64, 0.8); eng.noteOn(67, 0.8); }   // two notes over the first one's release: three voices (beta 0.3.2: a denser chord is scaled down, see core.js polyComp)
     if (o === 105600) eng.allNotesOff();
     eng.process(L.subarray(o, o + blk), R.subarray(o, o + blk), Math.min(blk, n - o));
   }

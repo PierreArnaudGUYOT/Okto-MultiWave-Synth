@@ -7,7 +7,7 @@ VST3 `pluginterfaces` headers only, and the web driver talks to Edge directly ov
 ```
 tests/
   quick.js       the 20-second check to run after every change (syntax, generated files, engine, VST3 host sections, web app)
-  regress_v07.js the 22 TOP Sounds against the published Wavelet Synthesizer beta 0.7 engine (tests/ref/v07/), within 1.5e-7
+  regress_v07.js the 22 TOP Sounds against the published Wavelet Synthesizer beta 0.7 engine (tests/ref/v07/), within 2.1e-7 (one note, then two notes over its release: up to three voices)
   idle_skip.js   the engine's idle rule, the smoothing at other sample rates, hostile velocities
   vst3host/      VST3 test host (C++, llvm-mingw, static exe)
     host.cpp, host_util.h, host_objects.h, build.bat

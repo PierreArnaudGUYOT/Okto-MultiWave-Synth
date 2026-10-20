@@ -687,7 +687,8 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
     if (!state) return kInvalidArgument;
     uint32_t magic = 0; float z = 1; int32_t dt = 0;
     if (readAll(state, &magic, 4) && magic == kCtlMagic2 && readAll(state, &z, 4)) {
-      if (std::isfinite(z)) zoomFactor = std::min(2.0f, std::max(0.5f, z));
+      // beta 0.3.2: 0 = fit the window to the screen. A state saved by an earlier beta holds 1 (its default, before the fit existed): it is the fit too
+      if (std::isfinite(z)) zoomFactor = (z <= 0 || z == 1.0f) ? 0.0f : std::min(2.0f, std::max(0.5f, z));
       int k = -1;
       uint32_t len = 0; char name[512];
       if (readAll(state, &dt, 4) && readAll(state, &len, 4) && len < sizeof name && (len == 0 || readAll(state, name, (int32)len))) {
@@ -852,7 +853,8 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
   bool browserOpen() override { return browserOpen_; }
   void setBrowserOpen(bool open) override { browserOpen_ = open; }
   double zoom() override { return zoomFactor; }
-  void setZoom(double z) override { zoomFactor = (float)z; }
+  // 0 = fit the window to the screen; a size chosen by the player (100 % is stored as 1.0001 so that it is not taken for the fit)
+  void setZoom(double z) override { zoomFactor = z <= 0 ? 0.0f : z == 1.0 ? 1.0001f : (float)z; }
   void editorClosed() override {}
 
  private:
@@ -866,7 +868,7 @@ class Controller : public IEditController, public IConnectionPoint, public IMidi
   std::string userName;   // the sound of the user bank shown in the browser ("" = the factory preset presetIdx)
   std::string formerName;   // beta 0.5: a factory preset of an older version, no longer in this one (its saved name)
   bool browserOpen_ = true;   // the preset browser panel of the editor (beta 0.3)
-  float zoomFactor = 1.0f;
+  float zoomFactor = 0.0f;   // beta 0.3.2: the window fits the screen until the player chooses a size
 
   // every non-hidden parameter to these plain values, sent to the host as one group edit (Okto MultiWave Synth: the chord keyboard's
   // settings stay as they are: a preset is a sound, not a playing setup)

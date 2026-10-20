@@ -350,6 +350,15 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
 - **Live scope / scalogram**: the engine publishes, for the last voice, the live gains and window of every oscillator that plays (`Display.sg / swin / mask`, `SharedState.sg / swin / smask`, JS `disp.sg`); `globalCycle` / `scopeBands` take an optional
   `live` (`ScopeLive` in C++) and use it instead of the static gains for the oscillators it names (`editor.cpp scopeLive`, `ui.js liveSlots()`). `tests/display_live.js`.
 
+
+### 3.3k BETA 0.3.2: NO CRACKLE ON A LOUD CHORD, THE WINDOW FITS THE SCREEN
+- **Output stage** (`web/js/core.js` / `vst/src/dsp.h`, operation for operation, cross-check kind `loud` in `tools/dsp_cases.js` + `dsp_compare.js` + `dsp_render.cpp`): `polyComp` (from the Wavelet Synthesizer beta 0.7.1: gain sqrt(POLY_FREE / nv), nv = the voices' energies over the loudest's,
+  20 / 50 ms; the notes of the chord keyboard, `vc.gain != 1`, are not counted: `chordTrim` scales them) after the voices, and the **peak guard** just before `softLimit` (GUARD_T 0.9, attack 0.3 ms, hold 15 ms, release 150 ms; gain exactly 1 below 0.9; an idle
+  skip and `reset` set it back to 1). Tests: `tests/regress_v07.js` plays one note then two notes over its release (three voices: the TOP Sounds stay within 2.1e-7 of beta 0.7; a denser chord is changed on purpose).
+- **Measures**: `tools/crackle.js` (every preset, a chord at velocity 1: `d2` = waveform change after a gain fit per 20 ms, `d3` = its part above 3 kHz = the crackle; `--notes`, `--guard off`, `--nums`), `tools/supermod/loud.js` (peak of five loud chords at the preset's master;
+  `--target 1.0 --apply` lowers the masters of presets numbered 501 and up by whole dB, run twice in beta 0.3.2: 1.15 then 1.0; 321 presets).
+- **Window fit**: `zoomFactor` 0 = FIT (`plugin.cpp`; state "WSC2" stores 0; an older state holding exactly 1 reads as FIT, a chosen 100 % is stored as 1.0001); `editor.cpp updateAuto()` (work area of the monitor of the host window through `workAreaOf`, 100 px kept,
+  clamp 0.5..1, in whole percents; recomputed in `requestResize`, `attached`, `getSize`); menu "Fit the window to the screen" + 50..150 %. Developer tests: `MW_WORKAREA=WxH` (a screen of that size; `vote_session` sets 3840x2160 and tests 1366x728).
 ### 3.4 Table rebuilds
 - Structural changes rebuild tables **off the audio thread** and switch with a 512-sample crossfade (`setTables`).
 - Web: `app.js` builds the tables in a **Worker** (`startWorker` / `scheduleBuild` / `deliver`; a `data:` URL made of

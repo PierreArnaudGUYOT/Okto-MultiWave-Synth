@@ -32,6 +32,16 @@ function WSCoreFactory(SPEC) {
   const LN1000 = Math.log(1000);
   const VOICE_GAIN = 0.4;   // about -8 dB per voice: headroom for chords
   const LIMIT_T = 0.7;      // output soft limiter: transparent below -3 dBFS, never above 0 dBFS
+  // beta 0.3.2 (the crackle of a loud chord): in front of the soft limiter, a peak guard rides the output gain so that the signal that reaches the limiter never goes
+  // past GUARD_T (the limiter's knee flattens a chord that sums to two or three times its knee into a buzz). Below GUARD_T the gain is exactly 1 (bit-identical with
+  // the earlier versions); above it the gain falls with GUARD_ATT (s), is held for GUARD_HOLD (s) so that it does not ripple at the pitch of the sound, and comes back
+  // with GUARD_REL (s).
+  const GUARD_T = 0.9, GUARD_ATT = 0.0003, GUARD_HOLD = 0.015, GUARD_REL = 0.15;
+  // beta 0.3.2 (the crackle of a loud chord): the presets' masters are set for about three notes; a denser chord drove the soft limiter into audible distortion (the same fix as
+  // the Wavelet Synthesizer's beta 0.7.1). The voice sum is scaled by sqrt(POLY_FREE / n) when n > POLY_FREE voices sound (n weighted by their energy relative to the loudest one,
+  // so release tails count little), smoothed: up to POLY_FREE voices nothing changes.
+  const POLY_FREE = 3;
+  const POLY_DOWN = 0.02, POLY_UP = 0.05;   // time constants (s) of the compensation going down / back up
   const CH_BASE = 0.006, CH_DEPTH = 0.003, CH_FAST = 9.7;   // chorus: base delay, sweep per unit of depth (s), fast/slow LFO ratio
   // the three chorus taps are 120 degrees apart: sin(a + 2*pi*c/3) = sin(a) * CH_COS[c] + cos(a) * CH_SIN[c]
   const CH_COS = [1, -0.5, -0.5], CH_SIN = [0, 0.8660254037844386, -0.8660254037844386];
@@ -642,6 +652,10 @@ function WSCoreFactory(SPEC) {
     this.damp = sr === 48000 ? 0.25 : Math.pow(0.25, 48000 / sr);
     this.quiet = 0; this.quietNeed = 1 << 30;   // samples of silence so far, and how many an idle skip needs (set by every block)
     this.vol = Math.exp(this.p[P.master] * (Math.LN10 / 20));
+    this.guard = { t: GUARD_T, att: GUARD_ATT, hold: GUARD_HOLD, rel: GUARD_REL };   // (a test can change them before the first block)
+    this.gd = 1; this.gHold = 0;   // the guard's gain and the samples it is still held for
+    this.polyG = 1;   // the chord compensation (1 = none)
+    this.polyDown = 1 - Math.exp(-1 / (POLY_DOWN * sr)); this.polyUp = 1 - Math.exp(-1 / (POLY_UP * sr));
     this.dcR = 1 - 2 * Math.PI * 10 / sr; this.dcxL = 0; this.dcyL = 0; this.dcxR = 0; this.dcyR = 0;
     this.chLen = Math.ceil(sr * 0.03) + 4;
     this.chBuf = new Float32Array(this.chLen); this.chW = 0; this.chPh = 0; this.chPh2 = 0;
@@ -790,6 +804,7 @@ function WSCoreFactory(SPEC) {
     for (const b of this.aB) b.fill(0);
     this.chBuf.fill(0);
     this.quiet = 0;
+    this.polyG = 1; this.gd = 1; this.gHold = 0;
   };
 
   // ---------------------------------------------------------------- Okto MultiWave Synth: the chord layer
@@ -880,6 +895,35 @@ function WSCoreFactory(SPEC) {
     const strum = this.p[P.chord_strum] * this.sr;   // STRUM: samples between two notes, lowest first
     for (let k = 0; k < n; k++) { this.chordOn[k] = 0; this.strumDue[k] = this.clock + k * strum; }
     this.strumTick();   // the first note starts now (all of them without STRUM)
+  };
+  // beta 0.3.2 (the crackle of a loud chord): scales this block's voice sum (before the effects) when more than POLY_FREE voices sound. nv = the sum of the voices' energies over the
+  // loudest one's (each voice's level at the end of the block, with its velocity gain; the notes of the chord keyboard are left out: chordTrim already scales them): equal voices count 1 each, a release tail 20 dB down counts 0.01. Target
+  // sqrt(POLY_FREE / nv), reached with POLY_DOWN / POLY_UP per sample; it snaps to the target within 1e-6, so up to POLY_FREE voices the gain is exactly 1 and the sound is
+  // bit-identical with beta 0.3.1; with no voice sounding it is 1 at once (the next note starts unscaled).
+  E.polyComp = function (L, R, n) {
+    const p = this.p;
+    let amax = 0, sum = 0, any = false;
+    for (let k = 0; k < MAXV; k++) {
+      const vc = this.voices[k];
+      if (!vc.active || vc.gain !== 1) continue;   // a chord keyboard note has its own level (chordTrim): it is not counted again
+      any = true;
+      const a = vc.amp.level * (1 - p[P.amp_vel] * (1 - vc.vel));
+      if (a > amax) amax = a;
+      sum += a * a;
+    }
+    if (!any) { this.polyG = 1; return; }
+    const nv = amax > 0 ? sum / (amax * amax) : 0;
+    // + 1e-6: three equal voices give nv = 3.0000000000000004 (rounding), which must still mean "no compensation"
+    const gT = nv > POLY_FREE + 1e-6 ? Math.sqrt(POLY_FREE / nv) : 1;
+    let g = this.polyG;
+    if (g === 1 && gT === 1) return;
+    const c = gT < g ? this.polyDown : this.polyUp;
+    for (let i = 0; i < n; i++) {
+      g += (gT - g) * c;
+      if (Math.abs(gT - g) < 1e-6) g = gT;
+      L[i] *= g; R[i] *= g;
+    }
+    this.polyG = g;
   };
   // at every block: the chord notes whose time has come (the strum; block boundaries, identical in both engines)
   E.strumTick = function () {
@@ -1362,6 +1406,7 @@ function WSCoreFactory(SPEC) {
     if (this.quiet >= this.quietNeed && !this.prev && !this.anyVoice()) {
       outL.fill(0, o, o + n); outR.fill(0, o, o + n);
       this.vol = Math.exp(p[P.master] * (Math.LN10 / 20)); this.dlyT = this.delaySec() * this.sr;
+      this.gd = 1; this.gHold = 0;
       this.publish(this.disp.peakL, this.disp.peakR, 0);
       return;
     }
@@ -1408,6 +1453,7 @@ function WSCoreFactory(SPEC) {
       voices |= 1 << k;
     }
     if (fading) { this.fade += n * fadeInc; if (this.fade >= 1) { this.fade = 1; this.prev = null; } }
+    this.polyComp(L, R, n);
 
     // ---- effects
     const drive = p[P.fx_drive], k = Math.exp(drive * 24 * (Math.LN10 / 20)), comp = 0.5 / Math.tanh(0.5 * k);
@@ -1430,6 +1476,8 @@ function WSCoreFactory(SPEC) {
     }
     const cB = this.cB, cLen = this.cLen, cI = this.cI, cF = this.cF, aB = this.aB, aLen = this.aLen, aI = this.aI;
     let pkL = this.disp.peakL, pkR = this.disp.peakR, bpk = 0;
+    const gG = this.guard, gGt = gG.t, kGa = rateCoef(1 - Math.exp(-1 / (gG.att * 48000)), this.sr), kGr = rateCoef(1 - Math.exp(-1 / (gG.rel * 48000)), this.sr), gHoldN = Math.round(gG.hold * this.sr);
+    let gd = this.gd, gHold = this.gHold;
     for (let i = 0; i < n; i++) {
       let l = L[i], r = R[i];
       if (drive > 0) {
@@ -1492,12 +1540,19 @@ function WSCoreFactory(SPEC) {
       const yl = l - this.dcxL + this.dcR * this.dcyL; this.dcxL = l; this.dcyL = Math.abs(yl) < 1e-20 ? 0 : yl; l = this.dcyL;
       const yr = r - this.dcxR + this.dcR * this.dcyR; this.dcxR = r; this.dcyR = Math.abs(yr) < 1e-20 ? 0 : yr; r = this.dcyR;
       this.vol += (volT - this.vol) * kVol;
-      l = softLimit(l * this.vol); r = softLimit(r * this.vol);
+      l *= this.vol; r *= this.vol;
+      // the peak guard (beta 0.3.2): the gain that keeps the larger channel under gT before the soft limiter
+      const aq = Math.abs(l) > Math.abs(r) ? Math.abs(l) : Math.abs(r), gT = aq > gGt && aq < 1e9 ? gGt / aq : 1;
+      if (gT < gd) { gd += (gT - gd) * kGa; gHold = gHoldN; }
+      else if (gHold > 0) gHold--;
+      else if (gd < 1) { gd += (gT - gd) * kGr; if (gT === 1 && 1 - gd < 1e-9) gd = 1; }
+      l = softLimit(l * gd); r = softLimit(r * gd);
       outL[o + i] = l; outR[o + i] = r;
       const al = Math.abs(l), ar = Math.abs(r);
       if (al > pkL) pkL = al; if (ar > pkR) pkR = ar;
       if (al > bpk) bpk = al; if (ar > bpk) bpk = ar;
     }
+    this.gd = gd; this.gHold = gHold;
     // how long the output has been silent, and how long it must stay so before the block is skipped
     if (voices === 0 && !fading && bpk < QUIET_PEAK) this.quiet += n; else this.quiet = 0;
     this.quietNeed = Math.ceil(1.5 * (dmix > 0 || fb > 0 ? Math.max(dTarget, this.dlyT) : 0)) + QUIET_EXTRA;

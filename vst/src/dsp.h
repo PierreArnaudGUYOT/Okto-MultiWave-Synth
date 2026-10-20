@@ -40,6 +40,15 @@ constexpr double LN10 = 2.302585092994046;   // Math.LN10
 constexpr double LVL_EPS = 1e-5;   // an oscillator whose smoothed level is below this is not rendered
 constexpr double VOICE_GAIN = 0.4;   // about -8 dB per voice: headroom for chords
 constexpr double LIMIT_T = 0.7;      // output soft limiter: transparent below -3 dBFS, never above 0 dBFS
+// beta 0.3.2 (the crackle of a loud chord): in front of the soft limiter, a peak guard rides the output gain so that the signal that reaches the limiter never goes past GUARD_T
+// (core.js, operation for operation). Below GUARD_T the gain is exactly 1 (bit-identical with the earlier versions); above it the gain falls with GUARD_ATT (s), is held for
+// GUARD_HOLD (s) so that it does not ripple at the pitch of the sound, and comes back with GUARD_REL (s).
+constexpr double GUARD_T = 0.9, GUARD_ATT = 0.0003, GUARD_HOLD = 0.015, GUARD_REL = 0.15;
+// beta 0.3.2: the presets' masters are set for about three notes; a denser chord drove the soft limiter into audible distortion (the same fix as the Wavelet Synthesizer's beta 0.7.1).
+// The voice sum is scaled by sqrt(POLY_FREE / n) when n > POLY_FREE voices sound (n weighted by their energy relative to the loudest one, so release tails count little), smoothed:
+// up to POLY_FREE voices nothing changes.
+constexpr double POLY_FREE = 3;
+constexpr double POLY_DOWN = 0.02, POLY_UP = 0.05;   // time constants (s) of the compensation going down / back up
 constexpr double PI = 3.14159265358979323846;
 constexpr double CH_BASE = 0.006, CH_DEPTH = 0.003, CH_FAST = 9.7;   // chorus: base delay, sweep per unit of depth (s), fast/slow LFO ratio
 // the three chorus taps are 120 degrees apart: sin(a + 2*pi*c/3) = sin(a) * CH_COS[c] + cos(a) * CH_SIN[c]
@@ -772,6 +781,9 @@ class Engine {
       for (int k = 0; k < 4; k++) { AP& a = aps[ch * 4 + k]; a.buf.assign((size_t)std::lround((aT[k] + ch * 23) * sc), 0.0f); a.i = 0; }
     }
     kDly = rateCoef(0.0005, sr); kLp = rateCoef(0.35, sr); kVol = rateCoef(0.002, sr);
+    polyG = 1; polyDown = 1 - std::exp(-1 / (POLY_DOWN * sr)); polyUp = 1 - std::exp(-1 / (POLY_UP * sr));
+    gd = 1; gHold = 0;
+    kGa = rateCoef(1 - std::exp(-1 / (GUARD_ATT * 48000)), sr); kGr = rateCoef(1 - std::exp(-1 / (GUARD_REL * 48000)), sr); gHoldN = (int)std::lround(GUARD_HOLD * sr);
     damp = sr == 48000 ? 0.25 : std::pow(0.25, 48000 / sr);
     quiet = 0; quietNeed = 1e18;   // samples of silence so far, and how many an idle skip needs (set by every block)
     vol = std::exp(p[P_MASTER] * (LN10 / 20));
@@ -796,6 +808,7 @@ class Engine {
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
     dcxL = dcyL = dcxR = dcyR = 0;
     quiet = 0;
+    polyG = 1; gd = 1; gHold = 0;
     started = false;
     for (int s = 0; s < NS; s++) lvlSm[s] = p[kSlots[s].lvl];
   }
@@ -911,6 +924,7 @@ class Engine {
     for (auto& a : aps) std::fill(a.buf.begin(), a.buf.end(), 0.0f);
     std::fill(chBuf.begin(), chBuf.end(), 0.0f);
     quiet = 0;
+    polyG = 1; gd = 1; gHold = 0;
   }
 
   // ---------------------------------------------------------------- Okto MultiWave Synth: the chord layer (core.js keyOn, 1:1)
@@ -1064,6 +1078,8 @@ class Engine {
   Comb combs[16]; AP aps[8];
   double vol = 0.5, dcR = 0.999, dcxL = 0, dcyL = 0, dcxR = 0, dcyR = 0;
   double kDly = 0.0005, kLp = 0.35, kVol = 0.002, damp = 0.25;   // smoothing per sample (setSampleRate)
+  double polyG = 1, polyDown = 0, polyUp = 0;                    // beta 0.3.2: chord compensation
+  double gd = 1, kGa = 0, kGr = 0; int gHold = 0, gHoldN = 0;      // beta 0.3.2: the peak guard (gain, its coefficients, the samples it is still held for)
   double quiet = 0, quietNeed = 1e18;   // the idle rule (block)
   std::vector<float> chBuf; int chLen = 0, chW = 0; double chPh = 0, chPh2 = 0;   // triple chorus
   float bufL[CTRL], bufR[CTRL];
@@ -1514,6 +1530,35 @@ class Engine {
     }
   }
 
+  // beta 0.3.2 (the crackle of a loud chord): scales this block's voice sum (before the effects) when more than POLY_FREE voices sound (core.js polyComp, operation for operation).
+  // nv = the sum of the voices' energies over the loudest one's (each voice's level at the end of the block, with its velocity gain; the notes of the chord keyboard are left out:
+  // chordTrim already scales them); target sqrt(POLY_FREE / nv) reached with POLY_DOWN / POLY_UP per sample, snapped within 1e-6: up to POLY_FREE voices the gain is exactly 1
+  // (bit-identical with beta 0.3.1); with no voice sounding it is 1 at once.
+  void polyComp(float* L, float* R, int n) {
+    double amax = 0, sum = 0; bool any = false;
+    for (int k = 0; k < MAXV; k++) {
+      const Voice& vc = voices[k];
+      if (!vc.active || vc.gain != 1) continue;   // a chord keyboard note has its own level (chordTrim): it is not counted again
+      any = true;
+      const double a = vc.amp.level * (1 - p[P_AMP_VEL] * (1 - vc.vel));
+      if (a > amax) amax = a;
+      sum += a * a;
+    }
+    if (!any) { polyG = 1; return; }
+    const double nv = amax > 0 ? sum / (amax * amax) : 0;
+    // + 1e-6: three equal voices give nv = 3.0000000000000004 (rounding), which must still mean "no compensation"
+    const double gT = nv > POLY_FREE + 1e-6 ? std::sqrt(POLY_FREE / nv) : 1;
+    double g = polyG;
+    if (g == 1 && gT == 1) return;
+    const double c = gT < g ? polyDown : polyUp;
+    for (int i = 0; i < n; i++) {
+      g += (gT - g) * c;
+      if (std::fabs(gT - g) < 1e-6) g = gT;
+      L[i] = (float)(L[i] * g); R[i] = (float)(R[i] * g);
+    }
+    polyG = g;
+  }
+
   void block(float* outL, float* outR, int o, int n) {
     strumTick(); clock += n;   // Okto MultiWave Synth: the strummed chord notes whose time has come
     started = true;
@@ -1526,6 +1571,7 @@ class Engine {
     if (quiet >= quietNeed && !hasPrev && !anyVoice()) {
       std::fill(outL + o, outL + o + n, 0.0f); std::fill(outR + o, outR + o + n, 0.0f);
       vol = std::exp(p[P_MASTER] * (LN10 / 20)); dlyT = delaySec() * sr;
+      gd = 1; gHold = 0;
       publish(disp.peakL, disp.peakR, 0);
       return;
     }
@@ -1578,6 +1624,7 @@ class Engine {
       fade += n * fadeInc;
       if (fade >= 1) { fade = 1; hasPrev = false; if (nReleased < 4) released[nReleased++] = prev.owner; }
     }
+    polyComp(bufL, bufR, n);
 
     // effects
     const double drive = p[P_FX_DRIVE], kd = std::exp(drive * 24 * (LN10 / 20)), comp = 0.5 / std::tanh(0.5 * kd);
@@ -1598,6 +1645,7 @@ class Engine {
     }
     float pkL = disp.peakL, pkR = disp.peakR;
     double bpk = 0;
+    double gdl = gd; int gHoldl = gHold;   // the peak guard's state for the block
     for (int i = 0; i < n; i++) {
       double l = bufL[i], r = bufR[i];
       if (drive > 0) {
@@ -1658,7 +1706,13 @@ class Engine {
       double yl = l - dcxL + dcR * dcyL; dcxL = l; dcyL = std::fabs(yl) < 1e-20 ? 0 : yl; l = dcyL;
       double yr = r - dcxR + dcR * dcyR; dcxR = r; dcyR = std::fabs(yr) < 1e-20 ? 0 : yr; r = dcyR;
       vol += (volT - vol) * kVol;
-      l = softLimit(l * vol); r = softLimit(r * vol);
+      l *= vol; r *= vol;
+      // the peak guard (beta 0.3.2): the gain that keeps the larger channel under GUARD_T before the soft limiter
+      const double aq = std::fabs(l) > std::fabs(r) ? std::fabs(l) : std::fabs(r), gT = aq > GUARD_T && aq < 1e9 ? GUARD_T / aq : 1;
+      if (gT < gdl) { gdl += (gT - gdl) * kGa; gHoldl = gHoldN; }
+      else if (gHoldl > 0) gHoldl--;
+      else if (gdl < 1) { gdl += (gT - gdl) * kGr; if (gT == 1 && 1 - gdl < 1e-9) gdl = 1; }
+      l = softLimit(l * gdl); r = softLimit(r * gdl);
       if (!std::isfinite(l)) l = 0;
       if (!std::isfinite(r)) r = 0;
       outL[o + i] = (float)l; outR[o + i] = (float)r;
@@ -1667,6 +1721,7 @@ class Engine {
       if (al > bpk) bpk = al;
       if (ar > bpk) bpk = ar;
     }
+    gd = gdl; gHold = gHoldl;
     // how long the output has been silent, and how long it must stay so before the block is skipped
     if (vmask == 0 && !fading && bpk < QUIET_PEAK) quiet += n; else quiet = 0;
     quietNeed = std::ceil(1.5 * (dmix > 0 || fb > 0 ? std::max(dTarget, dlyT) : 0)) + QUIET_EXTRA;

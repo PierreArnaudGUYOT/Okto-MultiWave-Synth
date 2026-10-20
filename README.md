@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3.1**, a test version (2026-10-20), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3.2**, a test version (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -20,6 +20,20 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What beta 0.3.2 changes
+
+Beta 0.3.2 answers two remarks of OktoPierre on beta 0.3.1 (plug-in only: the web app has the same engine, no new page):
+
+- **No more crackle on a loud chord.** OktoPierre's test: a C major chord at the maximum MIDI velocity crackled in many presets, and lowering VOLUME cured it. The cause is the output stage: the soft limiter (knee at 0.7)
+  flattens the peaks of a chord that sums to twice its knee or more into a buzz. Three changes (a chord of up to three notes that stays under 0.9 is bit-identical with beta 0.3.1):
+  (1) the voice sum is scaled by sqrt(3 / n) when n > 3 voices sound (n weighted by their energy, so release tails count little; the same compensation as the Wavelet Synthesizer's beta 0.7.1; the chord keyboard keeps its own level, `chordTrim`);
+  (2) a **peak guard** rides the output gain in front of the soft limiter so that the signal never reaches the limiter above 0.9 (exactly 1 below it: bit-identical; attack 0.3 ms, hold 15 ms, release 150 ms);
+  (3) the master volume of **321 of the 900 newest presets** was lowered by 1 to 6 dB (mean 2.2 dB) where the loudest chords (triads at C4, C5 and C6, a five- and a six-note chord, all at velocity 1) peaked above 1.0 before the output stage (`tools/supermod/loud.js`;
+  the 22 TOP Sounds and the 308 older presets keep their values). Measured by `tools/crackle.js` on all 1182 presets (the waveform change the output stage causes on the chord, against the same chord 18 dB lower, per 20 ms): presets above 1 %: triad at C6 58 -> 1, five notes 226 -> 7, six notes 351 -> 15;
+  above 2 %: 27 -> 0, 82 -> 0, 163 -> 1 (the remaining ones are old presets, not touched).
+- **The window fits the screen.** The panel is 1050 px tall (1170 with the chord card): on a 1080-pixel screen the bottom of the keyboard was out of sight. The new default zoom is **FIT** (the box at the top left shows "FIT 90 %"): the window is scaled
+  down so that the whole panel is on the screen of the host window, the taskbar left out and 100 px kept for the window's bar (never above 100 %, never below 50 %; it follows CHORD MODE, which makes the panel taller). A size chosen in the menu (50 to 150 %) stays; the same menu has "Fit the window to the screen". A project saved by an older beta holds 100 % = FIT.
 
 ## What beta 0.3.1 changes
 

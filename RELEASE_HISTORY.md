@@ -3,6 +3,31 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth beta 0.3.2 — 2026-10-20 (no more crackle on a loud chord, the window fits the screen)
+
+A **test version** after two remarks of OktoPierre on beta 0.3.1: "many presets crackle, turning the master volume down cures it (a C major chord at C5 at the maximum velocity)" and "the panel is too tall, I do not see the bottom of the keyboard".
+
+**In short**
+- **No more crackle on a loud chord.** OktoPierre's test: a C major chord at the maximum MIDI velocity crackled in many presets, and lowering VOLUME cured it. The cause is the output stage: the soft limiter (knee at 0.7)
+  flattens the peaks of a chord that sums to twice its knee or more into a buzz. Three changes (a chord of up to three notes that stays under 0.9 is bit-identical with beta 0.3.1):
+  (1) the voice sum is scaled by sqrt(3 / n) when n > 3 voices sound (n weighted by their energy, so release tails count little; the same compensation as the Wavelet Synthesizer's beta 0.7.1; the chord keyboard keeps its own level, `chordTrim`);
+  (2) a **peak guard** rides the output gain in front of the soft limiter so that the signal never reaches the limiter above 0.9 (exactly 1 below it: bit-identical; attack 0.3 ms, hold 15 ms, release 150 ms);
+  (3) the master volume of **321 of the 900 newest presets** was lowered by 1 to 6 dB (mean 2.2 dB) where the loudest chords (triads at C4, C5 and C6, a five- and a six-note chord, all at velocity 1) peaked above 1.0 before the output stage (`tools/supermod/loud.js`;
+  the 22 TOP Sounds and the 308 older presets keep their values). Measured by `tools/crackle.js` on all 1182 presets (the waveform change the output stage causes on the chord, against the same chord 18 dB lower, per 20 ms): presets above 1 %: triad at C6 58 -> 1, five notes 226 -> 7, six notes 351 -> 15;
+  above 2 %: 27 -> 0, 82 -> 0, 163 -> 1 (the remaining ones are old presets, not touched).
+- **The window fits the screen.** The panel is 1050 px tall (1170 with the chord card): on a 1080-pixel screen the bottom of the keyboard was out of sight. The new default zoom is **FIT** (the box at the top left shows "FIT 90 %"): the window is scaled
+  down so that the whole panel is on the screen of the host window, the taskbar left out and 100 px kept for the window's bar (never above 100 %, never below 50 %; it follows CHORD MODE, which makes the panel taller). A size chosen in the menu (50 to 150 %) stays; the same menu has "Fit the window to the screen". A project saved by an older beta holds 100 % = FIT.
+- The version is the plug-in's: no web app is published; its engine is the same (core.js), so the web app has the same output stage.
+
+**Checked**: the C++ engine against the JavaScript reference on **1268 cases** (every preset, the variants of every feature and 14 loud chords at velocity 1 with 3, 5 and 8 notes, 16 voices and unison, and a master at +6 dB so that the guard works; worst 3.95e-7 of full scale); the 22 TOP Sounds against beta 0.7 (worst 2.1e-7);
+the filters, the SuperModulation destinations, the idle rule, the live display, the presets file (`library_test`), the VST2 entry point (41 checks) and the plug-in's window in a host (`vote_session`: EVALUATE SOUNDS, the stars, CHORD MODE, and the fit: a 1366 x 728 screen shows the whole panel, 806 x 620 with the chord card; a large screen keeps 100 %).
+
+**Known limits**
+- Presets numbered 501 and up are quieter than in beta 0.3.1 (321 of 900, 1 to 6 dB); the 22 TOP Sounds and the 308 older presets are unchanged, so a loud chord on those is limited by the guard (a gain reduction, no crackle) instead of being turned up and down by the preset.
+- A chord of more than three notes is a little quieter than before (3 dB for six equal notes).
+- On a very small screen the fit goes down to 50 % (the text is then small): choose a larger size in the menu if the host allows a bigger window.
+- Not heard on every preset: the measure is the high-frequency part of the distortion on 1182 presets and five chords; the owner's ear on his own chords decides.
+
 ## Okto MultiWave Synth beta 0.3.1 — 2026-10-20 (the owner's ratings applied: sorted and remade presets, stars in the browser, Skip, 300 new SuperModulation presets, no more saturation, a live scope)
 
 A **test version** that applies the first ratings of OktoPierre (his files `sound 501 to sound 540.txt`, `541 to 580` and `581 to 620`: 80 of the 120 presets rated) and what he asked for after.

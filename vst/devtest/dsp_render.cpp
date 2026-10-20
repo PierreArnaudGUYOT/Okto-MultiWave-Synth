@@ -22,6 +22,10 @@ static const KeyEv kLiveScript[] = {
   {0, 0, 48, 1}, {0, 0, 67, 0.9}, {12800, 0, 51, 1}, {25600, 0, 50, 1}, {38400, 0, 59, 1}, {51200, 0, 53, 1},
   {64000, 5, P_CHORD_BASS, 0}, {70400, 5, P_CHORD_BASS, 1}, {76800, 0, 56, 1}, {83200, 5, P_CHORD_VOICING, 0}, {89600, 0, 49, 1},
   {96000, 1, 67, 0}, {100000, 4, 0, 0}};
+// beta 0.3.2, kind "loud": dense chords played with MIDI notes at velocity 1 (LOUD_SCRIPT in tools/dsp_compare.js): {offset, 1 on / 0 off, note, velocity}
+static const KeyEv kLoudScript[] = {
+  {0, 1, 72, 1}, {0, 1, 76, 1}, {0, 1, 79, 1}, {19200, 1, 84, 1}, {19200, 1, 88, 1}, {38400, 1, 60, 1}, {38400, 1, 64, 1}, {38400, 1, 67, 1},
+  {72000, 0, 72, 0}, {72000, 0, 76, 0}, {72000, 0, 79, 0}, {72000, 0, 84, 0}, {72000, 0, 88, 0}, {96000, 0, 60, 0}, {96000, 0, 64, 0}, {96000, 0, 67, 0}};
 static void render(const double* params, int idx, const std::string& name, int chord, double tempo, const char* outdir) {
   const int sr = 48000, n = sr * 3, blk = 128;
   Engine eng(sr);
@@ -32,7 +36,9 @@ static void render(const double* params, int idx, const std::string& name, int c
   std::vector<float> L(n), R(n);
   auto t0 = std::chrono::steady_clock::now();
   for (int o = 0; o < n; o += blk) {
-    if (chord == 2) {
+    if (chord == 3) {
+      for (const KeyEv& e : kLoudScript) if (e.o == o) { if (e.kind) eng.noteOn(e.note, e.vel); else eng.noteOff(e.note); }
+    } else if (chord == 2) {
       for (const KeyEv& e : kLiveScript) if (e.o == o) {
         if (e.kind == 0) eng.keyOn(e.note, e.vel); else if (e.kind == 1) eng.keyOff(e.note); else if (e.kind == 4) eng.allNotesOff(); else eng.setParam(e.note, e.vel);
       }
@@ -69,7 +75,7 @@ int main(int argc, char** argv) {
     double params[kNumParams];
     for (int i = 0; i < kNumParams; i++) ss >> params[i];
     if (!ss) { std::fprintf(stderr, "case %d: not %d values\n", idx, kNumParams); return 1; }
-    render(params, idx, line.substr(bar + 3), kind == "chordlive" ? 2 : kind == "chord" ? 1 : 0, tempo, outdir);
+    render(params, idx, line.substr(bar + 3), kind == "loud" ? 3 : kind == "chordlive" ? 2 : kind == "chord" ? 1 : 0, tempo, outdir);
     idx++;
   }
   std::printf("%d cases rendered\n", idx);
