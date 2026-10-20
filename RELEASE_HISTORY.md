@@ -25,7 +25,7 @@ The **official release**. It keeps what OktoPierre kept after his listening, ope
 - The 18 TOP Sounds of beta 0.7 that are in the list sound as they did (worst difference 8.8e-8 of the peak).
 - The engine tests (idle skip, filter, SuperModulation, live display), the presets file (`library_test`: the stars of an older file are not carried over), the VST2 entry point (41 checks), the plug-in window in a host (tabs, CHORD MODE, the LFO tabs, the oriental colours, the fit to the screen, the browser).
 - The crackle of a loud chord (three chords at velocity 1, all 237 presets): **none above 1 %** (HF residual).
-- The web app: the smoke test and the demo tour (67 checks) pass; the full web run on every preset (`test_web`) was still running when this was published.
+- The web app: the smoke test, the demo tour (67 checks) and the full web run on every preset (`test_web`, 104 checks) pass.
 
 **Known limits**
 - macOS: no build is made or tested here (the code is portable; `editor_mac.mm` follows the Windows editor but is not compiled).
