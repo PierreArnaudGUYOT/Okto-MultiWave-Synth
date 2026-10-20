@@ -356,7 +356,7 @@ async function main() {
     begin('DEMO button (no arrow, no song menu, no MIDI file input)');
     const btn = await rectOf('.demo-btn');
     check(!!btn && btn.visible && /DEMO/.test(btn.text), "'▶ DEMO' button present", JSON.stringify(btn && btn.text));
-    if (btn) log(`  button centre at device x ${(((btn.x - DEV.x) * 1100) / DEV.w).toFixed(0)} (spec 222-272)`);
+    if (btn) log(`  button centre at device x ${(((btn.x - DEV.x) * 1100) / DEV.w).toFixed(0)} (CSS 222-286)`);
     const gone = await ev(`({ arrow: !!document.querySelector('.demo-arrow'), menu: !!document.querySelector('.demo-menu'), file: !!document.querySelector('#file-midi'),
       evalBtn: !!document.querySelector('.evalbtn') })`);
     check(!gone.arrow && !gone.menu && !gone.file, 'there is no arrow next to DEMO, no song menu and no MIDI file input', JSON.stringify(gone));

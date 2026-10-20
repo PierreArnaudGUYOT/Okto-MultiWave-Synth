@@ -179,7 +179,6 @@ static std::string readFile(const std::wstring& p) {
   FILE* f = _wfopen(p.c_str(), L"rb"); if (!f) return "";
   std::string s; char b[4096]; size_t n; while ((n = std::fread(b, 1, sizeof b, f)) > 0) s.append(b, n); std::fclose(f); return s;
 }
-static bool has(const std::string& s, const std::string& x) { return s.find(x) != std::string::npos; }
 
 // the centre of the first widget of a type / of a parameter (in a section shown for the oscillator `view`)
 static bool widgetCenter(int type, int param, int view, float& cx, float& cy) {
@@ -335,15 +334,16 @@ int wmain(int argc, wchar_t** argv) {
     h.ctrl->setParamNormalized(P_CHORD_MODE, 0.0); h.run(0.4);
     {   // beta 0.3.1: the stars at the right of a row of the browser: a click on the left half of the second star rates the first row 3 / 10 (the presets file holds it)
       const float sx = 1100 + 4 + 136 + (420 - 12 - 162) - 6 - 60;   // the stars' left edge: the card x + the list x + its width - the margin - 5 stars of 12
-      const std::string before = readFile(presetsFile);
+      auto cnt = [](const std::string& s, const std::string& x) { int n = 0; for (size_t p = s.find(x); p != std::string::npos; p = s.find(x, p + 1)) n++; return n; };
+      const int threes0 = cnt(readFile(presetsFile), "Stars: 3\r\n");   // (the file is written at the first edit, with the built-in votes of some presets: the lines are counted)
       h.click(sx + 12 + 3, 8 + 98 + 11);
       h.run(0.3);
       const std::string after = readFile(presetsFile);
-      check(!after.empty() && has(after, "Stars: 3\r\n") && !has(before, "Stars: 3\r\n"), "a click on the stars of a row of the browser rates the sound (the presets file says Stars: 3)", std::to_string(after.size()) + " bytes");
+      const int threes1 = cnt(after, "Stars: 3\r\n");
+      check(!after.empty() && threes1 > threes0, "a click on the stars of a row of the browser rates the sound (the presets file says Stars: 3)", std::to_string(after.size()) + " bytes");
       h.click(sx + 12 + 3, 8 + 98 + 11);   // the same click again clears it
       h.run(0.3);
-      check(!has(readFile(presetsFile), "Stars: 3\r\n"), "a second click on the same rating clears it");
-      auto cnt = [](const std::string& s, const std::string& x) { int n = 0; for (size_t p = s.find(x); p != std::string::npos; p = s.find(x, p + 1)) n++; return n; };
+      check(cnt(readFile(presetsFile), "Stars: 3\r\n") == threes1 - 1, "a second click on the same rating clears it");
       const int tens = cnt(readFile(presetsFile), "Stars: 10\r\n");   // (a built-in vote of 10 is in the file too)
       h.click(sx + 4 * 12 + 9, 8 + 98 + 11);   // the right half of the fifth star: 10 / 10
       h.run(0.3);

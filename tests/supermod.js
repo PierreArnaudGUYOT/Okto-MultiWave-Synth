@@ -155,10 +155,10 @@ console.log('4. oriental tunings');
   check(Math.abs(cents(hic, hz(64)) - (17 * c53 - 400)) < 2, 'Turkish Hicaz on C: the third at 17 commas (-15 cents)', `${cents(hic, hz(64)).toFixed(1)} cents`);
   const oct = f({ mt_mode: 1, mt_scale: 0, mt_tonic: 0 }, 76);
   check(Math.abs(cents(oct, hz(76)) + 50) < 3, 'an octave higher (E5) is moved the same way', `${cents(oct, hz(76)).toFixed(1)} cents`);
-  // the demo and the evaluation passage play in equal temperament
+  // the demo plays in equal temperament
   const { eng } = make(Object.assign({}, sineSet, { mt_mode: 1, mt_scale: 0 })); eng.noMicro = true;
   const r = render(eng, 0.6, [[0, e => e.noteOn(64, 1)]]);
-  check(Math.abs(cents(freq(r.L, 12000, 28800), hz(64))) < 2, 'noMicro (the demo, EVALUATE SOUNDS): equal temperament whatever the tuning');
+  check(Math.abs(cents(freq(r.L, 12000, 28800), hz(64))) < 2, 'noMicro (the demo): equal temperament whatever the tuning');
 }
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASS');
