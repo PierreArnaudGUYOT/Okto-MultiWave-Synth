@@ -3,23 +3,30 @@
 // Aggregates the CSV files of vst/devtest/cpu_bench.cpp (one line per preset x chord x velocity: CPU % of real time) by the presets' features
 // (the file written by tools/cpu_cases.js), as Markdown tables; with --after, before / after side by side.
 //   node tools/cpu_report.js <features.json> --before a.csv[,b.csv...] [--after c.csv[,d.csv...]] [--top 15] [--chord 6]
+//   node tools/cpu_report.js <features.json> --paired a.csv[,b.csv...] [--top 15] [--chord 6]     the files of vst/devtest/cpu_ab.cpp: before = column 4, after = column 5
 'use strict';
 const fs = require('fs');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
 const feat = JSON.parse(fs.readFileSync(args[0], 'utf8'));
-const load = (list) => {
+const load = (list, col = 3) => {
   const m = new Map();
   for (const f of (list || '').split(',').filter(Boolean)) {
     for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
       if (!l || l[0] === '#') continue;
-      const [idx, chord, vel, mn] = l.split(','), key = `${idx}|${chord}`;   // a preset measured in several files (repeated runs): the smallest value, the run the machine disturbed least
+      const cols = l.trim().split(','), idx = cols[0], chord = cols[1], mn = cols[col], key = `${idx}|${chord}`;   // a preset measured in several files (repeated runs): the smallest value, the run the machine disturbed least
       if (!m.has(key) || +mn < m.get(key)) m.set(key, +mn);
     }
   }
   return m;
 };
-const before = load(opt('before')), after = load(opt('after')), hasAfter = after.size > 0, top = +opt('top', 15);
+const paired = opt('paired');
+const before = paired ? load(paired, 3) : load(opt('before')), after = paired ? load(paired, 4) : load(opt('after')), hasAfter = after.size > 0, top = +opt('top', 15);
+if (paired) {   // the hashes of both outputs of every render must be equal: the sound is bit-identical
+  let n = 0, bad = 0;
+  for (const f of paired.split(',')) for (const l of fs.readFileSync(f, 'utf8').split('\n')) { if (!l || l[0] === '#') continue; const c = l.trim().split(','); n++; if (c[5] !== c[6]) bad++; }
+  console.log(`${n} renders compared by the hash of their output: ${bad} differ\n`);
+}
 const ids = [...new Set([...before.keys()].map(k => k.split('|')[0]))].filter(i => feat[i]);
 const chords = [...new Set([...before.keys()].map(k => k.split('|')[1]))].sort((a, b) => a - b);
 const mean = (a) => a.reduce((s, x) => s + x, 0) / (a.length || 1);
@@ -57,6 +64,6 @@ for (const i of worst) {
   const fx = [f.chorus && 'chorus', f.delay && 'delay', f.reverb && 'reverb', f.fxdrive && 'drive'].filter(Boolean).join(' ') || '-';
   const lf = [f.lfo1 && '1', f.lfo2 && '2', f.lfo3 && '3'].filter(Boolean).join(' ') || '-';
   const fl = f.flt ? (f.fltType === 0 ? 'LADDER' : 'OTA') + (f.drive ? '+drive' : '') : 'off';
-  console.log(hasAfter ? `| ${f.name} | ${f2(b)} | ${f2(a)} | ${a ? (100 * (1 - a / b)).toFixed(0) + ' %' : '-'} | ${fl} | ${f.unison} | ${f.oscs}${f.morph ? '' : ''} | ${fx} | ${lf} | ${f.morph ? 'yes' : '-'} |`
-    : `| ${f.name} | ${f2(b)} | ${fl} | ${f.unison} | ${f.oscs} | ${fx} | ${lf} | ${f.morph ? 'yes' : '-'} |`);
+  console.log(hasAfter ? `| ${f.name} (#${i}) | ${f2(b)} | ${f2(a)} | ${a ? (100 * (1 - a / b)).toFixed(0) + ' %' : '-'} | ${fl} | ${f.unison} | ${f.oscs}${f.morph ? '' : ''} | ${fx} | ${lf} | ${f.morph ? 'yes' : '-'} |`
+    : `| ${f.name} (#${i}) | ${f2(b)} | ${fl} | ${f.unison} | ${f.oscs} | ${fx} | ${lf} | ${f.morph ? 'yes' : '-'} |`);
 }
