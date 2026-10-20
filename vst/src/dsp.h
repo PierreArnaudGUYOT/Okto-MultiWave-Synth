@@ -530,14 +530,19 @@ inline void buildScopeSets(const double* params, const Tables& shown, ScopeSets&
 }
 // One cycle of the mix at the reference note (C4, full velocity): each oscillator that plays through its own scale filter and position window, at its level and
 // tuning (an octave up shows two of its cycles), plus the sub oscillator; dry (no envelope, no effect). Same as core.js globalCycle.
-inline void globalCycle(const double* params, const ScopeSets& ss, double* out) {
+// beta 0.3.1: ScopeLive = the live gains and window of every oscillator that plays in the last voice (mask bit s), published by the engine (Display): the oscillator then
+// shows them instead of its static ones, so the displays move with the sound (the cutoff the LFOs and the envelopes move, the note). Same as core.js.
+struct ScopeLive { uint32_t mask = 0; float sg[NS][NB] = {}; float win[NS][3] = {}; };
+inline void globalCycle(const double* params, const ScopeSets& ss, double* out, const ScopeLive* live = nullptr) {
   for (int i = 0; i < N; i++) out[i] = 0;
   double g[NB]; std::vector<double> cyc(N);
   for (int s = 0; s < NS; s++) {
     if (!(ss.mask & (1 << s))) continue;
     const SlotDef& k = kSlots[s];
-    staticGains(params, g, s);
-    displayCycle(ss.set[s], g, params[k.pcen], params[k.pwid], params[k.pdep], cyc.data());
+    double c = params[k.pcen], w = params[k.pwid], d = params[k.pdep];
+    if (live && (live->mask & (1u << s))) { for (int b = 0; b < NB; b++) g[b] = live->sg[s][b]; c = live->win[s][0]; w = live->win[s][1]; d = live->win[s][2]; }
+    else staticGains(params, g, s);
+    displayCycle(ss.set[s], g, c, w, d, cyc.data());
     const double lvl = params[k.lvl], ratio = std::pow(2.0, (12 * params[k.oct] + params[k.semi] + params[k.fine] / 100) / 12);
     for (int i = 0; i < N; i++) {
       const double x = i * ratio, f = std::floor(x), fr = x - f;
@@ -554,11 +559,12 @@ inline void globalCycle(const double* params, const ScopeSets& ss, double* out) 
 // The scalogram of the mix: for each oscillator that plays, the scale of each band (level, band scale, size of the atoms, the band's filter gain); the screen
 // shows the root of the sum of the squares of what each oscillator's coefficients give.
 struct ScopeBand { const double* coeffs; double sc[NB]; };
-inline int scopeBands(const double* params, const ScopeSets& ss, ScopeBand* out) {
+inline int scopeBands(const double* params, const ScopeSets& ss, ScopeBand* out, const ScopeLive* live = nullptr) {
   int n = 0; double g[NB]; const double sq = 1 / std::sqrt((double)N);
   for (int s = 0; s < NS; s++) {
     if (!(ss.mask & (1 << s))) continue;
-    staticGains(params, g, s);
+    if (live && (live->mask & (1u << s))) { for (int b = 0; b < NB; b++) g[b] = live->sg[s][b]; }
+    else staticGains(params, g, s);
     out[n].coeffs = ss.set[s].coeffs.data();
     for (int b = 1; b <= NB; b++) out[n].sc[b - 1] = params[kSlots[s].lvl] * ss.set[s].bandScale[b - 1] * std::pow(2.0, (b - 1) / 2.0) * sq * std::fabs(g[b - 1]);
     n++;
@@ -702,6 +708,7 @@ inline int plateNotes(int root, int type, int* out) {
 struct Display {
   float gains[NB] = {}; int mode = 0, view = 0; uint32_t voices = 0; float peakL = 0, peakR = 0;
   float center = 0, width = 1, depth = 0; int note = -1; bool slotLive = false;
+  float sg[NS][NB] = {}; float swin[NS][3] = {}; uint32_t mask = 0;   // beta 0.3.1: the live gains and window of every oscillator that plays in the last voice (ScopeLive)
 };
 
 class Engine {
@@ -1494,6 +1501,17 @@ class Engine {
       for (int b = 0; b < NB; b++) disp.gains[b] = (float)sl.g[b];
       disp.center = (float)sl.pc; disp.width = (float)sl.pw; disp.depth = (float)sl.pd; disp.note = lv.note; disp.slotLive = true;
     } else { disp.note = lastVoice >= 0 && voices[lastVoice].active ? voices[lastVoice].note : -1; disp.slotLive = false; }
+    disp.mask = 0;
+    if (lastVoice >= 0 && voices[lastVoice].active) {
+      const Voice& lv = voices[lastVoice];
+      for (int s = 0; s < NS; s++) {
+        const Slot& sl = lv.sl[s];
+        if (!sl.live) continue;
+        disp.mask |= 1u << s;
+        for (int b = 0; b < NB; b++) disp.sg[s][b] = (float)sl.g[b];
+        disp.swin[s][0] = (float)sl.pc; disp.swin[s][1] = (float)sl.pw; disp.swin[s][2] = (float)sl.pd;
+      }
+    }
   }
 
   void block(float* outL, float* outR, int o, int n) {

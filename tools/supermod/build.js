@@ -33,7 +33,7 @@ if (process.argv[2] === '--worker') {
   const lab = require('../preset_lab.js');
   const SPEC = lab.SPEC, P = lab.P;
   const top = SPEC.PRESETS.slice(0, SPEC.TOP).map(p => lab.chordLoudness(p.values, 0.2).db).sort((a, b) => a - b);
-  const target = top[Math.floor(top.length / 2)] - 1;   // the TOP Sounds' median loudness, a dB under: headroom for the chords
+  const target = top[Math.floor(top.length / 2)];   // the TOP Sounds' median loudness (beta 0.3.1: no longer a dB under: the louder sounds were rated higher; the limiter check below keeps the headroom)
   const taken = new Set(SPEC.PRESETS.map(p => (p.name.split(' · ')[1] || p.name).toLowerCase()));
   const r = Rng(seed * 7919 + k * 104729 + 13);
   const mp = SPEC.PARAMS[P.master];
@@ -166,6 +166,7 @@ function select(selectOnly) {
     for (const m of mine) chosen.push(m);
     console.log(`${cat.padEnd(18)} ${mine.length} / ${quota} chosen from ${ok.filter(c => c.cat === cat).length}`);
   }
+  if (process.argv.includes('--no-write')) { console.log('--no-write: nothing written (the pool is kept)'); return; }   // beta 0.3.1: rebuild.js chooses from the pool
   // ---- numbers and file
   const firstNo = 501;
   let js = '// Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)\n// SPDX-License-Identifier: GPL-3.0-or-later\n' +

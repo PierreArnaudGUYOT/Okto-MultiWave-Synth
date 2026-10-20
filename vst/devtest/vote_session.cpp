@@ -249,6 +249,9 @@ int wmain(int argc, wchar_t** argv) {
   DeleteFileW(votes.c_str());
   DeleteFileW((votesDir + L"\\ratings-location.txt").c_str());
   SetEnvironmentVariableW(L"MW_VOTES_DIR", votesDir.c_str());   // before loading: the plug-in's C runtime copies it
+  const std::wstring presetsFile = votesDir + L"\\presets.txt";   // beta 0.3.1: the library file (the stars of the browser): never the player's own file
+  DeleteFileW(presetsFile.c_str());
+  SetEnvironmentVariableW(L"WS_PRESETS_FILE", presetsFile.c_str());
   G::GdiplusStartupInput gi; ULONG_PTR gt; G::GdiplusStartup(&gt, &gi, nullptr);
   SetProcessDPIAware();
 
@@ -344,7 +347,7 @@ int wmain(int argc, wchar_t** argv) {
   h.run(0.3); h.resetPeak(); h.run(2.0);
   check(h.peak > 0.02, "the passage of Beethoven sounds", fmt("peak %.3f", h.peak));
   h.shot(out + L"\\2_playing.png");
-  h.run(7.6);   // until the end of the passage and of the long chord (0.15 s lead + 9.4 s)
+  h.run(4.0);   // until the end of the passage and of the chord (0.15 s lead + 5.9 s)
   h.shot(out + L"\\3_rate.png");
   std::printf("3. 7 stars: saved at once, asks to modify\n");
   h.click(starX(7), STAR_Y);
@@ -361,7 +364,7 @@ int wmain(int argc, wchar_t** argv) {
     const std::string st = readFile(setFile);
     check(!st.empty() && has(st, "Set: sound " + N1 + " to sound " + N40 + " (40 sounds)") && has(st, "Rated: 1 / 40") && has(st, N1 + " |  7 |") && has(st, N40 + " |  - |") && !has(st, numOf(kPresets[kFirstNew + 40].name) + " |"),
           ("the set file \"sound " + N1 + " to sound " + N40 + ".txt\" is written next to the ratings file").c_str(), std::to_string(st.size()) + " bytes");
-    check(has(st, "then a long C minor chord"), "the files say that the passage ends with a long chord");
+    check(has(st, "then a C minor chord"), "the files say that the passage ends with a chord");
   }
   h.shot(out + L"\\4_ask.png");
   std::printf("4. Yes, modify it: the preset exactly as designed\n");
@@ -394,15 +397,17 @@ int wmain(int argc, wchar_t** argv) {
     check(n == 1, "the change holds only the parameter moved", std::to_string(n) + " line(s)");
   }
   check(h.plain(P_V_VOICES) == 16 && std::fabs(h.plain(C2) - kPresets[P2].v[C2]) < 1e-6, "after recording, the second preset plays");
-  std::printf("6. 002: 3 stars (no question), 003 plays, Stop\n");
-  h.run(9.8);
+  std::printf("6. 002: Skip to vote (the music stops), 3 stars (no question), 003 plays, Stop\n");
+  h.run(1.0);
+  h.click(buttonCenter({{L"Skip to vote", true}, {L"Stop", false}}, 0, CARD_X), CARD_Y);   // beta 0.3.1: the music ends at once, the rating window is there
+  h.run(0.3);
   h.click(starX(3), STAR_Y);
   h.run(0.4);
   txt = readFile(votes);
   check(has(txt, N2 + " |  3 |"), (N2 + " = 3 saved").c_str());
   check(std::fabs(h.plain(C3) - kPresets[P3].v[C3]) < 1e-6 && h.plain(P_V_VOICES) == 16, "3 stars: no question, the third plays");
   h.run(1.0);
-  h.click(buttonCenter({{L"Stop", false}}, 0, CARD_X), CARD_Y);
+  h.click(buttonCenter({{L"Skip to vote", true}, {L"Stop", false}}, 1, CARD_X), CARD_Y);
   h.run(0.25); h.resetPeak(); h.run(0.5);
   check(std::fabs(h.plain(P_MASTER) - master0) < 1e-6, "Stop gives back the sound played before", fmt("master %.2f dB", h.plain(P_MASTER)));
   check(h.peak < 1e-4, "silence after Stop", fmt("peak %.6f", h.peak));
@@ -460,10 +465,26 @@ int wmain(int argc, wchar_t** argv) {
   {
     float pr[4];
     check(widgetBox(W_PRESETS, pr), "the preset box in the layout");
-    SetWindowPos(h.top, nullptr, -4000, 0, 1500, kDeviceH + kChordH, SWP_NOZORDER | SWP_NOACTIVATE);   // wide enough for the browser at the right
+    SetWindowPos(h.top, nullptr, -4000, 0, 1560, kDeviceH + kChordH, SWP_NOZORDER | SWP_NOACTIVATE);   // wide enough for the browser at the right
     h.run(0.3);
     for (int i = 0; i < 40; i++) { h.click(pr[0] + pr[2] - 12, pr[1] + pr[3] / 2); h.run(0.05); }   // the right arrow: out of the TOP Sounds into SuperModulation
     h.run(0.5);
+    {   // beta 0.3.1: the stars at the right of a row of the browser: a click on the left half of the second star rates the first row 3 / 10 (the presets file holds it)
+      const float sx = 1100 + 4 + 136 + (420 - 12 - 162) - 6 - 60;   // the stars' left edge: the card x + the list x + its width - the margin - 5 stars of 12
+      const std::string before = readFile(presetsFile);
+      h.click(sx + 12 + 3, 8 + 98 + 11);
+      h.run(0.3);
+      const std::string after = readFile(presetsFile);
+      check(!after.empty() && has(after, "Stars: 3\r\n") && !has(before, "Stars: 3\r\n"), "a click on the stars of a row of the browser rates the sound (the presets file says Stars: 3)", std::to_string(after.size()) + " bytes");
+      h.click(sx + 12 + 3, 8 + 98 + 11);   // the same click again clears it
+      h.run(0.3);
+      check(!has(readFile(presetsFile), "Stars: 3\r\n"), "a second click on the same rating clears it");
+      auto cnt = [](const std::string& s, const std::string& x) { int n = 0; for (size_t p = s.find(x); p != std::string::npos; p = s.find(x, p + 1)) n++; return n; };
+      const int tens = cnt(readFile(presetsFile), "Stars: 10\r\n");   // (a built-in vote of 10 is in the file too)
+      h.click(sx + 4 * 12 + 9, 8 + 98 + 11);   // the right half of the fifth star: 10 / 10
+      h.run(0.3);
+      check(cnt(readFile(presetsFile), "Stars: 10\r\n") == tens + 1, "the right half of the fifth star gives 10 / 10 (one more Stars: 10 in the file)");
+    }
     h.shot(out + L"\\12_browser_followed.png");
   }
   check(!h.badSample, "no NaN or infinite sample");

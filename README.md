@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3**, a test version (2026-10-19), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **beta 0.3.1**, a test version (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -20,6 +20,18 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What beta 0.3.1 changes
+
+Beta 0.3.1 applies the first ratings of OktoPierre (80 of the new presets rated 1 to 10 in EVALUATE SOUNDS) and what he asked for after:
+
+- **The list follows his ratings**: the presets rated below 5 stars are left out (their numbers are not used again), the others keep their stars, those rated above 7 and his six favourites are in **TOP Sounds**.
+  The presets he had not rated were **remade** to look more like the ones he liked (wide, roomy, slowly moving sounds: unison, chorus, reverb, a gentle release; smooth warm waves), and there are
+  **300 new SuperModulation presets** (`1101`–`1400`) that move the wavelets themselves (sparsity, source phase and width, morph, window, additive scales).
+- **Stars in the preset browser**: five stars (half stars: 1 to 10) at the right of every sound; the ratings are saved in the presets file and **EXPORT carries them** (IMPORT reads them back).
+- **EVALUATE SOUNDS**: a **Skip to vote** button ends the music at once; the music is shorter (3.5 s of Beethoven and a 2 s chord).
+- **No more saturation on a long chord**: the volume of the presets that saturated on the evaluation passage was lowered (`tools/supermod/gain.js`).
+- **The scope and the scalogram move again** (beta 0.3 had made them static): they show the live gains and windows of the oscillators that play.
 
 ## What beta 0.3 changes
 

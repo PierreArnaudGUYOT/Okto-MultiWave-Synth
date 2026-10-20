@@ -11,7 +11,10 @@
 //   (built-in names, one per line). beta 0.5 ("LIST ORDER v2"): the lists also say which presets they hold — the player
 //   moves a preset to another category and adds or removes TOP Sounds; a preset the file does not know (a newer version's)
 //   goes to its default places. Older files' lists are not read (beta 0.5 rebuilt the factory lists). beta 0.7 ("LIST ORDER
-//   v3"): OktoPierre's 22 TOP Sounds and Source Phase last: the v2 lists of beta 0.5 are not read either (rebuilt again).
+//   v3"): OktoPierre's 22 TOP Sounds and Source Phase last: the v2 lists of beta 0.5 are not read either (rebuilt again).  beta 0.3.1 ("LIST ORDER v4"): the new TOP Sounds: the v3 lists are not read either.
+// beta 0.3.1: STARS. The player rates the sounds in the preset browser (1-10, shown as five stars with half stars; 0 = none): "Stars: 7" is a line of a
+// factory preset's or a user-bank sound's block (a factory preset the player did not rate keeps the stars of its built-in vote, kPresetStars, when it has
+// one; "Stars: 0" is a rating he cleared). They are in the file, so EXPORT carries them and IMPORT reads them.
 // The file is shared by every instance and Live Set, read again whenever it changes on disk, written atomically, and is
 // meant to be read back to make the next version's factory presets. Format (one block per preset; the parameters that
 // differ from the defaults, ENGINE and A/B MIX always, as in tools/spec.js):
@@ -50,6 +53,7 @@ inline constexpr int kNumBankSections = (int)(sizeof kBankSections / sizeof *kBa
 
 struct BankPreset {
   int section = 0;
+  int stars = 0;   // beta 0.3.1: the player's rating of this sound, 1..10 (0 = none)
   std::string name, from;
   double v[kNumParams];   // plain values (hidden parameters at their default)
 };
@@ -116,6 +120,28 @@ class Library {
     for (int i = 0; i < kNumParams; i++) v[i] = k >= 0 && k < kNumPresets ? s.vals[k][i] : kParams[i].def;
   }
   bool adjusted(int k) { std::lock_guard<std::mutex> l(m); refreshLocked(); return k >= 0 && k < kNumPresets && s.adj[k]; }
+  // beta 0.3.1: the stars of a factory preset: the player's rating, else the built-in vote (the owner's listening test) when it has one
+  int stars(int k) { std::lock_guard<std::mutex> l(m); refreshLocked(); return k >= 0 && k < kNumPresets ? starsOf(s, k) : 0; }
+  int starredCount() { std::lock_guard<std::mutex> l(m); refreshLocked(); int n = 0; for (int k = 0; k < kNumPresets; k++) n += starsOf(s, k) > 0; for (const BankPreset& p : s.user) n += p.stars > 0; return n; }
+  std::wstring setStars(int k, int n) {   // 0 clears the rating
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
+    if (k < 0 || k >= kNumPresets) return L"no such preset";
+    n = std::max(0, std::min(10, n));
+    State t = s;
+    t.stars[k] = n == kPresetStars[k] ? -1 : (signed char)n;
+    if (t.stars[k] == s.stars[k]) return L"";
+    return commit(t);
+  }
+  std::wstring setUserStars(int section, const std::string& name, int n) {
+    std::lock_guard<std::mutex> l(m); refreshLocked(true);
+    State t = s;
+    auto it = std::find_if(t.user.begin(), t.user.end(), [&](const BankPreset& q) { return q.section == section && q.name == name; });
+    if (it == t.user.end()) return L"not in the bank";
+    n = std::max(0, std::min(10, n));
+    if (it->stars == n) return L"";
+    it->stars = n;
+    return commit(t);
+  }
   bool deleted(int k) { std::lock_guard<std::mutex> l(m); refreshLocked(); return k >= 0 && k < kNumPresets && s.del[k]; }
   int deletedCount() { std::lock_guard<std::mutex> l(m); refreshLocked(); int n = 0; for (char d : s.del) n += d; return n; }
   int adjustedCount() { std::lock_guard<std::mutex> l(m); refreshLocked(); int n = 0; for (char a : s.adj) n += a; return n; }
@@ -162,7 +188,7 @@ class Library {
     t.user.erase(std::remove_if(t.user.begin(), t.user.end(), [&](const BankPreset& q) {
       return q.section == p.section && q.name == p.name && q.name != key; }), t.user.end());   // a renamed sound replaces a namesake
     auto it = std::find_if(t.user.begin(), t.user.end(), [&](const BankPreset& q) { return q.section == p.section && q.name == key; });
-    if (it != t.user.end()) *it = p;
+    if (it != t.user.end()) { const int keep = p.stars > 0 ? p.stars : it->stars; *it = p; it->stars = keep; }   // saving a sound again keeps its stars
     else if (t.user.size() >= kMaxBankSounds) return L"the user bank is full (2000 sounds): delete some first";
     else t.user.push_back(p);
     return commit(t);
@@ -299,6 +325,7 @@ class Library {
     std::vector<std::string> names;
     std::vector<std::array<double, kNumParams>> vals;
     std::vector<char> adj, del;
+    std::vector<signed char> stars;        // beta 0.3.1: the player's rating of each factory preset, -1 = none given (the built-in vote, if any, shows)
     std::vector<std::vector<int>> lists;   // the preset browser's factory lists (listLabels order)
     std::vector<BankPreset> user;
     bool tooMany = false;   // parse met more than kMaxBankSounds bank sounds (the rest is left out)
@@ -313,13 +340,14 @@ class Library {
 
   Library() { builtIn(s); }
   static void builtIn(State& t) {
-    t.names.assign(kNumPresets, ""); t.vals.assign(kNumPresets, {}); t.adj.assign(kNumPresets, 0); t.del.assign(kNumPresets, 0); t.user.clear();
+    t.names.assign(kNumPresets, ""); t.vals.assign(kNumPresets, {}); t.adj.assign(kNumPresets, 0); t.del.assign(kNumPresets, 0); t.stars.assign(kNumPresets, -1); t.user.clear();
     for (int k = 0; k < kNumPresets; k++) {
       t.names[k] = kPresets[k].name;
       for (int i = 0; i < kNumParams; i++) t.vals[k][i] = kPresets[k].v[i];
     }
     t.lists = defaultLists();
   }
+  static int starsOf(const State& t, int k) { return t.stars[k] >= 0 ? t.stars[k] : kPresetStars[k]; }
   // TOP Sounds, then the factory categories (kCategories; Source Phase second in beta 0.5 / 0.6, last since beta 0.7)
   static const std::vector<std::string>& listLabels() {
     static const std::vector<std::string> labels = [] {
@@ -335,6 +363,7 @@ class Library {
     const std::vector<std::string>& labels = listLabels();
     std::vector<std::vector<int>> v(labels.size());
     for (int k = 0; k < kNumTop && k < kNumPresets; k++) v[0].push_back(k);
+    for (int i = 0; i < kNumTopExtra; i++) if (kNumTopExtra > 0 && kTopExtra[i] >= kNumTop && kTopExtra[i] < kNumPresets) v[0].push_back(kTopExtra[i]);   // beta 0.3.1: rated above 7
     for (size_t i = 1; i < labels.size(); i++) {
       for (int k = 0; k < kNumPresets; k++) if (labels[i] == kPresets[k].cat) v[i].push_back(k);
       std::stable_sort(v[i].begin(), v[i].end(), [](int a, int b) { return kPresetRank[a] < kPresetRank[b]; });
@@ -393,12 +422,12 @@ class Library {
   static void parse(const std::string& all, State& t) {
     int part = 0;   // 0 = before any marker (a beta 0.3 user-bank file), 1 = factory presets, 2 = user bank, 3 = list order
     int orderList = -1;
-    bool v2 = false;   // lists of this version's format ("LIST ORDER v3", beta 0.7; they say which presets they hold); older ones are not read
+    bool v2 = false;   // lists of this version's format ("LIST ORDER v4", beta 0.3.1; they say which presets they hold); older ones are not read
     std::vector<std::vector<int>> orders(listLabels().size());
     std::vector<char> present(listLabels().size(), 0), known(kNumPresets, 0);
     int sec = -1;
     BankPreset* cur = nullptr;
-    struct Fb { std::string name, orig; bool adj = false, del = false; double v[kNumParams]; } fb;
+    struct Fb { std::string name, orig; bool adj = false, del = false; int stars = -1; double v[kNumParams]; } fb;
     bool inFb = false;
     auto endFb = [&] {
       if (!inFb) return;
@@ -407,6 +436,7 @@ class Library {
         if (fb.orig == kPresets[k].name) {
           known[k] = 1;
           t.del[k] = fb.del ? 1 : 0;
+          t.stars[k] = fb.stars < 0 || fb.stars == kPresetStars[k] ? -1 : (signed char)fb.stars;
           if (!fb.adj) break;   // only the adjusted ones replace the built-in presets
           t.names[k] = fb.name.empty() ? fb.orig : fb.name;
           for (int i = 0; i < kNumParams; i++) t.vals[k][i] = fb.v[i];
@@ -430,7 +460,7 @@ class Library {
         cur = nullptr; sec = -1;
         part = line.find("FACTORY") != std::string::npos ? 1 : line.find("USER BANK") != std::string::npos ? 2 :
                line.find("LIST ORDER") != std::string::npos ? 3 : 0;
-        if (part == 3) v2 = line.find("LIST ORDER v3") != std::string::npos;   // beta 0.7: v2 lists rebuilt (new TOP Sounds)
+        if (part == 3) v2 = line.find("LIST ORDER v4") != std::string::npos;   // beta 0.3.1: the lists of beta 0.3 ("v3", kept from beta 0.7) are rebuilt: the presets rated above 7 and the favourites join TOP Sounds
         orderList = -1;
         continue;
       }
@@ -454,11 +484,12 @@ class Library {
       if (part == 1) {
         if (line.compare(0, 8, "Preset: ") == 0) {
           endFb();
-          inFb = true; fb.name = clipName(line.substr(8)); fb.orig.clear(); fb.adj = false; fb.del = false;
+          inFb = true; fb.name = clipName(line.substr(8)); fb.orig.clear(); fb.adj = false; fb.del = false; fb.stars = -1;
           for (int i = 0; i < kNumParams; i++) fb.v[i] = kParams[i].def;
         } else if (inFb && line.compare(0, 9, "Factory: ") == 0) fb.orig = line.substr(9);
         else if (inFb && line.compare(0, 10, "Adjusted: ") == 0) fb.adj = line.compare(10, 3, "yes") == 0;
         else if (inFb && line.compare(0, 9, "Deleted: ") == 0) fb.del = line.compare(9, 3, "yes") == 0;
+        else if (inFb && line.compare(0, 7, "Stars: ") == 0) fb.stars = std::max(0, std::min(10, std::atoi(line.c_str() + 7)));
         else if (inFb) parseParamLine(line, fb.v);
         continue;
       }
@@ -474,7 +505,8 @@ class Library {
         for (int i = 0; i < kNumParams; i++) np.v[i] = kParams[i].def;
         t.user.push_back(np);
         cur = &t.user.back();
-      } else if (line.compare(0, 6, "From: ") == 0 && cur) cur->from = clipName(line.substr(6));
+      } else if (line.compare(0, 7, "Stars: ") == 0 && cur) cur->stars = std::max(0, std::min(10, std::atoi(line.c_str() + 7)));
+      else if (line.compare(0, 6, "From: ") == 0 && cur) cur->from = clipName(line.substr(6));
       else if (cur) parseParamLine(line, cur->v);
     }
     endFb();
@@ -501,15 +533,18 @@ class Library {
     char b[256];
     auto L = [&s](const std::string& x) { s += x; s += "\r\n"; };
     const LocalTime tm = localNow();
-    int adj = 0, del = 0; for (char a : t.adj) adj += a; for (char d : t.del) del += d;
+    int adj = 0, del = 0, starred = 0; for (char a : t.adj) adj += a; for (char d : t.del) del += d;
+    for (int k = 0; k < kNumPresets; k++) starred += starsOf(t, k) > 0;
+    for (const BankPreset& p : t.user) starred += p.stars > 0;
     L("OKTOMULTIWAVE SYNTH - presets");
     L(std::string("Saved by the VST plug-in (") + kAppVersion + "): every factory preset (those you adjusted with SAVE PRESET say \"Adjusted: yes\",");
     L("with their name now; those you deleted say \"Deleted: yes\") and your user bank. Each preset: its name, then the");
     L("parameters that differ from the defaults.");
     L("Format: key: value   (name: shown value)");
-    std::snprintf(b, sizeof b, "Saved: %04d-%02d-%02d %02d:%02d   Factory presets: %d (adjusted: %d, deleted: %d)   User bank: %d",
-                  tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute, kNumPresets, adj, del, (int)t.user.size());
+    std::snprintf(b, sizeof b, "Saved: %04d-%02d-%02d %02d:%02d   Factory presets: %d (adjusted: %d, deleted: %d)   User bank: %d   Rated (stars): %d",
+                  tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute, kNumPresets, adj, del, (int)t.user.size(), starred);
     L(b);
+    L("Stars: \"Stars: N\" (1-10, shown as five stars with half stars in the preset browser) after a preset's name is your rating of it.");
     L("");
     L("######## FACTORY PRESETS ########");
     const char* lastCat = nullptr;
@@ -521,10 +556,11 @@ class Library {
       L(std::string("Factory: ") + kPresets[k].name);
       L(t.adj[k] ? "Adjusted: yes" : "Adjusted: no");
       if (t.del[k]) L("Deleted: yes");
+      if (starsOf(t, k) > 0 || t.stars[k] == 0) L("Stars: " + std::to_string(starsOf(t, k)));   // a rating, or the built-in vote the player cleared
       paramLines(t.vals[k].data(), s);
     }
     L("");
-    L("######## LIST ORDER v3 (the preset browser: what each list holds, in its order; built-in names) ########");
+    L("######## LIST ORDER v4 (the preset browser: what each list holds, in its order; built-in names) ########");
     for (size_t i = 0; i < t.lists.size(); i++) {
       L("");
       L("== " + listLabels()[i] + " ==");
@@ -548,6 +584,7 @@ class Library {
         L("");
         L("Preset: " + p.name);
         if (!p.from.empty()) L("From: " + p.from);
+        if (p.stars > 0) L("Stars: " + std::to_string(p.stars));
         paramLines(p.v, s);
       }
       if (!any) L("(empty)");

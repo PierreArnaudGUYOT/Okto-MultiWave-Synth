@@ -21,7 +21,7 @@ const bOsc = (ctx) => B_IDS.filter(id => ctx.osc[id]);
 const allOsc = (ctx) => [...aOsc(ctx), ...bOsc(ctx)];
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 // the LFO 1 / LFO 2 rate in hertz, by the speed of the sound's kind (ctx.speed: [slow, fast]), on a log scale
-const rate = (ctx, r, lo = 0, hi = 1) => { const [a, b] = ctx.speed; return +(a * Math.pow(b / a, r.f(lo, hi))).toFixed(3); };
+const rate = (ctx, r, lo = 0, hi = 1) => { const [a, b] = ctx.speed; return +(a * Math.pow(b / a, r.f(lo, hi) * 0.85)).toFixed(3); };   // beta 0.3.1: a little slower (the slower LFOs were rated higher)
 const lfo1 = (ctx, r, shape, lo, hi) => {   // the first LFO 1 recipe sets the shape and rate; the others only add amounts
   const l = ctx.g.lfo = ctx.g.lfo || {};
   if (l.rate === undefined) { l.shape = shape || r.wpick([['sine', 5], ['tri', 4]]);   l.rate = rate(ctx, r, lo, hi); }
@@ -134,7 +134,7 @@ const MODS = [
     } },
   { id: 'l2Cut', kind: 'lfo2', w: 2.5, dest: 'cutoff', wd: true, words: ['Sweep', 'Rise'], fits: (c) => allOsc(c).length > 0 && !c.g[lk(c)],
     apply(c, r) { if (!sensitize(c, r)) return null; lfo2(c, r, 'cutoff', sign(r) * r.f(0.35, 0.7), undefined, 0, 0.5); return { desc: 'LFO 2 sweeps the scale filter' }; } },
-  { id: 'l2Reso', kind: 'lfo2', w: 1.5, dest: 'reso', wd: true, words: ['Wah', 'Ripple'], fits: (c) => allOsc(c).length > 0 && !c.g[lk(c)],
+  { id: 'l2Reso', kind: 'lfo2', w: 2.2, dest: 'reso', wd: true, words: ['Wah', 'Ripple'], fits: (c) => allOsc(c).length > 0 && !c.g[lk(c)],
     apply(c, r) { if (!sensitize(c, r)) return null; for (const id of allOsc(c)) ensure(c.osc[id], 'fres', 2, 5, r); lfo2(c, r, 'reso', r.f(0.55, 0.9), undefined, 0, 0.6); return { desc: 'LFO 2 swells the resonance' }; } },
   { id: 'l2Pos', kind: 'lfo2', w: 2.5, dest: 'position', wd: true, words: ['Orbit', 'Beam', 'Sweep'], fits: (c) => allOsc(c).length > 0 && !c.g[lk(c)],
     apply(c, r) {
@@ -182,12 +182,12 @@ const MODS = [
       lfo2(c, r, 'envamt', r.f(0.4, 0.8), undefined, 0, 0.5);
       return { desc: 'LFO 2 changes how far each note\'s envelope opens the scale filter' };
     } },
-  { id: 'l2Slope', kind: 'lfo2', w: 1, dest: 'slope', wd: true, words: ['Edge', 'Slope'], fits: (c) => allOsc(c).length > 0 && !c.g[lk(c)],
+  { id: 'l2Slope', kind: 'lfo2', w: 1.8, dest: 'slope', wd: true, words: ['Edge', 'Slope'], fits: (c) => allOsc(c).length > 0 && !c.g[lk(c)],
     apply(c, r) { if (!sensitize(c, r)) return null; for (const id of allOsc(c)) c.osc[id].fslope = +r.f(18, 40).toFixed(1); lfo2(c, r, 'slope', r.f(0.4, 0.7), undefined, 0, 0.5); return { desc: 'LFO 2 sharpens and relaxes the edge of the scale filter' }; } },
   // the FILTER effect (beta 0.3) moved by an LFO: its cutoff (octaves) or its resonance; the filter is set up first (g.flt)
-  { id: 'l2FltCut', kind: 'lfo2', w: 1, dest: 'fltcut', wd: false, words: ['Sweep', 'Wah', 'Rise'], fits: (c) => !!c.g.flt && !c.g[lk(c)],
+  { id: 'l2FltCut', kind: 'lfo2', w: 0.3, dest: 'fltcut', wd: false, words: ['Sweep', 'Wah', 'Rise'], fits: (c) => !!c.g.flt && !c.g[lk(c)],
     apply(c, r) { lfo2(c, r, 'fltcut', sign(r) * r.f(0.1, 0.28), undefined, 0, 0.55); return { desc: 'LFO 2 sweeps the cutoff of the low-pass filter' }; } },
-  { id: 'l2FltRes', kind: 'lfo2', w: 1, dest: 'fltres', wd: false, words: ['Wah', 'Ripple'], fits: (c) => !!c.g.flt && !c.g[lk(c)],
+  { id: 'l2FltRes', kind: 'lfo2', w: 0.5, dest: 'fltres', wd: false, words: ['Wah', 'Ripple'], fits: (c) => !!c.g.flt && !c.g[lk(c)],
     apply(c, r) { c.g.flt.res = +Math.max(c.g.flt.res, r.f(0.35, 0.55)).toFixed(2); lfo2(c, r, 'fltres', r.f(0.3, 0.55), undefined, 0, 0.6); return { desc: 'LFO 2 pulses the resonance of the low-pass filter' }; } },
   // ---------------------------------------------------------------- the mod envelope
   { id: 'envSweep', kind: 'env', dest: 'envcut', wd: true, words: ['Rise', 'Open'], fits: (c) => allOsc(c).length > 0 && !c.g.mod,
@@ -225,7 +225,7 @@ const FLT = {
 };
 // how often a kind of sound has the filter (a little over two thirds of the new presets in all)
 const FLT_PROB = { bass: 0.85, lead: 0.75, keys: 0.65, organ: 0.4, pad: 0.75, strings: 0.6, brass: 0.75, pluck: 0.7, bell: 0.45, fx: 0.7, perc: 0.5 };
-const fltSetup = (c, r) => { c.g.flt = FLT[c.kind](r); return c.g.flt; };
+const fltSetup = (c, r) => { const f = c.g.flt = FLT[c.kind](r); f.env = rd(f.env * 0.6); return f; };   // beta 0.3.1: gentler filter envelopes (rated lower)
 // the clause of a description for the filter (v: the sparse values of the preset)
 const fltClause = (v) => {
   const ty = v.vf_type === 1 ? 'OTA' : 'ladder', env = v.vf_env || 0, res = v.vf_res || 0;

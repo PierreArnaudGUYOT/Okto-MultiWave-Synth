@@ -45,7 +45,7 @@ const n1 = num(first), n2 = num(second);   // beta 0.3: the first preset to rate
     check((await phase()) === 'start', 'the start window is shown', String(await phase()));
     const txt0 = await ev(`document.querySelector('.vote-win').textContent`);
     check(txt0.includes('Start at') && new RegExp(`${SPEC.NEW_COUNT} new presets to rate`).test(txt0), "it offers 'Start at…' and says how many presets", txt0.slice(0, 120));
-    check(/long C minor chord/.test(txt0) && /sets of 40/.test(txt0), 'it says that the passage ends with a long chord and that the sounds come in sets of 40');
+    check(/C minor chord/.test(txt0) && /sets of 40/.test(txt0), 'it says that the passage ends with a chord and that the sounds come in sets of 40');
     await B.screenshot(path.join(__dirname, 'out', 'evaluate_start.png')).catch(() => {});
 
     console.log('2. preset 001 plays with the listening rules');
@@ -66,8 +66,8 @@ const n1 = num(first), n2 = num(second);   // beta 0.3: the first preset to rate
     let peak = 0;
     for (let i = 0; i < 20; i++) { const l = await ev('WS_TEST.getLevel()'); peak = Math.max(peak, l.peakL, l.peakR); await sleep(100); }
     check(peak > 0.02, 'the passage sounds', `peak ${peak.toFixed(3)}`);
-    await sleep(Math.max(0, 7000 - (Date.now() - tStart)));   // the long chord goes on after the 5 s of Beethoven: still playing 7 s in (counted from the start: the peak loop above takes 2+ s)
-    check((await phase()) === 'play', 'the long chord follows the passage (still playing 7 s in)', String(await phase()));
+    await sleep(Math.max(0, 4500 - (Date.now() - tStart)));   // the long chord goes on after the 5 s of Beethoven: still playing 7 s in (counted from the start: the peak loop above takes 2+ s)
+    check((await phase()) === 'play', 'the chord follows the passage (still playing 4.5 s in: 3.5 s of Beethoven, a pause, 2 s of chord)', String(await phase()));
     check(await waitPhase('vote', 8000), 'after the passage and the chord the window asks for stars');
     check(await ev(`[...document.querySelectorAll('.vote-win .vrow button')].some(b => /^Save as/.test(b.textContent))`), "the rating window has 'Save as…' (a copy under a name of your own, to stop half way)");
 
@@ -119,6 +119,9 @@ const n1 = num(first), n2 = num(second);   // beta 0.3: the first preset to rate
     await ev(`window.__answer = '${n1}'; true`);
     check(await clickButton('Start at'), `Start at… ${n1}`);
     await sleep(400);
+    check(await clickButton('Skip to vote'), "the playing window has a 'Skip to vote' button");
+    await sleep(300);
+    check((await phase()) === 'vote', "'Skip to vote' ends the music at once and asks for stars", String(await phase()));
     for (let k = 0; k < 39; k++) { await B.key('s', { code: 'KeyS' }); await sleep(60); }
     const n40 = num(SPEC.PRESETS[SPEC.NEW_FIRST + 39]), n41 = num(SPEC.PRESETS[SPEC.NEW_FIRST + 40]);
     const title = await ev(`document.querySelector('.vote-win .vtitle').textContent`);

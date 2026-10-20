@@ -336,6 +336,20 @@ hand's memory. Cross-check: `chordlive` scenarios (`LIVE_SCRIPT` / `kLiveScript`
   wavelet control (both for SuperModulation; weights `w` favour the subtractive-only controls), at most one LFO per control (`canon`), the filter with `FLT_PROB` (about two thirds), and
   `perc.js` (new) draws the drums of the Drums & Perc category from 14 archetypes. `build.js` writes `tools/presets_lfo3.js` (50 per category, numbers 501–1100).
 
+### 3.3j BETA 0.3.1: THE OWNER'S RATINGS, STARS, SKIP, A LIVE DISPLAY
+- **Ratings** (`tools/ratings_beta03.js`: number -> stars from his files `sound 501 to sound 540.txt` ... ; `FAV` = six favourites he named, 7 stars, in TOP Sounds): `tools/spec.js` leaves out the presets rated < 5 (`lowRated`; numbers not
+  reused), gives `stars` to the others (generated `kPresetStars`, the built-in votes) and puts those > 7 and `FAV` in TOP Sounds (`TOP_EXTRA` -> `kTopExtra` / `kNumTopExtra`, which `bank.h` `defaultLists()` appends to the first
+  `kNumTop` of the TOP Sounds list). Version `0.3.1` (`APP`, `version.rc`, `common.h`).
+- **Remaking the unrated presets**: `tools/supermod/taste.js` (a ridge regression of the stars on the features of a composer candidate: unison, chorus, reverb, delay, width, attack, release, peak, polyphony, bass; leave-one-out r = 0.43 on 80 ratings),
+  `tools/supermod/rebuild.js` (the 600 of beta 0.3 in `tools/out/presets_lfo3_v1.js`: a rated one stays, an unrated one is replaced under the same number and category by the best predicted candidate of the pool, farthest-point first; plus `--extra 300`
+  new SuperModulation presets 1101-1400 with at least two `INNOV` recipes), `compose.js` (`lush()`, `LAYER_W`, `INNOV`, the filter and the vibrato less often), `tools/supermod/gain.js` (renders the evaluation passage with the listening rules, compares with the same
+  12 dB lower, lowers `master` by whole dB until the limiter changes the sound by < 0.4 %; `--apply`). Order: `build.js --no-write ... --pool` (candidates), `rebuild.js`, `gain.js --apply`, `gen_spec.js`.
+- **Stars** (`bank.h`): `State.stars` (-1 = none given: the built-in vote shows), `BankPreset.stars`; the file has `Stars: N` in a factory preset's or a bank sound's block (a built-in vote the player cleared is `Stars: 0`); `Library::stars / setStars / setUserStars / starredCount`; the lists are `LIST ORDER v4` (the v3 lists of beta 0.3 are not read: the lists are rebuilt so that the new TOP Sounds show; `library_test` section 8b);
+  EXPORT / IMPORT carry them. Editor: five stars with half stars at the right of a row (`bStarsR`, `drawRowStars`, `starHalf`, `bRate`); the browser is 420 px wide (`kBrowserW`).
+- **EVALUATE SOUNDS**: `LEN = 3.5` and `CHORD_LEN = 2` (`gen_spec.js`, `evaluate.js`); `Skip to vote` button in the playing phase (`voteAsk()`; web `askVote`).
+- **Live scope / scalogram**: the engine publishes, for the last voice, the live gains and window of every oscillator that plays (`Display.sg / swin / mask`, `SharedState.sg / swin / smask`, JS `disp.sg`); `globalCycle` / `scopeBands` take an optional
+  `live` (`ScopeLive` in C++) and use it instead of the static gains for the oscillators it names (`editor.cpp scopeLive`, `ui.js liveSlots()`). `tests/display_live.js`.
+
 ### 3.4 Table rebuilds
 - Structural changes rebuild tables **off the audio thread** and switch with a 512-sample crossfade (`setTables`).
 - Web: `app.js` builds the tables in a **Worker** (`startWorker` / `scheduleBuild` / `deliver`; a `data:` URL made of
@@ -461,7 +475,7 @@ scale** (it was 1e-5 in the earlier code, 400 times looser than the real 2.4e-7;
   edit (an error leaves the state unchanged): `######## FACTORY PRESETS` (every preset: `Preset:` its name now,
   `Factory:` its built-in name = the key, `Adjusted: yes|no`, optional `Deleted: yes`, then `  key: value   (Name: shown)`
   for the parameters that differ from the defaults, ENGINE and A/B MIX always; only adjusted blocks override the built-in
-  values), `######## LIST ORDER v3` (beta 0.5 "v2", beta 0.7 "v3": what TOP Sounds and each category hold, in order,
+  values), `######## LIST ORDER v4` (beta 0.5 "v2", beta 0.7 "v3", beta 0.3.1 "v4": what TOP Sounds and each category hold, in order,
   `N. built-in name`; a preset the file does not know — no `Factory:` block — takes its default places, a known one in no
   category goes back to its own; files without "v3" — beta 0.3 to 0.6 — keep their adjusted / deleted presets and bank but
   not their lists, which are rebuilt with this version's TOP Sounds and categories;

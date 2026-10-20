@@ -18,7 +18,7 @@ namespace ws {
 
 #define WS_VENDOR "OktoPierre"
 #define WS_NAME "Okto MultiWave Synth"
-#define WS_VERSION "0.3.0"   // Okto MultiWave Synth beta 0.3; also in vst/src/version.rc and tools/spec.js APP
+#define WS_VERSION "0.3.1"   // Okto MultiWave Synth beta 0.3.1; also in vst/src/version.rc and tools/spec.js APP
 
 // beta 0.6 (security review): the sample rates a host may set; others are ignored (the engine keeps its rate)
 inline constexpr double kMinRate = 8000, kMaxRate = 1536000;
@@ -31,6 +31,8 @@ struct SharedState {
   std::atomic<float> center{0}, width{1}, depth{0}, peakL{0}, peakR{0};
   std::atomic<int> note{-1}, mode{0}, view{0};   // view: the oscillator shown (the gains are its)
   std::atomic<bool> slotLive{false};              // the oscillator shown plays in the last voice (else the panel shows its static gains)
+  std::atomic<float> sg[NS][NB], swin[NS][3];     // beta 0.3.1: the live gains and window of every oscillator that plays in the last voice (the scope and the scalogram)
+  std::atomic<uint32_t> smask{0};                 // ... and which ones (bit s)
   std::atomic<uint32_t> voices{0};
   std::atomic<uint32_t> keys[4];
   std::atomic<uint32_t> blocks{0};

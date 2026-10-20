@@ -528,6 +528,8 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     if (shared) {
       const Display& d = engine.disp;
       for (int b = 0; b < NB; b++) shared->gains[b].store(d.gains[b], std::memory_order_relaxed);
+      for (int s = 0; s < NS; s++) { for (int b = 0; b < NB; b++) shared->sg[s][b].store(d.sg[s][b], std::memory_order_relaxed); for (int q = 0; q < 3; q++) shared->swin[s][q].store(d.swin[s][q], std::memory_order_relaxed); }
+      shared->smask.store(d.mask);
       shared->center.store(d.center); shared->width.store(d.width); shared->depth.store(d.depth);
       shared->note.store(d.note); shared->mode.store(d.mode); shared->view.store(d.view); shared->slotLive.store(d.slotLive); shared->voices.store(d.voices);
       float o = shared->peakL.load(); while (d.peakL > o && !shared->peakL.compare_exchange_weak(o, d.peakL)) {}

@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Okto MultiWave Synth — EVALUATE SOUNDS: a listening session on the new presets (beta 0.3: the 600 of this version, 501-1100, then the 175 of beta 0.2 and the 133 of beta 0.1),
-// started by the header's button. Each new preset plays the same 5 s of Beethoven's Appassionata (III) — the busy passage from 0:13 of the demo — and then a long C minor
-// chord (4 s: a sustained sound can be judged too), then a window
+// started by the header's button. Each new preset plays the same 3.5 s of Beethoven's Appassionata (III) — the busy passage from 0:13 of the demo — and then a C minor
+// chord (2 s: a sustained sound can be judged too; "Skip to vote" ends the music at once), then a window
 // asks for a rating from 1 to 10 stars. Above 5 stars it offers to modify the preset: the preset is reloaded exactly as
 // designed, the window shrinks to a bar, the player changes the panel (mouse or MIDI controller) and plays it (MIDI
 // keyboard), then keeps the initial settings or records the change. The ratings and the recorded changes are kept in this
@@ -14,7 +14,7 @@
 function WSEvaluate(api) {
   'use strict';
   const P = api.P, PARAMS = api.PARAMS, C = api.C;
-  const START = 12.9, LEN = 5;                 // the passage (seconds of the default demo) and its length
+  const START = 12.9, LEN = 3.5;               // the passage (seconds of the default demo) and its length (beta 0.3.1: 30 % shorter than 5 s)
   const LEAD = 0.12;                           // seconds between loading a preset and its first note
   const STORE = 'mw.votes';
   const FIRST = WS_SPEC.NEW_FIRST, PRESETS = WS_SPEC.PRESETS.slice(FIRST);   // the presets to rate, in the order of the factory list (the newest first)
@@ -38,8 +38,8 @@ function WSEvaluate(api) {
   }
   const t0 = notes[0];
   for (let i = 0; i < notes.length; i += 4) notes[i] -= t0;   // starts on its first note
-  // then a long chord, C minor (C3 G3 C4 Eb4 G4), held 4 s after a short pause: the same notes and times as the plug-in's passage (tools/gen_spec.js)
-  const CHORD_AT = LEN + 0.4, CHORD_LEN = 4, CHORD_VEL = 0.7, TOTAL = CHORD_AT + CHORD_LEN;
+  // then a chord, C minor (C3 G3 C4 Eb4 G4), held 2 s after a short pause: the same notes and times as the plug-in's passage (tools/gen_spec.js)
+  const CHORD_AT = LEN + 0.4, CHORD_LEN = 2, CHORD_VEL = 0.7, TOTAL = CHORD_AT + CHORD_LEN;
   for (const n of [48, 55, 60, 63, 67]) notes.push(CHORD_AT, CHORD_LEN, n, CHORD_VEL);
 
   const store = {
@@ -70,7 +70,7 @@ function WSEvaluate(api) {
     const nv = list.filter(p => voted(KEY(p))).length;
     const d = new Date(), pad = (x) => String(x).padStart(2, '0');
     L.push('Okto MultiWave Synth - preset ratings (1 star = poor ... 10 stars = excellent)');
-    L.push('Listening: Beethoven, Appassionata (III), 5 s from 0:13 of the demo, then a long C minor chord (4 s); each preset played polyphonic at its normal octave.');
+    L.push('Listening: Beethoven, Appassionata (III), 3.5 s from 0:13 of the demo, then a C minor chord (2 s); each preset played polyphonic at its normal octave.');
     L.push('Presets: A1 A2 = subtractive oscillators, B1 = the additive oscillator; the letters of a name say which oscillators the preset uses.');
     if (lo !== undefined) L.push(`Set: sound ${num(lo)} to sound ${num(hi)} (${list.length} sounds)`);
     L.push(`Saved: ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}   ` +
@@ -252,7 +252,7 @@ function WSEvaluate(api) {
     win.title.textContent = TITLE;
     const done = nVotes();
     win.name.textContent = done ? `${done} of ${PRESETS.length} presets rated` : `${PRESETS.length} new presets to rate`;
-    win.desc.textContent = 'Each preset plays 5 s of Beethoven (Appassionata, the busy passage at 0:13) and then a long C minor chord, then rate it from 1 (poor) to 10 stars (excellent). ' +
+    win.desc.textContent = 'Each preset plays 3.5 s of Beethoven (Appassionata, the busy passage at 0:13) and then a C minor chord, then rate it from 1 (poor) to 10 stars (excellent). ' +
       `Above ${ASK_ABOVE} stars you can modify the preset and record the change. The sounds come in sets of ${SET}: each set has its own file, "sound xx to sound yy".`;
     win.bar.style.width = (100 * done / PRESETS.length) + '%';
     showStars('off');
@@ -305,7 +305,7 @@ function WSEvaluate(api) {
     win.name.textContent = PRESETS[s.k].name;
     win.desc.textContent = 'Playing… ' + (DESC[PRESETS[s.k].name] || '');
     showStars('off', data.votes[n]);
-    buttons([['Stop', stop]]);
+    buttons([['Skip to vote', askVote, true], ['Stop', stop]]);   // beta 0.3.1: Skip ends the music at once and goes to the rating
     status(voteNote(n) || fileLabel());
     playPassage();
     const t1 = performance.now();
@@ -320,6 +320,7 @@ function WSEvaluate(api) {
   }
   function askVote() {
     if (!s) return;
+    clearTimeout(s.timer);
     api.post({ t: 'seqstop' });   // the notes end, their release and the effects fade out
     s.phase = 'vote';
     win.desc.textContent = DESC[PRESETS[s.k].name] || 'How do you like this preset?';

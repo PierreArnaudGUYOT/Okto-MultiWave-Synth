@@ -584,7 +584,10 @@ function WSCoreFactory(SPEC) {
     for (let s = 0; s < NS; s++) { this.ownBuf.push(new Float64Array(CTRL)); this.endPh.push(new Float64Array(4)); }
     this.ownOn = new Uint8Array(NS); this.ownLevel = new Float64Array(NS); this.ownStage = new Int32Array(NS);
     this.endLevel = 0; this.endStage = 0; this.endSubPhase = 0;
-    this.disp = { gains: new Float32Array(NB), mode: 0, view: 0, voices: 0, peakL: 0, peakR: 0, center: 0, width: 1, depth: 0, note: -1, slotLive: false };
+    // beta 0.3.1: also the live gains and window of every oscillator that plays in the last voice (sg: NS x NB, swin: NS x [center, width, depth], mask: its bits), for the
+    // SCOPE and the SCALOGRAM, which show the whole sound and move with the modulation (the cutoff of the LFOs and the envelopes, the note)
+    this.disp = { gains: new Float32Array(NB), mode: 0, view: 0, voices: 0, peakL: 0, peakR: 0, center: 0, width: 1, depth: 0, note: -1, slotLive: false,
+      sg: new Float32Array(NS * NB), swin: new Float32Array(NS * 3), mask: 0 };
     this.lastVoice = -1;
     this.tempo = 0;   // beta 0.6: the host's tempo (BPM), 0 = none
     this.started = false;   // the first block has been rendered
@@ -1334,6 +1337,16 @@ function WSCoreFactory(SPEC) {
       for (let b = 0; b < NB; b++) d.gains[b] = sl.g[b];
       d.center = sl.pc; d.width = sl.pw; d.depth = sl.pd; d.note = lv.note; d.slotLive = true;
     } else { d.note = lv && lv.active ? lv.note : -1; d.slotLive = false; }
+    d.mask = 0;
+    if (lv && lv.active) {
+      for (let s = 0; s < NS; s++) {
+        const sl = lv.sl[s];
+        if (!sl.live) continue;
+        d.mask |= 1 << s;
+        for (let b = 0; b < NB; b++) d.sg[s * NB + b] = sl.g[b];
+        d.swin[s * 3] = sl.pc; d.swin[s * 3 + 1] = sl.pw; d.swin[s * 3 + 2] = sl.pd;
+      }
+    }
   };
 
   E.block = function (outL, outR, o, n) {
@@ -1531,14 +1544,17 @@ function WSCoreFactory(SPEC) {
   }
   // One cycle of the mix at the reference note (C4, full velocity): each oscillator that plays through its own scale filter and position window, at
   // its level and tuning (an octave up shows two of its cycles), plus the sub oscillator; dry (no envelope, no effect).
-  function globalCycle(params, sets, out) {
+  // (beta 0.3.1: `live` = { mask, sg, win } from the last voice: an oscillator it plays shows its live gains and window, so the display moves with the sound; else the static ones)
+  function globalCycle(params, sets, out, live) {
     out.fill(0);
     const g = new Float64Array(NB), cyc = new Float64Array(N);
     for (let s = 0; s < NS; s++) {
       if (!sets[s]) continue;
       const k = K[s];
-      staticGains(params, g, s);
-      displayCycle(sets[s], g, params[k.pcen], params[k.pwid], params[k.pdep], cyc);
+      let c = params[k.pcen], w = params[k.pwid], d = params[k.pdep];
+      if (live && (live.mask & (1 << s))) { for (let b = 0; b < NB; b++) g[b] = live.sg[s * NB + b]; c = live.win[s * 3]; w = live.win[s * 3 + 1]; d = live.win[s * 3 + 2]; }
+      else staticGains(params, g, s);
+      displayCycle(sets[s], g, c, w, d, cyc);
       const lvl = params[k.lvl], ratio = Math.pow(2, (12 * params[k.oct] + params[k.semi] + params[k.fine] / 100) / 12);
       for (let i = 0; i < N; i++) {
         const x = i * ratio, f = Math.floor(x), fr = x - f, i0 = f % N, i1 = (i0 + 1) % N;
@@ -1554,11 +1570,12 @@ function WSCoreFactory(SPEC) {
   }
   // The scalogram of the mix: for each oscillator that plays, its coefficients and the scale of each band (level, band scale, size of the atoms,
   // the band's filter gain); the screen shows the root of the sum of the squares.
-  function scopeBands(params, sets) {
+  function scopeBands(params, sets, live) {
     const r = [], g = new Float64Array(NB), sq = 1 / Math.sqrt(N);
     for (let s = 0; s < NS; s++) {
       if (!sets[s]) continue;
-      staticGains(params, g, s);
+      if (live && (live.mask & (1 << s))) { for (let b = 0; b < NB; b++) g[b] = live.sg[s * NB + b]; }
+      else staticGains(params, g, s);
       const sc = new Float64Array(NB);
       for (let b = 1; b <= NB; b++) sc[b - 1] = params[K[s].lvl] * sets[s].bandScale[b - 1] * Math.pow(2, (b - 1) / 2) * sq * Math.abs(g[b - 1]);
       r.push({ coeffs: sets[s].coeffs, sc });

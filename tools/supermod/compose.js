@@ -29,7 +29,16 @@ const CATS = {
   'FX': { kind: 'fx', speed: [0.05, 9] }, 'Drums & Perc': { kind: 'perc', speed: [1.5, 12] },
 };
 const SPEED = { bass: [0.2, 6], lead: [0.4, 8], keys: [0.25, 5], organ: [0.3, 7], pad: [0.06, 1.4], strings: [0.12, 4], brass: [0.3, 6], pluck: [0.25, 5], bell: [0.08, 2.5], fx: [0.05, 9], perc: [1.5, 12] };
-const SUPER_KINDS = [['pad', 4], ['lead', 3], ['bass', 2.5], ['keys', 2], ['pluck', 2], ['strings', 1.2], ['fx', 3], ['brass', 1], ['bell', 1.2], ['organ', 0.6]];
+// (beta 0.3.1, after the owner's ratings of 501-620: the SuperModulation sounds he liked were pads and leads, the basses were rated lowest: fewer basses)
+const SUPER_KINDS = [['pad', 4], ['lead', 3], ['bass', 0.8], ['keys', 2], ['pluck', 2], ['strings', 1.4], ['fx', 3], ['brass', 1], ['bell', 1.2], ['organ', 0.6]];
+// beta 0.3.1: the recipes that act on the wavelet itself (what the instrument is about), not only on a filter: the atoms kept (sparsity), the source phase and width, the morph between two
+// wavelets, the window, the additive scales. SuperModulation sounds draw them more often and need at least two of them (the owner asked for presets "that innovate with the wavelets").
+const INNOV = new Set(['sparseBreath', 'morphLfo', 'windowSweep', 'ewSwing', 'l2Sparse', 'l2Phase', 'l2Width', 'l2Morph', 'l2Pos', 'l2WinW', 'l2Tilt', 'l2Odd', 'l2Even', 'l2Sus']);
+const isInnov = (id) => INNOV.has(id.replace(/_3$/, ''));
+// beta 0.3.1: how much a layer is drawn, from the mean stars of the presets made of it (shrunk towards 1: few ratings each): smooth warm waves up, nasal / phased / stepped ones down
+const LAYER_W = { softtri: 1.8, warmsaw: 1.6, subsq: 1.5, knockpulse: 1.3, trigrit: 1.2, hollowbars: 1.2, buzzsaw: 1.1, reedpulse: 0.4, phasesaw: 0.4, phasepulse: 0.5, walsh: 0.6, zapsine: 0.6,
+  bassmirror: 0.5, thumptri: 0.7, sparsesaw: 0.7, hollowsq: 0.7, mallet: 0.8, subsine: 0.8, sinepure: 0.9 };
+const pickLayer = (r, pool) => r.wpick(pool.map(l => [l, LAYER_W[l.id] || 1]));
 
 // which layers a kind of sound may use for each role
 const okLayer = (l, kind) => {
@@ -112,6 +121,23 @@ function globals(r, kind) {
   return g;
 }
 
+// ---- beta 0.3.1: LUSH. What the owner rated highest (and the measures that go with the stars: width 0.39, reverb 0.37, chorus 0.36, unison 0.34, release 0.27, a delay 0.27) is a wide,
+// roomy, slowly moving sound: unison copies, stereo width, chorus, reverb, a little echo, a release that lets go gently. `lush` gives a sound those in most cases (strength: how much).
+function lush(r, g, kind, strength) {
+  if (!r.p(kind === 'bass' ? 0.5 : 0.85)) return g;
+  const s = strength === undefined ? r.f(0.55, 1) : strength;
+  const low = kind === 'bass';
+  if (!g.uni || g.uni[0] < 2) g.uni = [low ? 2 : r.wpick([[2, 2], [3, 3]]), +(low ? r.f(3, 8) : r.f(7, 14)).toFixed(1)];
+  g.width = +Math.max(g.width === undefined ? 0 : g.width, low ? r.f(0.45, 0.7) : r.f(0.75, 1)).toFixed(2);
+  const chm = g.chorus ? g.chorus[0] : 0, want = (low ? 0.2 : 0.3) + 0.25 * s * r.next();
+  if (chm < want) g.chorus = [+want.toFixed(2), +r.f(0.4, 0.9).toFixed(2), 0.6];
+  const rv = g.reverb || [0, 0];
+  g.reverb = [+Math.max(rv[0], low ? 0.4 : 0.55 + 0.3 * s * r.next()).toFixed(2), +Math.max(rv[1], (low ? 0.1 : 0.2) + 0.2 * s * r.next()).toFixed(2)];
+  if (!g.delay && !low && kind !== 'pad' && kind !== 'strings' && r.p(0.5)) g.delay = [r.pick([0.25, 0.33, 0.5, 0.75]), +r.f(0.25, 0.4).toFixed(2), +r.f(0.1, 0.22).toFixed(2)];
+  if (['pad', 'strings', 'lead', 'keys', 'brass', 'fx', 'organ'].includes(kind) && g.amp && g.amp[3] < 0.5) g.amp[3] = +r.f(0.5, 1.4).toFixed(3);
+  return g;
+}
+
 // ---- layers of one mode that fit a kind of sound and a role
 function candidates(mode, kind, roles) {
   return (mode === 'A' ? LAY.A : LAY.B).filter(l => roles.includes(l.role) && okLayer(l, kind));
@@ -130,16 +156,17 @@ function modulate(r, ctx, cat, kind) {
     used.push({ m, res }); dests.add(canon(m.dest)); return true;
   };
   const wd = MODS.filter(m => m.wd), by = (k) => wd.filter(m => m.kind === k);
-  const weighted = (list) => { const out = [], left = list.slice(); while (left.length) { const m = r.wpick(left.map(x => [x, x.w || 1])); out.push(m); left.splice(left.indexOf(m), 1); } return out; };
+  const wt = (m) => (m.w || 1) * (super_ && isInnov(m.id) ? 2.2 : 1);
+  const weighted = (list) => { const out = [], left = list.slice(); while (left.length) { const m = r.wpick(left.map(x => [x, wt(x)])); out.push(m); left.splice(left.indexOf(m), 1); } return out; };
   // the filter effect first (an LFO may move it)
-  const doFlt = r.p(FLT_PROB[kind] === undefined ? 0.6 : FLT_PROB[kind]);
+  const doFlt = r.p((FLT_PROB[kind] === undefined ? 0.6 : FLT_PROB[kind]) * 0.6);   // beta 0.3.1: the sounds with the filter envelope were rated lower: less often
   if (doFlt) fltSetup(ctx, r);
   const both = super_ || r.p(0.45);                                    // LFO 2 and LFO 3 both move wavelet parameters
   const first = r.p(0.5) ? 'lfo2' : 'lfo3', second = first === 'lfo2' ? 'lfo3' : 'lfo2';
   const nL1 = super_ ? r.wpick([[1, 3], [2, 2]]) : both ? r.wpick([[0, 3], [1, 2]]) : r.wpick([[0, 1.2], [1, 3], [2, 1]]);
   const doEnv = r.p(super_ ? 0.3 : 0.2);
   let nDone = 0;
-  for (const m of r.shuffle(by('lfo1'))) { if (nDone >= nL1) break; if (apply(m)) nDone++; }
+  for (const m of weighted(by('lfo1'))) { if (nDone >= nL1) break; if (apply(m)) nDone++; }
   const lfoWavelet = (slot) => { for (const m of weighted(by(slot))) if (apply(m)) return true; return false; };
   if (!lfoWavelet(first)) return null;
   if (both) { if (!lfoWavelet(second)) return null; }
@@ -148,9 +175,9 @@ function modulate(r, ctx, cat, kind) {
   }
   if (doEnv) { for (const m of by('env')) if (apply(m)) break; }
   const wdCount = new Set(used.filter(u => u.m.wd).map(u => canon(u.m.dest))).size;
-  if (super_ && (wdCount < 3 || !ctx.g.lfo2 || !ctx.g.lfo3)) return null;
+  if (super_ && (wdCount < 3 || !ctx.g.lfo2 || !ctx.g.lfo3 || used.filter(u => isInnov(u.m.id)).length < 2)) return null;
   if (!super_ && (wdCount < 1 || wdCount > 3)) return null;
-  if (r.p(0.3) && ctx.g.lfo && ctx.g.lfo.pitch === undefined && kind !== 'bell' && kind !== 'pluck' && kind !== 'perc') { const m = MODS.find(x => x.id === 'pitchVib'); if (m.fits(ctx)) apply(m); }
+  if (r.p(0.3) && ctx.g.lfo && ctx.g.lfo.pitch === undefined && kind !== 'bell' && kind !== 'pluck' && kind !== 'perc' && r.p(0.4)) { const m = MODS.find(x => x.id === 'pitchVib'); if (m.fits(ctx)) apply(m); }   // (vibrato rated low: 0.3 x 0.4 of the sounds)
   return used;
 }
 
@@ -211,7 +238,7 @@ function composeLayers(r, kind) {
     const mode = s[0];
     const pool = candidates(mode, kind, ['body', 'color']).filter(l => bodyOk(l, kind));
     if (!pool.length) continue;
-    bodySlot = s; take(s, r.pick(pool), 'body', true); break;
+    bodySlot = s; take(s, pickLayer(r, pool), 'body', true); break;
   }
   if (!bodySlot) return null;
   for (const s of slots) {
@@ -224,7 +251,7 @@ function composeLayers(r, kind) {
     for (let tries = 0; tries < 14; tries++) {
       const role = r.wpick(rolePool), pool = candidates(mode, kind, [role]).filter(l => !usedFam.has(l.fam));
       if (!pool.length) continue;
-      const l = r.pick(pool), o = l.make(r); placeLayer(r, kind, role, o, false); o.lvl = levelFor(r, role);
+      const l = pickLayer(r, pool), o = l.make(r); placeLayer(r, kind, role, o, false); o.lvl = levelFor(r, role);
       const cand = { l, o, role };
       const worst = same.length ? Math.min(...same.map(x => contrast(x, cand))) : 9;
       const need = same.length ? 4 : 0;   // two oscillators of the same kind must be very different
@@ -235,7 +262,7 @@ function composeLayers(r, kind) {
     if (same.length && Math.min(...same.map(x => contrast(x, best))) < 3) return null;
     picked[s] = best; usedFam.add(best.l.fam);
   }
-  const ctx = { osc: {}, g: globals(r, kind), kind, speed: SPEED[kind], variant: null, cur: null };
+  const ctx = { osc: {}, g: lush(r, globals(r, kind), kind), kind, speed: SPEED[kind], variant: null, cur: null };
   for (const s of slots) ctx.osc[s] = picked[s].o;
   const order2 = [bodySlot, ...slots.filter(s => s !== bodySlot)];
   return { slots, ctx, layerWords: slots.map(s => r.pick(picked[s].l.words)), form: null, order: order2, layers: slots.map(s => picked[s].l.id), roles: slots.map(s => picked[s].role),
@@ -258,4 +285,4 @@ function describeWith(base, modIds, v) {
   return base + '; ' + (cl.length > 1 ? cl.slice(0, -1).join(', ') + ', and ' + cl[cl.length - 1] : cl[0]) + '.';
 }
 function describe(layers, oscs, modIds, v) { return describeWith(layersText(layers, oscs), modIds, v); }
-module.exports = { compose, describe, describeWith, CATS, contrast };
+module.exports = { compose, describe, describeWith, CATS, contrast, INNOV, isInnov };

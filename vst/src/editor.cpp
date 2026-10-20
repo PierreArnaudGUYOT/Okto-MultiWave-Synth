@@ -152,6 +152,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   bool chordOn = false;     // CHORD MODE: the chord card is shown and the panel is taller
   Tables disp; uint64_t dispSig = ~0ull;
   ScopeSets scopeSets;   // beta 0.3: the raw layers of every oscillator that plays (the scope and the scalogram show the whole sound)
+  ScopeLive scopeLive;   // beta 0.3.1: the live gains and window of the oscillators that play in the last voice (the displays move with the sound)
   std::map<int, Atom> atoms;
   // live data
   float liveGains[NB] = {}; float liveC = 0, liveW = 1, liveD = 0; int liveNote = -1, liveView = 0; bool liveSlot = false; uint32_t liveVoices = 0;
@@ -274,6 +275,10 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       int n = sh->note.load(), vw = sh->view.load(); const bool sl = sh->slotLive.load(); uint32_t vo = sh->voices.load();
       if (c != liveC || w != liveW || d != liveD || n != liveNote || vw != liveView || sl != liveSlot) changed = true;
       liveC = c; liveW = w; liveD = d; liveNote = n; liveView = vw; liveSlot = sl;
+      ScopeLive sNew; sNew.mask = sh->smask.load();
+      for (int s = 0; s < NS; s++) { for (int b = 0; b < NB; b++) sNew.sg[s][b] = sh->sg[s][b].load(); for (int q = 0; q < 3; q++) sNew.win[s][q] = sh->swin[s][q].load(); }
+      if (sNew.mask != scopeLive.mask || (sNew.mask && std::memcmp(&sNew, &scopeLive, sizeof sNew) != 0)) changed = true;
+      scopeLive = sNew;
       if (changed) { invalidateType(W_SCOPE); invalidateType(W_SCALOGRAM); invalidateType(W_WINDOW); }
       if (vo != liveVoices) { liveVoices = vo; invalidateType(W_LEDS); }
       bool kc = false;
@@ -571,7 +576,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     g.line(Pt{r.x, r.y + r.h / 2}, Pt{r.x + r.w, r.y + r.h / 2}, Pen(argb(23, 255, 255, 255), 1));
     double v[kNumParams]; currentParams(v);
     std::vector<double> y(N);
-    globalCycle(v, scopeSets, y.data());
+    globalCycle(v, scopeSets, y.data(), &scopeLive);
     double peak = 0.25;
     for (int i = 0; i < N; i++) peak = std::max(peak, std::fabs(y[i]));
     const double sy = (r.h / 2 - 8) / peak;
@@ -584,6 +589,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     if (v[P_SUB_LEVEL] > 0) names += (names.empty() ? L"" : L" + ") + std::wstring(L"SUB");
     if (names.empty()) names = L"NO OSCILLATOR";
     pill(g, names + L" · ONE CYCLE OF THE MIX", r.x + 8, r.y + 14, false, rgb(0xc8d2e1, 160));
+    if (scopeLive.mask && liveNote >= 0) pill(g, noteName(liveNote) + L" · LIVE", r.x + r.w - 8, r.y + 14, true, rgb(accent()));
   }
 
   // beta 0.3: the whole sound: the atoms of every oscillator that plays (root of the sum of the squares of what each one shows)
@@ -592,7 +598,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     for (int b = 1; b <= NB; b++)
       text(g, L"B" + std::to_wstring(b), R{r.x, top + (NB - b) * rh, lm - 4, rh}, 8.5f, true, argb(102, 200, 210, 225), 2);
     double v[kNumParams]; currentParams(v);
-    ScopeBand bands[NS]; const int nb = scopeBands(v, scopeSets, bands);
+    ScopeBand bands[NS]; const int nb = scopeBands(v, scopeSets, bands, &scopeLive);
     int PW = (int)pw;
     std::vector<uint32_t> img((size_t)PW * NB);
     uint32_t ac = accent(); int ar = (ac >> 16) & 255, ag = (ac >> 8) & 255, ab = ac & 255;
@@ -1213,8 +1219,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
   }
 
   // ================================================================ EVALUATE SOUNDS: listen-and-rate session
-  // EVALUATE SOUNDS plays each of the new presets (beta 0.3: 501-1100, then 201-500, then 001-200) with the same 5 s of Beethoven as the web app
-  // and a long C minor chord (the plug-in plays it itself: vote_data.h), then asks a rating from 1 to 10 stars. The sounds come in SETS OF 40:
+  // EVALUATE SOUNDS plays each of the new presets (beta 0.3: 501-1100, then 201-500, then 001-200) with the same 3.5 s of Beethoven as the web app
+  // and a C minor chord of 2 s (the plug-in plays it itself: vote_data.h; "Skip to vote" ends the music at once), then asks a rating from 1 to 10 stars. The sounds come in SETS OF 40:
   // "Start at…" asks for the number of the first sound, every set has its own file next to the ratings file ("sound 502 to sound 541.txt",
   // rewritten after every rating, so a set is never lost). Above 5 stars it offers to modify the preset: it is loaded
   // exactly as designed, a bar replaces the on-screen keyboard, the player changes the panel with the mouse and plays it on the
@@ -1339,7 +1345,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     int nVoted = 0, nChanged = 0;
     for (int k = lo; k <= hi; k++) { if (vVotes[k] > 0) nVoted++; if (!vChanges[k].empty()) nChanged++; }
     put("Okto MultiWave Synth - preset ratings (1 star = poor ... 10 stars = excellent)");
-    put("Listening: Beethoven, Appassionata (III), 5 s from 0:13 of the demo, then a long C minor chord (4 s); each preset played polyphonic at its normal octave. Rated in the VST plug-in.");
+    put("Listening: Beethoven, Appassionata (III), 3.5 s from 0:13 of the demo, then a C minor chord (2 s); each preset played polyphonic at its normal octave. Rated in the VST plug-in.");
     put("Presets: A1 A2 = subtractive oscillators, B1 = the additive oscillator; the letters of a name say which oscillators the preset uses.");
     if (set) put("Set: sound " + vNum(lo) + " to sound " + vNum(hi) + " (" + std::to_string(hi - lo + 1) + " sounds)");
     std::snprintf(b, sizeof b, "Saved: %04d-%02d-%02d %02d:%02d   Rated: %d / %d   Presets with a recorded change: %d",
@@ -1457,7 +1463,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     vK0 = -1;
     vTitle = L"LISTEN AND RATE · " + std::to_wstring(n) + L" NEW PRESETS";
     vName = done ? std::to_wstring(done) + L" of " + std::to_wstring(n) + L" presets rated" : std::to_wstring(n) + L" new presets to rate";
-    vDesc = L"Each preset plays 5 s of Beethoven and a long C minor chord; rate it from 1 (poor) to 10 stars (excellent). "
+    vDesc = L"Each preset plays 3.5 s of Beethoven and a C minor chord; rate it from 1 (poor) to 10 stars (excellent). "
             L"Above 5 stars you can modify it. The sounds come in sets of 40, each with its own .txt file.";
     vProgress = (float)done / n;
     std::vector<VBtn> b;
@@ -1519,7 +1525,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     vDesc = L"Playing… " + toW(kPresetDesc[pk]);
     vStatus = voteNote(vK);
     if (vStatus.empty()) vStatus = voteFileLabel();
-    voteShow(V_PLAY, {{L"Stop", [this] { voteStop(); }, false, {}}});
+    voteShow(V_PLAY, {{L"Skip to vote", [this] { voteAsk(); }, true, {}}, {L"Stop", [this] { voteStop(); }, false, {}}});   // beta 0.3.1: Skip ends the music and goes to the rating
   }
   void voteTick() {
     if (vPhase != V_PLAY) return;
@@ -1717,7 +1723,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
                        kCmdBrowser = 912, kCmdDelete = 913, kCmdBankLoad = 1000, kCmdBankDelete = 3000, kCmdUndelete = 5000,
                        kCmdBankImport = 903,   // beta 0.4
                        kCmdMoveTo = 7000, kCmdTopAdd = 7100, kCmdTopRemove = 7101;   // beta 0.5: the sound menu (ctxRow)
-  static constexpr float kBrowserW = 360;                  // logical width added at the right while the browser is open
+  static constexpr float kBrowserW = 420;                  // logical width added at the right while the browser is open
   static constexpr R kSaveBtn{862, 9, 68, 30};             // SAVE PRESET, between EVALUATE and MANUAL
   std::vector<BankPreset> menuBank;                        // the bank as listed by the last menu / browser (commands index it)
   struct BCat { std::wstring label; std::vector<int> presets; };   // a factory category of the browser
@@ -1985,7 +1991,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     std::wstring path = envPath(L"WS_PRESETS_EXPORT");   // developer test: no dialog
     if (path.empty()) {
       if (!win) return;
-      path = win->saveFileDialog(L"Export all presets (factory presets and user bank)", L"OKTOMULTIWAVE presets.txt");
+      path = win->saveFileDialog(L"Export all presets (factory presets, user bank and your stars)", L"OKTOMULTIWAVE presets.txt");
       if (path.empty()) return;
     }
     Library::get().refresh();
@@ -2167,6 +2173,7 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     else if (h >= 1000) {
       const std::vector<int> rows = bRows();
       const int j = h - 1000 + bScroll;
+      if (j < (int)rows.size() && bStarsR(h - 1000).has(x, y)) { bRate(rows[j], x - bStarsR(h - 1000).x); return; }   // beta 0.3.1: a click on the stars rates the sound (it does not load it)
       if (j < (int)rows.size()) {
         if (bTab == 0) host->loadPreset(rows[j]);
         else host->loadUserSound(menuBank[rows[j]].v, kUserPrefix + menuBank[rows[j]].name);
@@ -2363,21 +2370,17 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       std::string name;
       bool fav = false, adj = false;
       int vote = 0;
-      if (bTab == 0) { name = lib.name(row); fav = lib.inTop(row); adj = lib.adjusted(row); vote = kPresetStars[row]; }   // ★ = in TOP Sounds
-      else name = menuBank[row].name;
-      float right = r.x + r.w - 6;
+      if (bTab == 0) { name = lib.name(row); fav = lib.inTop(row); adj = lib.adjusted(row); vote = lib.stars(row); }   // ★ = in TOP Sounds
+      else { name = menuBank[row].name; vote = menuBank[row].stars; }
+      drawRowStars(g, bStarsR(j), vote);   // beta 0.3.1: the rating, at the right of the row
+      float right = bStarsR(j).x - 6;
       if (adj) {   // adjusted by the player
         const R p{right - 26, r.y + 5, 26, r.h - 10};
         fillRR(g, p, 3, rgb(accent(), 40));
         text(g, L"ADJ", p, 8, true, rgb(accent()));
         right -= 30;
       }
-      if (fav) { starShape(g, right - 7, r.y + r.h / 2, 5, rgb(0xffcf4a)); right -= 16; }   // a favourite
-      else if (vote > 0) {   // OktoPierre's vote in the listening test
-        starShape(g, right - 6, r.y + r.h / 2, 4, rgb(0xffcf4a, 170));
-        text(g, std::to_wstring(vote), R{right - 30, r.y, 18, r.h}, 9.5f, true, rgb(0xffcf4a, 200), 2);
-        right -= 32;
-      }
+      if (fav) { starShape(g, right - 7, r.y + r.h / 2, 5, rgb(0xffcf4a)); right -= 16; }   // a favourite (in TOP Sounds)
       nameText(g, name, R{r.x + 8, r.y, right - r.x - 10, r.h}, 11.5f, cur, cur ? rgb(0xffffff) : rgb(0xd5dce6), 255);
     }
     if ((int)rows.size() > vis) {   // scroll bar (beta 0.4: wide enough for a trackpad; drag the thumb or click the bar)
@@ -2416,6 +2419,49 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
       p[k] = Pt{cx + (float)(rr * std::sin(a)), cy - (float)(rr * std::cos(a))};
     }
     g.fillPolygon(p, 10, c);
+  }
+  // beta 0.3.1: the left half of a star (the star clipped at x = cx)
+  void starHalf(Canvas& g, float cx, float cy, float r, Col c) {
+    Pt p[10], q[24]; int n = 0;
+    for (int k = 0; k < 10; k++) {
+      const double a = PI * k / 5, rr = k % 2 ? r * 0.45 : r;
+      p[k] = Pt{cx + (float)(rr * std::sin(a)), cy - (float)(rr * std::cos(a))};
+    }
+    for (int k = 0; k < 10; k++) {
+      const Pt a = p[k], b = p[(k + 1) % 10];
+      const bool ain = a.x <= cx, bin = b.x <= cx;
+      if (ain) q[n++] = a;
+      if (ain != bin) { const float t = (cx - a.x) / (b.x - a.x); q[n++] = Pt{cx, a.y + t * (b.y - a.y)}; }
+    }
+    if (n >= 3) g.fillPolygon(q, n, c);
+  }
+  // beta 0.3.1: the rating of a sound at the right of its row in the preset browser: five stars with half stars (n = 0..10)
+  static constexpr float kStarW = 12;
+  R bStarsR(int j) const { const R r = bRowR(j); return R{r.x + r.w - 6 - 5 * kStarW, r.y, 5 * kStarW, r.h}; }
+  void drawRowStars(Canvas& g, const R& s, int n) {
+    for (int i = 0; i < 5; i++) {
+      const float cx = s.x + i * kStarW + kStarW / 2, cy = s.y + s.h / 2;
+      starShape(g, cx, cy, 5, rgb(0xffffff, n > 0 ? 34 : 22));   // the empty star
+      if (n >= 2 * i + 2) starShape(g, cx, cy, 5, rgb(0xffcf4a));
+      else if (n == 2 * i + 1) starHalf(g, cx, cy, 5, rgb(0xffcf4a));
+    }
+  }
+  // a click on the stars of a row (dx: where, from the left of the stars): the left half of a star gives a half star, the right half the whole star, 1..10;
+  // a click on the rating the sound already has clears it. The rating is kept in the presets file (EXPORT carries it).
+  void bRate(int row, float dx) {
+    Library& lib = Library::get();
+    const int idx = std::max(0, std::min(4, (int)(dx / kStarW)));
+    int n = idx * 2 + (dx - idx * kStarW < kStarW / 2 ? 1 : 2);
+    const bool fac = bTab == 0;
+    if (!fac && (row < 0 || row >= (int)menuBank.size())) return;
+    const int cur = fac ? lib.stars(row) : menuBank[row].stars;
+    if (n == cur) n = 0;
+    const std::string nm = fac ? lib.name(row) : menuBank[row].name;
+    const std::wstring e = fac ? lib.setStars(row, n) : lib.setUserStars(menuBank[row].section, menuBank[row].name, n);
+    if (libError(e, L"Could not save the presets file:")) return;
+    menuBank = lib.bank();
+    bStatus = L"“" + toW(nm) + L"”: " + (n ? std::to_wstring(n) + L" / 10 stars" : std::wstring(L"rating cleared")) + L" (EXPORT… keeps your stars).";
+    invalidateLogical(bCard());
   }
   void drawSaveBtn(Canvas& g) {
     const R r = kSaveBtn;

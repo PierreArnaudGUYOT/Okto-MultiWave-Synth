@@ -19,9 +19,9 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: 'beta 0.3',
-  versionNum: '0.3.0',
-  date: '2026-10-19',
+  version: 'beta 0.3.1',
+  versionNum: '0.3.1',
+  date: '2026-10-20',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
 };
@@ -566,8 +566,13 @@ const withoutB2 = r => {
   if (v.osc_view > 2) delete v.osc_view;
   return Object.assign({}, r, { v });
 };
-// the presets EVALUATE SOUNDS rates, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones)
-const NEW_RAW = [...LFO3_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).map(withoutB2);
+// beta 0.3.1: the owner's listening test of 501-580 (tools/ratings_beta03.js). The presets he rated below 5 stars are left out (their numbers are not used again, so the
+// ratings of the others stay valid); the others keep their stars (the preset browser shows them, and he can change them) and those above 7 are in TOP Sounds.
+const RATED = require('./ratings_beta03.js');
+const numOfName = r => parseInt(r.name, 10);   // the number written first in a new preset's name (3 or 4 digits)
+const lowRated = r => RATED[numOfName(r)] !== undefined && RATED[numOfName(r)] < 5;
+// the presets EVALUATE SOUNDS rates, in this order: the 600 of beta 0.3, the 300 of beta 0.2, the 200 of beta 0.1 (minus the B2 ones and the low-rated ones)
+const NEW_RAW = [...LFO3_RAW, ...SUPER_RAW, ...OLD_RAW].filter(r => !usesB2(r)).filter(r => !lowRated(r)).map(withoutB2);
 const DESCRIPTIONS = {};   // the new presets' one-line descriptions (the evaluation window shows them)
 for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 
@@ -578,7 +583,10 @@ const TOP_RAW = require('./presets_top.js');
 const PRESETS = [];
 for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: convertLegacy(r.v) });
 const TOP_COUNT = PRESETS.length;
-for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: r.v });
+for (const r of NEW_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: r.v, ...(RATED[numOfName(r)] ? { stars: RATED[numOfName(r)] } : {}) });
+// the presets he rated above 7 and the favourites he named (RATED.FAV, 7 stars) go to TOP Sounds (after the 22 of beta 0.7), the best first
+const TOP_EXTRA = PRESETS.map((p, i) => i).filter(i => i >= TOP_COUNT && (PRESETS[i].stars > 7 || RATED.FAV.includes(parseInt(PRESETS[i].name, 10))))
+  .sort((a, b) => PRESETS[b].stars - PRESETS[a].stars || a - b);
 // the factory order is each category's order too (TOP Sounds first, then the new presets, then 001 ...). Beta 0.2: "Wobble Bass" is the first of the
 // Bass list (it comes right after the TOP Sounds in the order of the lists; the numbering of the presets does not change)
 {
@@ -622,5 +630,5 @@ for (const s of S) {
   }
 }
 
-module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, CATEGORIES,
+module.exports = { DEVICE, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, CATEGORIES,
   LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };

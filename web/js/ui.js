@@ -712,7 +712,8 @@ class SynthUI {
   setLive(d) {
     this.live = d;
     const sig = d.note + '|' + d.voices + '|' + d.slotLive + '|' + d.view + '|' + d.peakL.toFixed(4) + '|' + d.peakR.toFixed(4) + '|' + d.center + '|' + d.width + '|' + d.depth + '|' +
-      d.keys.join(',') + '|' + (d.chord ? d.chord.root + ',' + d.chord.last + ',' + d.chord.notes.join(',') : '') + '|' + (d.slotLive ? d.gains.join(',') : '');
+      d.keys.join(',') + '|' + (d.chord ? d.chord.root + ',' + d.chord.last + ',' + d.chord.notes.join(',') : '') + '|' + (d.slotLive ? d.gains.join(',') : '') +
+      '|' + (d.mask ? d.mask + ',' + d.sg.join(',') + ',' + d.swin.join(',') : '');   // beta 0.3.1: the scope and the scalogram follow the live gains of every oscillator
     if (sig !== this.liveSig) { this.liveSig = sig; this.liveVer = (this.liveVer || 0) + 1; }
   }
 
@@ -801,7 +802,10 @@ class SynthUI {
     return { g, center: vals[k.pcen], width: vals[k.pwid], depth: vals[k.pdep], note: -1 };
   }
 
-  // beta 0.3: the whole sound: one cycle of the mix of every oscillator that plays (and the sub oscillator) at the reference note C4
+  // beta 0.3.1: the live gains and windows of the oscillators that play in the last voice (null when no voice plays: the displays then show the static ones)
+  liveSlots() { const d = this.live; return d && d.mask && d.sg ? { mask: d.mask, sg: d.sg, win: d.swin } : null; }
+
+  // beta 0.3: the whole sound: one cycle of the mix of every oscillator that plays (and the sub oscillator); beta 0.3.1: moving with the live sound when a note plays
   draw_scope(ctx, W, H) {
     const C = this.C, sets = this.scope;
     ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
@@ -812,7 +816,7 @@ class SynthUI {
     const vals = this.host.values();
     const names = this.SPEC.SLOTS.filter((sl, k) => sets[k]).map(sl => sl.name);
     if (vals[this.P.sub_level] > 0) names.push('SUB');
-    const y = C.globalCycle(vals, sets, this.cycle);
+    const live = this.liveSlots(), y = C.globalCycle(vals, sets, this.cycle, live);
     let peak = 0.25;
     for (let i = 0; i < C.N; i++) peak = Math.max(peak, Math.abs(y[i]));
     const sy = (H / 2 - 8) / peak;
@@ -826,6 +830,7 @@ class SynthUI {
     ctx.stroke();
     ctx.shadowBlur = 0;
     pill(ctx, (names.length ? names.join(' + ') : 'NO OSCILLATOR') + ' · ONE CYCLE OF THE MIX', 8, 14, 'left', 'rgba(200,210,225,0.6)');
+    if (live && this.live.note >= 0) pill(ctx, noteName(this.live.note) + ' · LIVE', W - 8, 14, 'right', this.accent());
   }
 
   // beta 0.3: the whole sound: the atoms of every oscillator that plays (root of the sum of the squares of what each shows)
@@ -840,7 +845,7 @@ class SynthUI {
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     if (!sets) return;
-    const bands = C.scopeBands(this.host.values(), sets);
+    const bands = C.scopeBands(this.host.values(), sets, this.liveSlots());
     const [r0, g0, b0] = this.accentRGB();
     const col = (t) => {
       if (t <= 0) return null;

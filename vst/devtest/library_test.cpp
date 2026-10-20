@@ -28,6 +28,7 @@ static std::string u8(const std::wstring& w) {
 static std::string readAll(const std::wstring& p) { bool f = false; return readTextFile(p, f); }
 static bool has(const std::string& s, const std::string& x) { return s.find(x) != std::string::npos; }
 static void sleepMs(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
+static int countOf(const std::string& s, const std::string& x) { int n = 0; for (size_t p = s.find(x); p != std::string::npos; p = s.find(x, p + 1)) n++; return n; }
 
 int wmain(int argc, wchar_t** argv) {
   if (argc < 2) { std::printf("usage: library_test.exe <outdir>\n"); return 2; }
@@ -38,13 +39,18 @@ int wmain(int argc, wchar_t** argv) {
   Library& lib = Library::get();
 
   std::printf("1. no file: the built-in presets\n");
-  const int kA = kFirstNew + 4, kB = kFirstNew + 9;   // two new presets
+  // two new presets that are not in TOP Sounds by default and have no built-in vote (beta 0.3.1: the owner's favourites are in TOP Sounds, the rated ones carry stars)
+  auto plain = [](int from) { for (int k = from; k < kNumPresets; k++) { bool x = false; for (int i = 0; i < kNumTopExtra; i++) x = x || kTopExtra[i] == k; if (!x && kPresetStars[k] == 0) return k; } return kNumPresets - 1; };
+  const int kA = plain(kFirstNew + 4), kB = plain(kA + 5);
   check(lib.name(kA) == kPresets[kA].name && !lib.adjusted(kA) && !lib.deleted(kA) && lib.bank().empty(), "names are the built-in ones, nothing adjusted or deleted");
   {
     const auto lists = lib.lists();
     size_t total = 0; for (size_t i = 1; i < lists.size(); i++) total += lists[i].second.size();
-    check(lists.size() == 1 + kNumCategories && (int)lists[0].second.size() == kNumTop && (int)total == kNumPresets,
+    check(lists.size() == 1 + kNumCategories && (int)lists[0].second.size() == kNumTop + kNumTopExtra && (int)total == kNumPresets,
           "TOP Sounds + the categories hold every preset", std::to_string(lists.size()) + " lists, " + std::to_string(total) + " in the categories");
+    bool allIn = true;
+    for (int i = 0; i < kNumTopExtra; i++) allIn = allIn && std::count(lists[0].second.begin(), lists[0].second.end(), kTopExtra[i]) == 1;
+    check(allIn && kNumTopExtra > 0, "the presets rated above 7 are in TOP Sounds by default", std::to_string(kNumTopExtra) + " of them");
   }
 
   std::printf("2. SAVE PRESET: a factory preset adjusted and renamed\n");
@@ -76,7 +82,7 @@ int wmain(int argc, wchar_t** argv) {
 
   std::printf("4. the lists: a preset to TOP Sounds, another moved to a category\n");
   e = lib.setTop(kA, true);
-  check(e.empty() && lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + 1, "setTop adds a preset to TOP Sounds", u8(e));
+  check(e.empty() && lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + kNumTopExtra + 1, "setTop adds a preset to TOP Sounds", u8(e));
   lib.setTop(kA, false);
   const int cat0 = lib.categoryOf(kB), target = cat0 == 1 ? 2 : 1;
   e = lib.moveToCategory(kB, target);
@@ -173,6 +179,63 @@ int wmain(int argc, wchar_t** argv) {
     check(superIdx > 0 && (int)ls[superIdx].second.size() == nSuper, "the SuperModulation list holds its presets", std::to_string(superIdx > 0 ? ls[superIdx].second.size() : 0) + " of " + std::to_string(nSuper));
     check(lib.name(kA) == "Old file adjusted" && lib.adjusted(kA), "an adjusted preset of the old file stays adjusted");
     lib.restore(kA);
+  }
+
+  std::printf("8b. the lists of a file of beta 0.3 (\"LIST ORDER v3\") are not read: the default lists, with the new TOP Sounds\n");
+  {
+    e = lib.setTop(kA, true);   // a list the player changed ...
+    check(e.empty() && lib.inTop(kA), "a player's TOP Sounds addition is written", u8(e));
+    std::string t = readAll(file);
+    const size_t lo = t.find("######## LIST ORDER v4");
+    check(lo != std::string::npos, "the file says LIST ORDER v4");
+    if (lo != std::string::npos) {
+      t.replace(lo, 22, "######## LIST ORDER v3");   // ... and the same file as beta 0.3 wrote it
+      writeTextFile(file, t);
+      sleepMs(30);
+      lib.refresh();
+      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTop + kNumTopExtra, "the v3 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
+    }
+    lib.setTop(kA, false);
+  }
+
+  std::printf("9. stars (beta 0.3.1): the built-in votes, the player's ratings, the file, EXPORT / IMPORT, the user bank\n");
+  {
+    int kv = -1; for (int k = kFirstNew; k < kNumPresets; k++) if (kPresetStars[k] > 0 && kPresetStars[k] < 10) { kv = k; break; }
+    const int kn = plain(kFirstNew);
+    check(kv >= 0 && lib.stars(kv) == kPresetStars[kv], "a preset with a built-in vote shows it", std::to_string(kv >= 0 ? lib.stars(kv) : -1));
+    check(lib.stars(kn) == 0, "an unrated preset has no stars");
+    // (the built-in votes of the rated presets are in the file too: the lines are counted)
+    lib.setStars(kn, 1);   // writes the file
+    const int c7 = countOf(readAll(file), "Stars: 7\r\n");
+    e = lib.setStars(kn, 7);
+    check(e.empty() && lib.stars(kn) == 7 && countOf(readAll(file), "Stars: 7\r\n") == c7 + 1, "setStars writes 'Stars: 7' in the file", u8(e));
+    lib.setStars(kn, 0);
+    check(lib.stars(kn) == 0 && countOf(readAll(file), "Stars: 7\r\n") == c7, "clearing a rating removes its line");
+    const int def = kv >= 0 ? kPresetStars[kv] : 5, other = def == 6 ? 7 : 6;
+    const int cOther = countOf(readAll(file), "Stars: " + std::to_string(other) + "\r\n");
+    lib.setStars(kv, other);
+    check(lib.stars(kv) == other && countOf(readAll(file), "Stars: " + std::to_string(other) + "\r\n") == cOther + 1, "a rating replaces the built-in vote");
+    lib.setStars(kv, 0);
+    check(lib.stars(kv) == 0 && has(readAll(file), "Stars: 0\r\n"), "a built-in vote the player cleared is written as 'Stars: 0'");
+    lib.setStars(kv, def);
+    check(lib.stars(kv) == def, "the built-in vote again");
+    lib.setStars(kn, 9);
+    e = lib.exportTo(exported);
+    const std::string ex = readAll(exported);
+    check(e.empty() && has(ex, "Stars: 9\r\n") && has(ex, "Rated (stars):"), "EXPORT carries the stars", u8(e));
+    lib.setStars(kn, 2);
+    std::wstring backup;
+    e = lib.importFrom(exported, backup);
+    check(e.empty() && lib.stars(kn) == 9, "IMPORT reads the stars back", u8(e));
+    lib.setStars(kn, 0);
+    BankPreset up; up.section = bankSectionOf("Lead"); up.name = "Starred lead"; lib.values(kn, up.v);
+    lib.putUser(up);
+    e = lib.setUserStars(up.section, "Starred lead", 6);
+    check(e.empty() && !lib.bank().empty() && lib.bank()[0].stars == 6 && has(readAll(file), "Stars: 6\r\n"), "a sound of the user bank can be rated", u8(e));
+    BankPreset again = up; again.stars = 0;
+    lib.putUser(again);
+    check(lib.bank()[0].stars == 6, "saving a bank sound again keeps its stars");
+    lib.removeUser(up.section, "Starred lead");
   }
 
   std::printf(gFails ? "\n%d FAILED\n" : "\nALL PASS\n", gFails);

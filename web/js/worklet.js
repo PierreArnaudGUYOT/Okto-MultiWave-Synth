@@ -80,6 +80,7 @@ function WSWorkletMain() {
         const chord = { root: eng.chordRoot, last: eng.chordLastRoot, notes, type: eng.p[this.C.P.chord_type], changed: eng.chordTypeChanged };
         eng.chordTypeChanged = false;
         this.port.postMessage({ t: 'disp', gains: Array.from(d.gains), mode: d.mode, view: d.view, slotLive: d.slotLive, voices: d.voices, peakL: d.peakL, peakR: d.peakR,
+          mask: d.mask, sg: Array.from(d.sg), swin: Array.from(d.swin),   // beta 0.3.1: the live gains and windows of every oscillator that plays (the scope and the scalogram)
           center: d.center, width: d.width, depth: d.depth, note: d.note, keys, chord,
           seqTime: this.seq ? (currentFrame - this.seq.start) / sampleRate : -1, seqDone: this.seqDone });
         d.peakL = 0; d.peakR = 0;
