@@ -13,7 +13,7 @@ const path = require('path');
 const { fork } = require('child_process');
 const OUT = path.join(__dirname, '..', 'out');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i >= 0 ? process.argv[i + 1] : d; };
-const FILE = arg('file', 'C:/Users/pierrearnaud.guyot/GIT/wavelet synthesizer TEST/Preset/OKTOMULTIWAVE presets.txt');
+const FILE = arg('file', path.join(process.env.USERPROFILE || process.env.HOME || '.', 'GIT', 'wavelet synthesizer TEST', 'Preset', 'OKTOMULTIWAVE presets.txt'));   // (pass --file with the exported presets file)
 const PROCS = +arg('procs', 8);
 const TMP = (k) => path.join(OUT, `filter_rated_${k}.json`);
 
