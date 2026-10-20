@@ -9,7 +9,7 @@ const fs = require('fs'), path = require('path'), cp = require('child_process');
 const exe = process.argv[2], histFile = process.argv[3], top = +process.argv[4] || 40;
 if (!exe || !histFile) { console.error('usage: node tools/cpu_profile.js <cpu_bench.exe> <hist.txt> [top]'); process.exit(1); }
 const sym = path.join(process.env.LLVM_MINGW || path.join(process.env.USERPROFILE, 'tools', 'llvm-mingw'), 'bin', 'llvm-symbolizer.exe');
-const rows = fs.readFileSync(histFile, 'utf8').trim().split('\n').map(l => l.split(' ')).map(([a, c]) => [a, +c]);
+const rows = fs.readFileSync(histFile, 'utf8').trim().split('\n').filter(l => l[0] !== '#').map(l => l.split(' ')).map(([a, c]) => [a, +c]);   // the '# module' lines (system libraries' places) are for tools/out/funcs.js-style readers
 const total = rows.reduce((s, r) => s + r[1], 0);
 const r = cp.spawnSync(sym, ['--obj=' + exe, '--inlining', '--relative-address', '--functions=short', '--basenames'], { input: rows.map(x => x[0]).join('\n') + '\n', encoding: 'utf8', maxBuffer: 1 << 28 });
 if (r.status !== 0) { console.error(r.stderr); process.exit(1); }

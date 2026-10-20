@@ -157,8 +157,8 @@ int main(int argc, char** argv) {
   }
   if (!samplePath.empty()) smp.finish(samplePath.c_str());
   if (!checkDir.empty()) std::fprintf(stderr, "checked %d renders: %d not bit-identical, worst difference %.3e of the peak\n", compared, nonIdent, worstAll);
-#ifdef WS_COUNT   // a build with an instrumented scratch copy of dsp.h that counts the table rows read (never the repository's dsp.h)
-  std::fprintf(csv, "# renderVoice calls %llu, rows %llu, band terms %llu (%.2f per row), rows with the window %llu\n", ws::g_calls, ws::g_rows, ws::g_terms, (double)ws::g_terms / std::max(1ull, ws::g_rows), ws::g_dry);
+#ifdef WS_COUNT   // a build with an instrumented scratch copy of dsp.h (never the repository's dsp.h) that counts what it does and defines this macro to print it
+  WS_COUNT_REPORT(csv);
 #endif
   FILETIME c, e, k, u; GetProcessTimes(GetCurrentProcess(), &c, &e, &k, &u);
   const double ct = (((uint64_t)u.dwHighDateTime << 32 | u.dwLowDateTime) + ((uint64_t)k.dwHighDateTime << 32 | k.dwLowDateTime)) / 1e7;

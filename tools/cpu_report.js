@@ -13,7 +13,8 @@ const load = (list) => {
   for (const f of (list || '').split(',').filter(Boolean)) {
     for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
       if (!l || l[0] === '#') continue;
-      const [idx, chord, vel, mn] = l.split(','); m.set(`${idx}|${chord}`, +mn);
+      const [idx, chord, vel, mn] = l.split(','), key = `${idx}|${chord}`;   // a preset measured in several files (repeated runs): the smallest value, the run the machine disturbed least
+      if (!m.has(key) || +mn < m.get(key)) m.set(key, +mn);
     }
   }
   return m;
