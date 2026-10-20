@@ -33,6 +33,9 @@ function WSDemo(api) {
   const TOUR_SAFE = { v_voices: 16, v_oct: 0, v_glide: 0 };
   const TOUR_MAX_ATTACK = 0.08;
   const TOUR_MAX_DELAY_MIX = 0.1, TOUR_MAX_DELAY_FB = 0.3;   // long echoes on a fast piece sound like a canon
+  // The piece is played with every note at velocity 1 and 16 voices, and the presets' masters are set for a few notes: with the filter and the LFOs the tour went to the limiter.
+  // Every tour preset is played this much lower (tools/demo_level.js: at -6 dB none of the 29 presets of the tour is touched by the output stage; at 0 dB five are, up to 10 %).
+  const TOUR_TRIM_DB = -6;
   const TOUR_SNAP = 1.5, TOUR_LEAD = 0.08, TOUR_CUT = 0.25;
   function chordOnsets(notes) {   // notes: flat [time, duration, note, velocity] * n, sorted by time
     const ev = [];
@@ -144,6 +147,7 @@ function WSDemo(api) {
       if (api.values()[P.amp_a] > TOUR_MAX_ATTACK) set('amp_a', TOUR_MAX_ATTACK);
       if (api.values()[P.fx_dmix] > TOUR_MAX_DELAY_MIX) set('fx_dmix', TOUR_MAX_DELAY_MIX);
       if (api.values()[P.fx_dfb] > TOUR_MAX_DELAY_FB) set('fx_dfb', TOUR_MAX_DELAY_FB);
+      set('master', Math.max(PARAMS[P.master].min, api.values()[P.master] + TOUR_TRIM_DB));
       st.scene = k;
       api.setPresetLabel(sc.preset, false);
       const engine = engineLabel();
