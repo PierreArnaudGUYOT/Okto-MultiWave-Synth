@@ -10,7 +10,7 @@ const wav = JSON.parse(fs.readFileSync(path.join(__dirname, 'wavelets.json'), 'u
 
 const root = path.join(__dirname, '..');
 const { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS, INDEX, SECTIONS, PRESETS, TOP, TOP_EXTRA, TOP_LIST, CATEGORIES, LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, MICRO_TABLES,
-  CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, DEMO_PRESETS } = spec;
+  CHORDS, CHORD_KEYS, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, DEMO_PRESETS, KEYATTAC } = spec;
 // the fields of an oscillator, in the order of the C++ SlotDef (a field an oscillator lacks is -1: the subtractive ones have no
 // atom pattern, the additive ones no source wave)
 const SLOT_FIELDS = ['lvl', 'wavelet', 'wave', 'width', 'sparsity', 'phase', 'pattern', 'seed', 'tilt', 'bar1', 'atk', 'spread', 'body', 'bright', 'sus',
@@ -21,9 +21,12 @@ const presetValues = PRESETS.map(pr => ({
   name: pr.name,
   cat: pr.cat,
   id: pr.id,   // version 1.0: the name the preset had with its number (the tools that read the number)
+  ...(pr.vote ? { stars: pr.vote } : {}),   // version 1.0.3: OktoPierre's stars of his third listening (the web app shows them, read only; the plug-in's built-in votes stay zero)
   rank: pr.rank,   // beta 0.5: its place in its category's list (the preset browsers' default order)
   values: PARAMS.map(p => (pr.v[p.key] !== undefined ? pr.v[p.key] : p.def)),
 }));
+// version 1.0.3: KeyAttac, the retouched favourites (the user bank of the plug-in; the tools read them here)
+const keyAttac = KEYATTAC.map(k => ({ name: k.name, from: k.from, stars: k.stars, values: PARAMS.map(p => (k.v[p.key] !== undefined ? k.v[p.key] : p.def)) }));
 // version 1.0: the presets of the demo's tour (web only: the plug-in has no demo)
 const demoPresets = DEMO_PRESETS.map(pr => ({ name: pr.name, values: PARAMS.map(p => (pr.v[p.key] !== undefined ? pr.v[p.key] : p.def)) }));
 const wavelets = wav.order.map((n, i) => ({ id: n, name: PARAMS[INDEX.wavelet].choices[i], h: wav.h[n] }));
@@ -33,6 +36,7 @@ const web = {
   DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET: defaultPresetIndex, TOP, TOP_EXTRA, TOP_LIST, NEW_FIRST, NEW_COUNT, DESCRIPTIONS, TOUR, CATEGORIES, PARAMS, SECTIONS, WAVELETS: wavelets,
   PRESETS: presetValues,
   DEMO_PRESETS: demoPresets,
+  KEYATTAC: keyAttac,
   LFO2_TARGETS: LFO2_TARGETS.map(k => INDEX[k]),   // beta 0.3: the parameters LFO 2 can move (lfo2_target order, the parameters of A1)
   MICRO: MICRO_TABLES,   // beta 0.2: the oriental tunings: [Arabic, Turkish][scale][semitone above the tonic] = cents from the equal-tempered key
   ROLES, LFO2_ROLE: LFO2_ROLE.map(r => ROLES.indexOf(r)),   // the role (index in ROLES) of each target: LFO 2 moves it in every oscillator
@@ -131,6 +135,12 @@ h += 'inline constexpr PresetDef kPresets[] = {\n';
 for (const pr of presetValues) h += `  { ${q(pr.name)}, ${q(pr.cat)}, { ${pr.values.map(v => num(v)).join(', ')} } },\n`;
 h += '};\n';
 h += `inline constexpr int kNumPresets = ${presetValues.length};\n`;
+// version 1.0.3: KeyAttac, a folder of the USER BANK (bank.h puts it there while the presets file has none): the favourites retouched to be percussive
+h += 'struct KeyAttacDef { const char* name; const char* from; int stars; double v[kNumParams]; };\n';
+h += 'inline constexpr KeyAttacDef kKeyAttac[] = {\n';
+for (const k of keyAttac) h += `  { ${q(k.name)}, ${q(k.from)}, ${k.stars}, { ${k.values.map(v => num(v)).join(', ')} } },\n`;
+h += '};\n';
+h += `inline constexpr int kNumKeyAttac = ${keyAttac.length};\n`;
 h += `inline constexpr int kNumTop = ${TOP};   // beta 0.5: the first presets are TOP Sounds, in their order\n`;
 // beta 0.3.1: the presets rated above 7 in the owner's listening test are in TOP Sounds too (after the first kNumTop, in this order)
 h += `inline constexpr int kTopExtra[] = { ${TOP_EXTRA.length ? TOP_EXTRA.join(', ') : '0'} };\ninline constexpr int kNumTopExtra = ${TOP_EXTRA.length};\n`;

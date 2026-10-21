@@ -119,8 +119,8 @@ async function web() {
     if (!await B.waitFor('!!window.WS_TEST', 5000)) throw new Error('the app did not start (no WS_TEST)');
     const names = await B.evaluate('WS_TEST.presets()');
     // the menu: the TOP Sounds, then each category's presets by rank (beta 0.2: not the array order, which has the 300 new presets before the 200 of beta 0.1)
-    const want = SPEC.PRESETS.slice(0, SPEC.TOP).sort((a, b) => a.rank - b.rank).map(p => p.name);   // (version 1.0.2: the TOP Sounds too go by rank, the most starred first)
-    for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.slice(SPEC.TOP).filter(q => q.cat === c).sort((a, b) => a.rank - b.rank)) want.push(p.name);
+    const inTop = new Set(SPEC.TOP_LIST), want = SPEC.TOP_LIST.map(i => SPEC.PRESETS[i].name);   // (version 1.0.3: the TOP Sounds list of the plug-in, the best first; the sections follow without them)
+    for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.filter((q, i) => q.cat === c && !inTop.has(i)).sort((a, b) => a.rank - b.rank)) want.push(p.name);
     if (JSON.stringify(names.slice(0, want.length)) !== JSON.stringify(want)) bad.push('preset menu order differs from the spec');
     const label = await B.evaluate("(document.querySelector('.presets .pname span') || {}).textContent || ''");
     if (label !== SPEC.PRESETS[SPEC.DEFAULT_PRESET].name) bad.push(`opens on '${label}' instead of '${SPEC.PRESETS[SPEC.DEFAULT_PRESET].name}'`);

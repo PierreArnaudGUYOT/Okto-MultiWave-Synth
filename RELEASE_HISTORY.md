@@ -3,6 +3,22 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth 1.0.3 — 2026-10-20 (the best 20 % lead, stars on the web, the KeyAttac folder)
+
+A release after three more requests of OktoPierre, using his third listening (the export of 2026-10-20, 20:51).
+
+**In short**
+- **The best 20 % of the rated presets lead the preset list, all sections together**: the seven he gave 10 stars to (with 36 rated, 20 % is seven; the cut falls after the 10-star group) are now the first seven of **TOP Sounds**, the most starred first, whatever their section (five of them were not in TOP Sounds). TOP Sounds has 59 sounds; the synth opens on the first, *A · Siren Sweep*. Inside each section the starred sounds were already first.
+- **The web app shows his stars, from 1 to 10, read only**: five stars with half stars at the right of each sound in the preset browser, with the same order as the plug-in (the web's TOP Sounds list is now the plug-in's list). Nothing can be rated or changed on the web: the rating stays a feature of the plug-in, where every sound still starts with no stars.
+- **KeyAttac, a new folder of the USER BANK of the plug-in**: the 36 factory presets that have stars, copied and retouched to be very percussive (every attack at its minimum: amp, own envelopes, additive scales, mod and filter envelopes; a decay of 0.2 s at most to a sustain of 0.08 at most; the release kept at 0.8 s or longer), set again for big chords (`tools/supermod/loud.js --keyattac`, `tools/keyattac_adjust.js`: three went down by 2 dB). They keep his stars and say which factory preset they come from. They are put in the user bank while the presets file is older than `LIST ORDER v7` (or there is none); after the first write the player's deletions stay.
+- The presets file says `LIST ORDER v7`; the stars, the user bank and the adjusted / deleted presets of a 1.0 / 1.0.1 / 1.0.2 file are kept, the lists of a v5 file are rebuilt.
+- The 1.0.2 full web run had one stale expectation in its test (the last section was still expected to be Drums & Perc; it is Other): the test is fixed, the product was right.
+
+**Checked**
+- The plug-in and engine lane of `node tests/full.js` (13 steps): the quick suite, the C++ engine against the JavaScript reference (323 cases, worst difference 2.1e-7), the 18 TOP Sounds of beta 0.7, the engine tests, the presets file (`library_test`, with a new part for the KeyAttac folder: it is in the user bank, its attacks are at the minimum, a favourite the player deletes stays deleted), the VST2 entry point, the plug-in window in a host, the crackle of three chords.
+- **KeyAttac, measured** (a held C4, every favourite against its original): the peak comes within 30 ms for all 36, at 0 ms in the median (the originals: 760 ms in the median, they swell), the level 0.6 s into a held note is a quarter of the first 100 ms (the originals: more than twice), and the release rings (the tail 0.3 s after the key is up is 2.6 % of the peak in the median); the loud-chord volume check: none of the 36 reaches the output stage (three went down by 2 dB).
+- The web app: the smoke test and the demo tour (67 checks) pass; the full web run (`test_web`) was running when this was published.
+
 ## Okto MultiWave Synth 1.0.2 — 2026-10-20 (the third listening: the best sounds first, SuperModulation sorted out, a new opening for the demo)
 
 A release after OktoPierre's third evaluation of the presets (his export of 2026-10-20, 20:51, made with the plug-in 1.0: 36 presets with stars, one of them adjusted).

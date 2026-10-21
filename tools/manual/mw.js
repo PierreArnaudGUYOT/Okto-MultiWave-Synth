@@ -44,7 +44,7 @@ const TOP_NAMES = new Set(TOP_LIST.map(i => SPEC.PRESETS[i].name));
 const SUPERMOD = SPEC.PRESETS.filter(p => p.cat === 'SuperModulation');   // the SuperModulation category
 const lfo23 = p => pv(p, 'lfo2_amt') > 0 || pv(p, 'lfo3_amt') > 0;   // LFO 2 and / or LFO 3 move a control
 const N_LFO23 = SPEC.PRESETS.filter(lfo23).length, N_SM_LFO23 = SUPERMOD.filter(lfo23).length;
-const N_EXTRA = SPEC.TOP_EXTRA.length;
+const N_EXTRA = TOP_LIST.length - SPEC.TOP;
 // the Shape control of LFO 2 and LFO 3: the five waveforms of LFO 1 (a choice), or a knob
 const lfoShape = key => PK[key].fmt === 'choice' ? 'The same five waveforms as LFO 1.' : 'The waveform of the LFO, from the same family as LFO 1 (sine, triangle, saw, square, sample &amp; hold).';
 // the number of vanishing moments of a wavelet: how many of the moments of its high-pass filter are zero (centred, relative to their size)
@@ -576,7 +576,8 @@ function pluginChapter() {
 <li><b>SAVE PRESET</b> (left of MANUAL) overwrites the preset playing: a factory preset is <em>adjusted</em> in place, optionally under a new name (RESTORE brings the original back); a sound of the user bank is replaced.</li>
 <li><b>The presets file</b>: everything above lives in one readable text file, <code>OKTOMULTIWAVE presets.txt</code>, kept next to the <code>.vst3</code> folder (the folder must allow writing: <code>C:\\Program Files\\Common Files\\VST3</code> needs administrator rights, so install into a folder you own, or run Live as administrator once). It is written atomically after every edit and read again when another instance changes it. A file longer than 16 MB is never written over.</li>
 <li><b>Automation</b>: every sound parameter and the chord harp's six settings can be automated; the oscillator tabs (OSC) are a panel choice, not part of a sound.</li>
-<li><b>Stars</b>: the preset browser shows five stars (half stars: 1 to 10) at the right of every sound; click to rate, click the same rating to clear it. <b>Every sound starts with no stars</b>: the ratings are yours, saved in the presets file, and <b>EXPORT carries them</b>.</li>
+<li><b>Stars</b>: the preset browser shows five stars (half stars: 1 to 10) at the right of every sound; click to rate, click the same rating to clear it. <b>Every sound starts with no stars</b> in the plug-in: the ratings are yours, saved in the presets file, and <b>EXPORT carries them</b>. The web app shows the author's own stars (1 to 10), read only.</li>
+<li><b>KeyAttac</b>: the USER BANK of the plug-in starts with a folder of that name: the ${SPEC.KEYATTAC.length} factory presets the author starred, retouched to be very percussive (the attacks at their minimum, a short decay to a low sustain, the release kept long) and set for big chords. They are yours: rename, move or delete them (a sound deleted stays deleted).</li>
 </ul>`;
 }
 

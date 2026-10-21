@@ -42,7 +42,7 @@ int wmain(int argc, wchar_t** argv) {
   // two new presets that are not in TOP Sounds by default and have no built-in vote (beta 0.3.1: the owner's favourites are in TOP Sounds, the rated ones carry stars)
   auto plain = [](int from) { for (int k = from; k < kNumPresets; k++) { bool x = false; for (int i = 0; i < kNumTopExtra; i++) x = x || kTopExtra[i] == k; if (!x && kPresetStars[k] == 0) return k; } return kNumPresets - 1; };
   const int kA = plain(kFirstNew + 4), kB = plain(kA + 5);
-  check(lib.name(kA) == kPresets[kA].name && !lib.adjusted(kA) && !lib.deleted(kA) && lib.bank().empty(), "names are the built-in ones, nothing adjusted or deleted");
+  check(lib.name(kA) == kPresets[kA].name && !lib.adjusted(kA) && !lib.deleted(kA) && (int)lib.bank().size() == kNumKeyAttac, "names are the built-in ones, nothing adjusted or deleted (the user bank holds the KeyAttac favourites)");
   {
     const auto lists = lib.lists();
     size_t total = 0; for (size_t i = 1; i < lists.size(); i++) total += lists[i].second.size();
@@ -76,9 +76,9 @@ int wmain(int argc, wchar_t** argv) {
   BankPreset bp; bp.section = bankSectionOf("Pad"); bp.name = "Bank pad"; bp.from = kPresets[kA].name;
   lib.values(kB, bp.v);
   e = lib.putUser(bp);
-  check(e.empty() && lib.bank().size() == 1 && lib.bank()[0].name == "Bank pad" && has(readAll(file), "######## USER BANK"), "putUser() adds a sound to the user bank", u8(e));
+  check(e.empty() && (int)lib.bank().size() == kNumKeyAttac + 1 && lib.bank().back().name == "Bank pad" && has(readAll(file), "######## USER BANK"), "putUser() adds a sound to the user bank", u8(e));
   e = lib.removeUser(bp.section, "Bank pad");
-  check(e.empty() && lib.bank().empty(), "removeUser() deletes it", u8(e));
+  check(e.empty() && (int)lib.bank().size() == kNumKeyAttac, "removeUser() deletes it", u8(e));
 
   std::printf("4. the lists: a preset to TOP Sounds, another moved to a category\n");
   e = lib.setTop(kA, true);
@@ -188,8 +188,8 @@ int wmain(int argc, wchar_t** argv) {
     lib.setStars(kA, 7);   // ... and a rating
     check(lib.stars(kA) == 7, "the rating is kept in the file");
     std::string t = readAll(file);
-    const size_t lo = t.find("######## LIST ORDER v6");
-    check(lo != std::string::npos, "the file says LIST ORDER v6");
+    const size_t lo = t.find("######## LIST ORDER v7");
+    check(lo != std::string::npos, "the file says LIST ORDER v7");
     if (lo != std::string::npos) {
       std::string t5 = t; t5.replace(lo, 22, "######## LIST ORDER v5");   // ... and the same file as 1.0 wrote it
       writeTextFile(file, t5);
@@ -241,11 +241,27 @@ int wmain(int argc, wchar_t** argv) {
     BankPreset up; up.section = bankSectionOf("Lead"); up.name = "Starred lead"; lib.values(kn, up.v);
     lib.putUser(up);
     e = lib.setUserStars(up.section, "Starred lead", 6);
-    check(e.empty() && !lib.bank().empty() && lib.bank()[0].stars == 6 && has(readAll(file), "Stars: 6\r\n"), "a sound of the user bank can be rated", u8(e));
+    check(e.empty() && !lib.bank().empty() && lib.bank().back().stars == 6 && has(readAll(file), "Stars: 6\r\n"), "a sound of the user bank can be rated", u8(e));
     BankPreset again = up; again.stars = 0;
     lib.putUser(again);
-    check(lib.bank()[0].stars == 6, "saving a bank sound again keeps its stars");
+    check(lib.bank().back().stars == 6, "saving a bank sound again keeps its stars");
     lib.removeUser(up.section, "Starred lead");
+  }
+
+  std::printf("10. version 1.0.3: the KeyAttac folder of the user bank (the starred favourites, retouched to be percussive)\n");
+  {
+    const int sec = bankSectionOf("KeyAttac");
+    auto inFolder = [&] { int n = 0; for (const BankPreset& p : lib.bank()) n += p.section == sec; return n; };
+    check(sec >= 0 && kNumKeyAttac > 0 && inFolder() == kNumKeyAttac, "the user bank holds the KeyAttac favourites", std::to_string(inFolder()) + " of " + std::to_string(kNumKeyAttac));
+    bool fast = true, from = true; double slowest = 0;
+    for (const BankPreset& p : lib.bank()) if (p.section == sec) { slowest = std::max(slowest, p.v[P_AMP_A]); fast = fast && p.v[P_AMP_A] <= 0.0011; from = from && !p.from.empty(); }
+    check(fast && from, "their attack is at its minimum and each one says which factory preset it comes from", std::to_string(slowest));
+    std::string first; for (const BankPreset& p : lib.bank()) if (p.section == sec) { first = p.name; break; }
+    e = lib.removeUser(sec, first);
+    lib.refresh();
+    bool gone = true; for (const BankPreset& p : lib.bank()) if (p.section == sec && p.name == first) gone = false;
+    check(e.empty() && gone && inFolder() == kNumKeyAttac - 1, "a favourite the player deletes stays deleted (the file says LIST ORDER v7)", u8(e));
+    check(has(readAll(file), "== KeyAttac =="), "the file has the KeyAttac folder");
   }
 
   std::printf(gFails ? "\n%d FAILED\n" : "\nALL PASS\n", gFails);

@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **version 1.0.2**, the final version with its fixes (2026-10-20), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **version 1.0.3**, the final version with its fixes (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -20,6 +20,11 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What version 1.0.3 changes
+
+- **The seven best-rated presets (10 stars) lead TOP Sounds**, in every section the starred sounds come first, and **the web app shows the author's stars (1 to 10), read only**.
+- **KeyAttac**: a new folder of the plug-in's USER BANK with the 36 starred presets retouched to be very percussive (attacks at the minimum, a short decay, a long release).
 
 ## What version 1.0.2 changes
 

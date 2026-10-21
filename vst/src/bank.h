@@ -48,7 +48,7 @@
 namespace ws {
 
 inline constexpr const char* kBankSections[] = {"Bass", "Lead", "Keys", "Organ", "Pad", "Strings", "Brass & Wind", "Pluck",
-                                                "Bells & Mallets", "Chords", "FX", "Drums & Perc"};
+                                                "Bells & Mallets", "Chords", "FX", "Drums & Perc", "KeyAttac"};   // version 1.0.3: KeyAttac, filled with the retouched favourites (kKeyAttac)
 inline constexpr int kNumBankSections = (int)(sizeof kBankSections / sizeof *kBankSections);
 
 struct BankPreset {
@@ -298,6 +298,7 @@ class Library {
     State t;
     builtIn(t);
     parse(all, t);
+    if (t.fileVer < 7) seedKeyAttac(t);
     if (t.tooMany) return L"its user bank holds more than 2000 sounds";
     if (existed) {
       bool had = false;
@@ -329,6 +330,7 @@ class Library {
     std::vector<std::vector<int>> lists;   // the preset browser's factory lists (listLabels order)
     std::vector<BankPreset> user;
     bool tooMany = false;   // parse met more than kMaxBankSounds bank sounds (the rest is left out)
+    int fileVer = 0;        // version 1.0.3: the "LIST ORDER vN" of the file read (0: none); the KeyAttac folder is put in the user bank while it is below 7
   };
   std::mutex m;
   State s;
@@ -338,7 +340,7 @@ class Library {
   uint64_t stamp = 0, size = 0;   // the file's last write time and size when read or written
   std::atomic<uint32_t> ver{1};
 
-  Library() { builtIn(s); }
+  Library() { builtIn(s); seedKeyAttac(s); }
   static void builtIn(State& t) {
     t.names.assign(kNumPresets, ""); t.vals.assign(kNumPresets, {}); t.adj.assign(kNumPresets, 0); t.del.assign(kNumPresets, 0); t.stars.assign(kNumPresets, -1); t.user.clear();
     for (int k = 0; k < kNumPresets; k++) {
@@ -346,6 +348,19 @@ class Library {
       for (int i = 0; i < kNumParams; i++) t.vals[k][i] = kPresets[k].v[i];
     }
     t.lists = defaultLists();
+  }
+  // version 1.0.3: the KeyAttac folder of the user bank: the favourites retouched to be percussive (kKeyAttac); put there while the presets file is older than "LIST ORDER v7" (or there is none),
+  // the ones that are already there are left as they are, and after the first write the player's deletions stay
+  static void seedKeyAttac(State& t) {
+    const int sec = bankSectionOf("KeyAttac");
+    if (sec < 0) return;
+    for (int k = 0; k < kNumKeyAttac; k++) {
+      const bool have = std::any_of(t.user.begin(), t.user.end(), [&](const BankPreset& q) { return q.section == sec && q.name == kKeyAttac[k].name; });
+      if (have || t.user.size() >= kMaxBankSounds) continue;
+      BankPreset p; p.section = sec; p.name = kKeyAttac[k].name; p.from = kKeyAttac[k].from; p.stars = kKeyAttac[k].stars;
+      for (int i = 0; i < kNumParams; i++) p.v[i] = kKeyAttac[k].v[i];
+      t.user.push_back(p);
+    }
   }
   static int starsOf(const State& t, int k) { return t.stars[k] >= 0 ? t.stars[k] : kPresetStars[k]; }
   // TOP Sounds, then the factory categories (kCategories; Source Phase second in beta 0.5 / 0.6, last since beta 0.7)
@@ -403,6 +418,7 @@ class Library {
     if (!found) all = readTextFile(oldBankPath(), found, &cut);   // the beta 0.3 user bank, before the library file existed
     tooBig = cut;
     if (found && !cut) parse(all, t);
+    if (!(found && cut) && t.fileVer < 7) seedKeyAttac(t);
     s = std::move(t);
     ver++;
   }
@@ -460,7 +476,7 @@ class Library {
         cur = nullptr; sec = -1;
         part = line.find("FACTORY") != std::string::npos ? 1 : line.find("USER BANK") != std::string::npos ? 2 :
                line.find("LIST ORDER") != std::string::npos ? 3 : 0;
-        if (part == 3) { v2 = line.find("LIST ORDER v6") != std::string::npos; keepStars = v2 || line.find("LIST ORDER v5") != std::string::npos; }   // version 1.0.2 (v6: the sorted sections and Other, after the owner's third listening: the v5 lists of 1.0 / 1.0.1 are rebuilt)
+        if (part == 3) { t.fileVer = line.find("LIST ORDER v7") != std::string::npos ? 7 : line.find("LIST ORDER v6") != std::string::npos ? 6 : line.find("LIST ORDER v5") != std::string::npos ? 5 : 4; v2 = t.fileVer >= 6; keepStars = t.fileVer >= 5; }   // version 1.0.2 (v6: the sorted sections and Other, after the owner's third listening: the v5 lists of 1.0 / 1.0.1 are rebuilt)
         orderList = -1;
         continue;
       }
@@ -561,7 +577,7 @@ class Library {
       paramLines(t.vals[k].data(), s);
     }
     L("");
-    L("######## LIST ORDER v6 (the preset browser: what each list holds, in its order; built-in names) ########");
+    L("######## LIST ORDER v7 (the preset browser: what each list holds, in its order; built-in names) ########");
     for (size_t i = 0; i < t.lists.size(); i++) {
       L("");
       L("== " + listLabels()[i] + " ==");

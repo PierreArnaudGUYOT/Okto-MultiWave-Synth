@@ -577,7 +577,7 @@ class SynthUI {
   // Selection only: saving stays in the status bar (Save preset / Export / Import).
   bLists() {
     const S = this.SPEC, P = S.PRESETS;
-    const lists = [{ label: 'TOP Sounds', presets: [...Array(Math.min(S.TOP, P.length)).keys()].sort((a, b) => P[a].rank - P[b].rank) }];
+    const lists = [{ label: 'TOP Sounds', presets: S.TOP_LIST.slice() }];   // (version 1.0.3: the list of the plug-in, the best first)
     for (const c of S.CATEGORIES) {
       const l = [];
       for (let k = 0; k < P.length; k++) if (P[k].cat === c) l.push(k);
@@ -654,7 +654,7 @@ class SynthUI {
       r.onclick = () => { this.bCat = i; this.renderBrowser(); };
     });
     const items = this.bTab === 0
-      ? (lists[this.bCat] || lists[0]).presets.map(k => ({ id: 'f:' + k, name: P[k].name, fav: k < this.SPEC.TOP, stars: 0 }))
+      ? (lists[this.bCat] || lists[0]).presets.map(k => ({ id: 'f:' + k, name: P[k].name, fav: this.bCat !== 0 && this.SPEC.TOP_LIST.includes(k), stars: P[k].stars || 0 }))   // (the TOP Sounds mark is not repeated in the TOP Sounds list itself)
       : user.map(x => ({ id: x.id, name: x.name, fav: false, stars: 0 }));
     b.querySelector('.bhd').textContent = `${(this.bTab === 0 ? (lists[this.bCat] || lists[0]).label : 'My presets').toUpperCase()}  ·  ${items.length}`;
     const list = b.querySelector('.blist');
@@ -665,8 +665,8 @@ class SynthUI {
       const r = el('div', 'bsnd' + (cur && cur.id === it.id ? ' cur' : ''), list);
       const m = splitName(it.name);
       const eng = m ? `${esc(m.num)}<span class="eng">${engHTML(m.eng)} · </span>` : '';
-      const mark = it.fav ? '<span class="mk" title="In TOP Sounds, OktoPierre’s selection">★</span>'
-        : it.stars ? `<span class="mk vote" title="OktoPierre’s vote in his listening test">${it.stars} ★</span>` : '';
+      const mark = (it.fav ? '<span class="mk" title="In TOP Sounds, OktoPierre’s selection">★</span>' : '')
+        + (it.stars ? `<span class="rate" title="OktoPierre’s rating: ${it.stars} / 10 (shown, not editable)" style="--r:${it.stars * 10}%">★★★★★</span>` : '');   // (version 1.0.3: his stars, 1 to 10 as five stars with half stars, read only)
       r.innerHTML = `${eng}<span class="nm">${esc(m ? m.title : it.name)}</span>${mark}`;
       r.title = it.name;
       r.onclick = () => this.host.loadPreset(it.id);

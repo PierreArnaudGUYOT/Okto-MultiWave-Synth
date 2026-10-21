@@ -76,6 +76,8 @@ button { font-family: inherit; }
 #browser .bsnd .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 #browser .bsnd .mk { margin-left: 6px; color: #ffcf4a; font-size: 10px; }
 #browser .bsnd .mk.vote { opacity: 0.8; font-size: 9.5px; font-weight: 700; }
+/* version 1.0.3: OktoPierre's stars of the third listening, 1 to 10 as five stars with half stars (a gradient cut at --r), read only */
+#browser .bsnd .rate { margin-left: 4px; font-size: 9.5px; letter-spacing: 0; white-space: nowrap; background: linear-gradient(90deg, #ffcf4a var(--r), #3a424d var(--r)); -webkit-background-clip: text; background-clip: text; color: transparent; pointer-events: none; }
 #browser .bnone { padding: 8px; font-size: 10.5px; color: var(--faint); white-space: normal; }
 #browser .bstatus { margin-top: 6px; font-size: 9px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

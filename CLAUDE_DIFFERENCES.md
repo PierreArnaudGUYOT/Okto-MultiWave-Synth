@@ -21,7 +21,8 @@ Read this file first, then CLAUDE.md for the part you are going to touch.
 | Panel | 1100 x 720 | 1100 x 944 (+120 with the chord card under the keyboard on the web) |
 | Header | WAVELET SYNTHESIZER | **OKTOWAVE / FRACTAL WAVELET SYNTHESIZER** |
 | Demo | 8 songs, a menu, MIDI file loading | **one** song (Beethoven, Appassionata III), the same tour as the initial web app, no menu, no MIDI loading |
-| Stars | none | 1-10 stars (five stars with half stars) in the plug-in's browser, saved in the presets file, EXPORT / IMPORT |
+| Stars | none | 1-10 stars (five stars with half stars) in the plug-in's browser, saved in the presets file, EXPORT / IMPORT; the web app shows the author's stars, read only |
+| User bank | the player's own sounds | + a folder **KeyAttac** (the 36 starred presets retouched to be percussive), put there by `bank.h` while the presets file is older than `LIST ORDER v7` |
 | Platforms | web, VST3/VST2 Windows, VST3 macOS | web, VST3/VST2 Windows (the macOS editor `editor_mac.mm` follows the Windows one but is not built or tested here) |
 
 Rules that follow from the family tie (do not break them):

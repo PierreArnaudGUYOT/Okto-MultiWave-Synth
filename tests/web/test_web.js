@@ -547,8 +547,8 @@ async function stepPresets() {
   log(`  ${names.length} presets`);
   if (SPEC) {
     // the menu lists the TOP Sounds, then each category's presets by rank (beta 0.2: not the array order, which has the 300 new presets before the 200 of beta 0.1)
-    const sn = SPEC.PRESETS.slice(0, SPEC.TOP).sort((a, b) => a.rank - b.rank).map((p) => p.name);   // (version 1.0.2: the TOP Sounds too go by rank)
-    for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.slice(SPEC.TOP).filter((q) => q.cat === c).sort((a, b) => a.rank - b.rank)) sn.push(p.name);
+    const inTop = new Set(SPEC.TOP_LIST), sn = SPEC.TOP_LIST.map((i) => SPEC.PRESETS[i].name);   // (version 1.0.3: the TOP Sounds list of the plug-in, the best first)
+    for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.filter((q, i) => q.cat === c && !inTop.has(i)).sort((a, b) => a.rank - b.rank)) sn.push(p.name);
     check(names.length === sn.length, 'preset count matches the spec', `${names.length} vs ${sn.length}`);
     const diff = sn.map((n, i) => (names[i] !== n ? `#${i} '${names[i]}' vs spec '${n}'` : null)).filter(Boolean);
     check(diff.length === 0, 'preset names/order match the spec', short(diff), 'WARN');
@@ -742,10 +742,11 @@ async function stepPanel() {
     'right-click on the delay TIME knob starts MIDI learn; a CC links it; Backspace unlinks it', `status '${learnTxt}', map ${JSON.stringify(map)}, after ${JSON.stringify(unlinked)}`);
   // TOP Sounds = the sounds of beta 0.7 that OktoPierre kept (21 in the final list), the categories in the spec order (Pad ... Drums & Perc): in the preset browser
   // (its sound types and their numbers) and in the preset menu (its groups: the categories that hold a sound that is not a TOP Sound)
-  const TOP_N = SPEC.TOP;
-  const topNames = SPEC.PRESETS.slice(0, SPEC.TOP).sort((a, b) => a.rank - b.rank).map((p) => p.name);
+  const TOP_N = SPEC.TOP_LIST.length;   // (version 1.0.3: the web's TOP Sounds are the plug-in's list)
+  const inTop = new Set(SPEC.TOP_LIST);
+  const topNames = SPEC.TOP_LIST.map((i) => SPEC.PRESETS[i].name);
   const lastCat = SPEC.CATEGORIES[SPEC.CATEGORIES.length - 1];
-  check(SPEC.TOP === TOP_N && SPEC.PRESETS.length === TOP_N + SPEC.NEW_COUNT && lastCat === 'Drums & Perc', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets; ${lastCat} is the last category`,
+  check(SPEC.PRESETS.length === SPEC.TOP + SPEC.NEW_COUNT && lastCat === 'Other', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets; ${lastCat} is the last category`,
     `TOP ${SPEC.TOP}, presets ${SPEC.PRESETS.length}, last category '${lastCat}'`);
   const bInfo = await ev(`(() => { const b = document.getElementById('browser'); if (!b) return null;
     const tab = b.querySelector('.btabs button'); if (tab) tab.click();   // FACTORY
@@ -765,7 +766,7 @@ async function stepPanel() {
     const g = m ? [...m.querySelectorAll('.grp')].map((h) => { const c = h.querySelector('.cnt'); return { name: h.textContent.replace(/^[▾▸]/, '').replace(c ? c.textContent : '', '').trim(), n: c ? +c.textContent : NaN }; }) : null;
     if (m) n.click(); return g; })()`);
   const factoryGroups = (groups || []).filter((g) => g.name !== 'USER PRESETS');
-  const grpWant = ['★ TOP SOUNDS', ...SPEC.CATEGORIES.filter((c) => SPEC.PRESETS.slice(SPEC.TOP).some((p) => p.cat === c)).map((c) => c.toUpperCase())];
+  const grpWant = ['★ TOP SOUNDS', ...SPEC.CATEGORIES.filter((c) => SPEC.PRESETS.some((p, i) => p.cat === c && !inTop.has(i))).map((c) => c.toUpperCase())];
   log(`  preset menu groups: ${(groups || []).map((g) => `${g.name} ${g.n}`).join(' | ')}`);
   check(!!groups && JSON.stringify(factoryGroups.map((g) => g.name)) === JSON.stringify(grpWant) && factoryGroups[0].n === TOP_N &&
     factoryGroups[factoryGroups.length - 1].name === lastCat.toUpperCase() && !(await ev(`!!document.querySelector('.pmenu')`)),

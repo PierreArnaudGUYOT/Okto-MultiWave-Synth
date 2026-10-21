@@ -25,8 +25,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: '1.0.2',
-  versionNum: '1.0.2',
+  version: '1.0.3',
+  versionNum: '1.0.3',
   date: '2026-10-20',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -698,13 +698,38 @@ for (const p of PRESETS) {
   const a = RATED3.adjusted[p.name];
   if (a) { const { master_delta, ...q } = a; p.v = Object.assign({}, p.v, q); if (master_delta) p.v.master = (p.v.master !== undefined ? p.v.master : -3) + master_delta; }
   if (p.cat === 'SuperModulation' && !stars3(p)) p.cat = 'Other';
+  if (stars3(p)) p.vote = stars3(p);   // (version 1.0.3: the web app shows it, read only)
 }
 const before3 = (x, y) => stars3(PRESETS[y]) - stars3(PRESETS[x]) || (PRESETS[y].stars || 0) - (PRESETS[x].stars || 0) || x - y;   // x before y: more stars now, then the stars of the second listening, then the array order
 TOP_LIST.sort(before3);
+// version 1.0.3: the best 20 % of the rated presets (all sections together: with 36 rated, the seven he gave 10 stars to) lead TOP Sounds, the most starred first
+{
+  const rated = PRESETS.map((p, i) => i).filter(i => stars3(PRESETS[i])).sort(before3);
+  const cut = stars3(PRESETS[rated[Math.max(0, Math.round(rated.length * 0.2) - 1)]]);
+  const best = rated.filter(i => stars3(PRESETS[i]) >= cut);
+  TOP_LIST.splice(0, TOP_LIST.length, ...best, ...TOP_LIST.filter(i => !best.includes(i)));
+}
 // the factory order is each category's order too: every section lists its presets from the best to the least rated
 PRESETS.map((p, i) => i).sort(before3).forEach((i, rank) => { PRESETS[i].rank = rank; });
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
+// version 1.0.3: KeyAttac, a folder of the USER BANK of the plug-in (filled when the presets file has none yet): the factory presets that have stars, retouched to be very percussive: the attacks at their
+// minimum (amp, the own envelopes, the additive scales, the mod and filter envelopes), a short decay to a low sustain, the release kept long; being percussive they are set again for big chords
+// (tools/keyattac_adjust.js, written by tools/supermod/loud.js --keyattac --apply).
+let KA_ADJ = {}; try { KA_ADJ = require('./keyattac_adjust.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+const percussive = (v0) => {
+  const v = Object.assign({}, v0), g = k => (v[k] !== undefined ? v[k] : P[idx[k]].def);
+  v.amp_a = 0.001; v.amp_d = Math.min(g('amp_d'), 0.2); v.amp_s = Math.min(g('amp_s'), 0.08); v.amp_r = Math.max(g('amp_r'), 0.8);
+  for (const o of ['a1', 'a2', 'b1']) if (g(o + '_eon') >= 0.5) { v[o + '_ea'] = 0.001; v[o + '_ed'] = Math.min(g(o + '_ed'), 0.3); v[o + '_es'] = Math.min(g(o + '_es'), 0.15); v[o + '_er'] = Math.max(g(o + '_er'), 0.4); }
+  v.b_atk = 0.001; v.b_sus = Math.min(g('b_sus'), 0.2); v.b_body = Math.min(g('b_body'), 0.7); v.b_bright = Math.min(g('b_bright'), 0.35);
+  v.mod_a = 0.001; v.vf_a = 0.001;
+  return v;
+};
+const KEYATTAC = PRESETS.map((p, i) => i).filter(i => PRESETS[i].vote).sort((a, b) => PRESETS[a].rank - PRESETS[b].rank).map(i => {
+  const p = PRESETS[i], v = percussive(p.v), down = KA_ADJ[p.name] || 0;
+  if (down) v.master = Math.max(-36, (v.master !== undefined ? v.master : P[idx.master].def) - down);
+  return { name: p.name, from: p.name, stars: p.vote, v };
+});
 const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app / a new plugin instance opens: the first of TOP Sounds (beta 1.0)
 // The preset tour of the demo (the default piece, Beethoven's Appassionata, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard). Version 1.0: it is the tour of the
 // Wavelet Synthesizer's web app (beta 0.7.1): the same piece, the same presets in the same order, at the same level. Those presets are not all in the factory list (the 237 the owner kept), so
@@ -719,7 +744,7 @@ for (const n of TOUR) if (!DEMO_PRESETS.some(p => p.name === n) && !PRESETS.some
 if (!PRESETS.some(p => p.name === DEFAULT_PRESET)) throw new Error('DEFAULT_PRESET not found: ' + DEFAULT_PRESET);
 
 // Validate preset keys and ranges at generation time.
-for (const pr of [...PRESETS, ...DEMO_PRESETS]) for (const [k, v] of Object.entries(pr.v)) {
+for (const pr of [...PRESETS, ...DEMO_PRESETS, ...KEYATTAC]) for (const [k, v] of Object.entries(pr.v)) {
   if (!(k in idx)) throw new Error(`preset ${pr.name}: unknown param ${k}`);
   const p = P[idx[k]];
   if (v < p.min || v > p.max) throw new Error(`preset ${pr.name}: ${k}=${v} out of range`);
@@ -734,5 +759,5 @@ for (const s of S) {
   }
 }
 
-module.exports = { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, TOP_LIST, DEMO_PRESETS, CATEGORIES,
+module.exports = { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_COUNT, TOP_EXTRA, TOP_LIST, DEMO_PRESETS, KEYATTAC, CATEGORIES,
   LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_COUNT, NEW_COUNT: NEW_RAW.length, DESCRIPTIONS, TOUR };
