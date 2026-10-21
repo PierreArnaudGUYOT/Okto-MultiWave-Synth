@@ -294,11 +294,22 @@ struct SlotTables {
   // SPARSITY and WIDTH: all SPARSE_K / WIDTH_K sets
   int vk = -1;
   std::vector<std::vector<float>> phMips, phRms, w2PhMips, w2PhRms;
+  // version 1.0.7: a build writes into the vectors this object already holds (the 1 MB tables of a set are not freed and allocated again at every build);
+  // begin() clears the flags, end() frees the vectors the build did not use (so an object never keeps more than its last build needs)
+  void begin() { on = false; mode = 0; hasW2 = false; vk = -1; }
+  void end() {
+    auto drop = [](std::vector<float>& v) { std::vector<float>().swap(v); };
+    auto dropAll = [](std::vector<std::vector<float>>& v) { std::vector<std::vector<float>>().swap(v); };
+    if (!on) { drop(mips); drop(rms); }
+    if (!hasW2) { drop(w2Mips); drop(w2Rms); }
+    if (vk < 0) { dropAll(phMips); dropAll(phRms); }
+    if (vk < 0 || !hasW2) { dropAll(w2PhMips); dropAll(w2PhRms); }
+  }
 };
 struct Tables {
   // displays (buildTables without mips): the raw layers of the oscillator shown on the panel; also where buildSet works
   int mode = 0, kept = 0, nonzero = 0;
-  std::vector<double> layers;   // NL * N (raw, for displays)
+  std::vector<double> layers;   // NL * N (raw, for displays; allocated by buildSet, version 1.0.7: the sound sets of the plug-in never need them)
   std::vector<double> coeffs;   // N
   double bandScale[NB];
   std::vector<float> mips;      // NMIP * TW (empty when built without mips)
@@ -306,7 +317,7 @@ struct Tables {
   // the sound (buildTables with mips): the oscillators that play
   int needs = 0;
   SlotTables slot[NS];
-  Tables() : layers((size_t)NL * N), coeffs(N) {}
+  void ensureWork() { if (layers.size() != (size_t)NL * N) layers.assign((size_t)NL * N, 0.0); if (coeffs.size() != (size_t)N) coeffs.assign(N, 0.0); }
   const double* layer(int l) const { return layers.data() + (size_t)l * N; }
 };
 
@@ -354,8 +365,11 @@ inline int variantSig(const double* params) {
 
 // Builds the tables of oscillator s into t (raw layers, coefficients, and with mips the mip tables). ovWavelet / ovPhase (>= 0)
 // replace the oscillator's own wavelet / source phase (the WAVELET MORPH set, the phase sets).
-inline void buildSet(const double* params, int s, bool withMips, Tables& t, double ovWavelet = -1, double ovPhase = -1, double ovSparsity = -1, double ovWidth = -1) {
+// outMips / outRms (version 1.0.7): where the mip tables are written (default: t.mips, t.rms), so that a build can fill the vectors of its destination directly.
+inline void buildSet(const double* params, int s, bool withMips, Tables& t, double ovWavelet = -1, double ovPhase = -1, double ovSparsity = -1, double ovWidth = -1,
+                     std::vector<float>* outMips = nullptr, std::vector<float>* outRms = nullptr) {
   const SlotDef& k = kSlots[s];
+  t.ensureWork();
   t.mode = k.mode;
   const Filter& f = filter((int)jsRound(ovWavelet >= 0 ? ovWavelet : params[k.wavelet]));
   double* c = t.coeffs.data();
@@ -390,8 +404,10 @@ inline void buildSet(const double* params, int s, bool withMips, Tables& t, doub
   }
   if (!withMips) return;
 
-  t.mips.assign((size_t)NMIP * TW, 0.0f);
-  t.rms.assign((size_t)NMIP * NL, 0.0f);
+  std::vector<float>& mipsOut = outMips ? *outMips : t.mips;
+  std::vector<float>& rmsOut = outRms ? *outRms : t.rms;
+  mipsOut.assign((size_t)NMIP * TW, 0.0f);
+  rmsOut.assign((size_t)NMIP * NL, 0.0f);
   std::vector<double> re(N), im(N), yr(N), yi(N);
   const FFT& F = fft();
   for (int L = 0; L < NL; L++) {
@@ -406,11 +422,11 @@ inline void buildSet(const double* params, int s, bool withMips, Tables& t, doub
       for (int h = 1; h <= H; h++) { yr[h] = re[h]; yi[h] = im[h]; }
       for (int h = 1; h <= std::min(H, N / 2 - 1); h++) { yr[N - h] = re[N - h]; yi[N - h] = im[N - h]; }
       F.run(yr.data(), yi.data(), true);
-      float* dst = t.mips.data() + (size_t)m * TW;
+      float* dst = mipsOut.data() + (size_t)m * TW;
       double e = 0;
       for (int i = 0; i < N; i++) { double v = yr[i] / N; dst[i * NL + L] = (float)v; e += v * v; }
       dst[N * NL + L] = dst[L];
-      t.rms[m * NL + L] = (float)std::sqrt(e / N);
+      rmsOut[m * NL + L] = (float)std::sqrt(e / N);
     }
   }
 }
@@ -418,22 +434,21 @@ inline void buildSet(const double* params, int s, bool withMips, Tables& t, doub
 // The other sets of a variant of subtractive oscillator s with wavelet wav (core.js variantSets). PHASE: phase a_phase + k / PHASE_K for
 // k = 1 .. PHASE_K - 1 (set 0 is the oscillator's own). SPARSITY and WIDTH: the SPARSE_K sparsities k / (SPARSE_K - 1) and the WIDTH_K
 // widths WIDTH_MIN + k (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1), k = 0 .. K - 1 (all of them; the oscillator's own set is not one of them).
-inline void variantSets(const double* params, int s, double wav, int vk, std::vector<std::vector<float>>& mips, std::vector<std::vector<float>>& rms) {
+inline void variantSets(const double* params, int s, double wav, int vk, std::vector<std::vector<float>>& mips, std::vector<std::vector<float>>& rms, Tables& sc) {
   const int first = vk == VK_PHASE ? 1 : 0, cnt = VK_N[vk] - first;
   mips.resize(cnt); rms.resize(cnt);
-  Tables sc;
   for (int k = first; k < VK_N[vk]; k++) {
-    if (vk == VK_PHASE) { double v = params[kSlots[s].phase] + (double)k / PHASE_K; v -= std::floor(v); buildSet(params, s, true, sc, wav, v); }
-    else if (vk == VK_SPARSITY) buildSet(params, s, true, sc, wav, -1, (double)k / (SPARSE_K - 1));
-    else buildSet(params, s, true, sc, wav, -1, -1, WIDTH_MIN + k * (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1));
-    mips[k - first].swap(sc.mips); rms[k - first].swap(sc.rms);
+    std::vector<float>* m = &mips[k - first]; std::vector<float>* r = &rms[k - first];
+    if (vk == VK_PHASE) { double v = params[kSlots[s].phase] + (double)k / PHASE_K; v -= std::floor(v); buildSet(params, s, true, sc, wav, v, -1, -1, m, r); }
+    else if (vk == VK_SPARSITY) buildSet(params, s, true, sc, wav, -1, (double)k / (SPARSE_K - 1), -1, m, r);
+    else buildSet(params, s, true, sc, wav, -1, -1, WIDTH_MIN + k * (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1), m, r);
   }
 }
 
 // withMips=false: the oscillator shown on the panel (displays). withMips=true: the oscillators the sound needs.
 inline void buildTables(const double* params, bool withMips, Tables& t) {
   t.needs = 0;
-  for (int s = 0; s < NS; s++) t.slot[s] = SlotTables();
+  for (int s = 0; s < NS; s++) t.slot[s].begin();
   if (!withMips) { buildSet(params, (int)jsRound(params[P_OSC_VIEW]), false, t); return; }
   const int need = tableNeeds(params);
   t.needs = need;
@@ -442,19 +457,20 @@ inline void buildTables(const double* params, bool withMips, Tables& t) {
     if (!(need & (1 << s))) continue;
     SlotTables& st = t.slot[s];
     st.on = true;
-    buildSet(params, s, true, sc);
-    st.mode = sc.mode; st.mips.swap(sc.mips); st.rms.swap(sc.rms);
+    buildSet(params, s, true, sc, -1, -1, -1, -1, &st.mips, &st.rms);
+    st.mode = sc.mode;
     if (slotMorph(params, s)) {   // WAVELET MORPH
-      buildSet(params, s, true, sc, params[P_WAV2]);
-      st.hasW2 = true; st.w2Mips.swap(sc.mips); st.w2Rms.swap(sc.rms);
+      buildSet(params, s, true, sc, params[P_WAV2], -1, -1, -1, &st.w2Mips, &st.w2Rms);
+      st.hasW2 = true;
     }
     const int vk = slotVariant(params, s);
     if (vk >= 0) {   // SOURCE PHASE / SPARSITY / SOURCE WIDTH moved by an LFO: every set also at the other values (also for WAVELET 2)
       st.vk = vk;
-      variantSets(params, s, params[kSlots[s].wavelet], vk, st.phMips, st.phRms);
-      if (st.hasW2) variantSets(params, s, params[P_WAV2], vk, st.w2PhMips, st.w2PhRms);
+      variantSets(params, s, params[kSlots[s].wavelet], vk, st.phMips, st.phRms, sc);
+      if (st.hasW2) variantSets(params, s, params[P_WAV2], vk, st.w2PhMips, st.w2PhRms, sc);
     }
   }
+  for (int s = 0; s < NS; s++) t.slot[s].end();
 }
 
 // ------------------------------------------------------------------ gains & window
