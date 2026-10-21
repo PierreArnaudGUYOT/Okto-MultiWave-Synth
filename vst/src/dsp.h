@@ -52,6 +52,8 @@ inline v2d v2_min(v2d a, v2d b) { return _mm_min_pd(a, b); }
 inline v2d v2_max(v2d a, v2d b) { return _mm_max_pd(a, b); }
 inline v2d v2_cvt(const float* p) { return _mm_cvtps_pd(_mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)p))); }   // the two floats at p, as doubles
 inline void v2_f32(v2d v, float& lo, float& hi) { const __m128 r = _mm_cvtpd_ps(v); lo = _mm_cvtss_f32(r); hi = _mm_cvtss_f32(_mm_shuffle_ps(r, r, 1)); }   // each lane rounded to a float
+inline double v2_lo(v2d v) { return _mm_cvtsd_f64(v); }
+inline double v2_hi(v2d v) { return _mm_cvtsd_f64(_mm_unpackhi_pd(v, v)); }
 #else
 using v2d = float64x2_t;
 inline v2d v2_set1(double x) { return vdupq_n_f64(x); }
@@ -68,6 +70,8 @@ inline v2d v2_min(v2d a, v2d b) { return vminq_f64(a, b); }
 inline v2d v2_max(v2d a, v2d b) { return vmaxq_f64(a, b); }
 inline v2d v2_cvt(const float* p) { return vcvt_f64_f32(vld1_f32(p)); }
 inline void v2_f32(v2d v, float& lo, float& hi) { const float32x2_t r = vcvt_f32_f64(v); lo = vget_lane_f32(r, 0); hi = vget_lane_f32(r, 1); }
+inline double v2_lo(v2d v) { return vgetq_lane_f64(v, 0); }
+inline double v2_hi(v2d v) { return vgetq_lane_f64(v, 1); }
 #endif
 #endif
 
@@ -2081,6 +2085,34 @@ class Engine {
       if (++dlyW >= dlyLen) dlyW = 0;
       if (rmix > 0) {
         double inp = (l + r) * 0.015, wl = 0, wr = 0;
+#if defined(WS_V2)
+        // version 1.0.7 (CPU review 2.4): comb k (left) and comb k + 8 (right) are independent chains of the same operations: they run as the two lanes of one register; the sums
+        // wl and wr stay scalar and in the order of the loop below. The all-passes k (left chain) and k + 4 (right chain) likewise.
+        {
+          const v2d vod = v2_set1(1 - damp), vdp = v2_set1(damp), vfb = v2_set1(feedback), vin = v2_set1(inp), half = v2_set1(0.5);
+          for (int k = 0; k < 8; k++) {
+            Comb& cl = combs[k]; Comb& cr = combs[k + 8];
+            const v2d y = v2_set((double)cr.buf[cr.i], (double)cl.buf[cl.i]);
+            const v2d fv = v2_add(v2_mul(y, vod), v2_mul(v2_set(cr.f, cl.f), vdp));   // c.f = y (1 - damp) + c.f damp
+            cl.f = v2_lo(fv); cr.f = v2_hi(fv);
+            float bl, br; v2_f32(v2_add(vin, v2_mul(fv, vfb)), bl, br);               // (float)(inp + c.f feedback)
+            cl.buf[cl.i] = bl; cr.buf[cr.i] = br;
+            if (++cl.i >= (int)cl.buf.size()) cl.i = 0;
+            if (++cr.i >= (int)cr.buf.size()) cr.i = 0;
+            wl += v2_lo(y); wr += v2_hi(y);
+          }
+          for (int k = 0; k < 4; k++) {
+            AP& al = aps[k]; AP& ar = aps[k + 4];
+            const v2d bo = v2_set((double)ar.buf[ar.i], (double)al.buf[al.i]), x = v2_set(wr, wl);
+            float bl, br; v2_f32(v2_add(x, v2_mul(bo, half)), bl, br);                // (float)(x + bo 0.5)
+            al.buf[al.i] = bl; ar.buf[ar.i] = br;
+            if (++al.i >= (int)al.buf.size()) al.i = 0;
+            if (++ar.i >= (int)ar.buf.size()) ar.i = 0;
+            const v2d w = v2_sub(bo, x);                                              // w = bo - x
+            wl = v2_lo(w); wr = v2_hi(w);
+          }
+        }
+#else
         for (int k = 0; k < 16; k++) {
           Comb& c = combs[k];
           double y = c.buf[c.i];
@@ -2096,6 +2128,7 @@ class Engine {
           if (++a.i >= (int)a.buf.size()) a.i = 0;
           if (k < 4) wl = bo - x; else wr = bo - x;
         }
+#endif
         l += rmix * wl * 1.5; r += rmix * wr * 1.5;
       }
       // DC blocker (10 Hz), master volume, soft limiter
