@@ -25,8 +25,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: '1.0.1',
-  versionNum: '1.0.1',
+  version: '1.0.2',
+  versionNum: '1.0.2',
   date: '2026-10-20',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -659,7 +659,7 @@ for (const r of NEW_RAW) if (r.desc) DESCRIPTIONS[r.name] = r.desc;
 // Categories (preset menu groups, like the banks of a hardware synthesizer), in menu order.
 // (beta 0.2: SuperModulation: the presets whose life is the LFOs moving the wavelet-domain controls. Version 1.0: Pad comes right after TOP Sounds, and Keys and Pluck are one section,
 // Keyboard: the presets' own category names (the data files, the user bank) are unchanged, SECTION_OF maps them)
-const CATEGORIES = ['Pad', 'SuperModulation', 'Bass', 'Lead', 'Keyboard', 'Organ', 'Strings', 'Brass & Wind', 'Bells & Mallets', 'FX', 'Drums & Perc'];
+const CATEGORIES = ['Pad', 'SuperModulation', 'Bass', 'Lead', 'Keyboard', 'Organ', 'Strings', 'Brass & Wind', 'Bells & Mallets', 'FX', 'Drums & Perc', 'Other'];   // (version 1.0.2: Other = the SuperModulation sounds that have no stars)
 const SECTION_OF = { Keys: 'Keyboard', Pluck: 'Keyboard' };
 // the 22 TOP Sounds of beta 0.7 the owner rated more than one star, best first (the same stars: the order of beta 0.7)
 const TOP_RAW = require('./presets_top.js').filter(r => RATED2.names[r.name] >= 3).map((r, i) => ({ r, i }))
@@ -689,8 +689,20 @@ for (const p of PRESETS) if (SECTION_OF[p.cat]) p.cat = SECTION_OF[p.cat];
   for (const p of PRESETS) { p.id = p.name; const t = typeOf(p.name); if (t) p.name = t + ' · ' + p.name.split(' · ').slice(1).join(' · '); renamed.set(p.id, p.name); }
   for (const k of Object.keys(DESCRIPTIONS)) { const n = renamed.get(k); if (n && n !== k) { DESCRIPTIONS[n] = DESCRIPTIONS[k]; delete DESCRIPTIONS[k]; } }
 }
-// the factory order is each category's order too: every section lists its presets from the best to the least rated (the owner's stars; a tie: TOP Sounds first, then by number)
-PRESETS.map((p, i) => i).sort((x, y) => (PRESETS[y].stars || 0) - (PRESETS[x].stars || 0) || x - y).forEach((i, rank) => { PRESETS[i].rank = rank; });
+// version 1.0.2: the owner's third listening (tools/ratings_v3.js: his export of 2026-10-20 20:51, 36 presets with stars, one adjusted): in every section (TOP Sounds too) the sounds he starred come
+// first, the most starred first, then the order of before; SuperModulation keeps only the presets that have stars: the other ones are in a section of their own, Other; the preset he adjusted
+// takes his values. The stars stay a feature of the browsers (no sound has a built-in vote): here they only decide the order.
+const RATED3 = require('./ratings_v3.js');
+const stars3 = p => RATED3.names[p.name] || 0;
+for (const p of PRESETS) {
+  const a = RATED3.adjusted[p.name];
+  if (a) { const { master_delta, ...q } = a; p.v = Object.assign({}, p.v, q); if (master_delta) p.v.master = (p.v.master !== undefined ? p.v.master : -3) + master_delta; }
+  if (p.cat === 'SuperModulation' && !stars3(p)) p.cat = 'Other';
+}
+const before3 = (x, y) => stars3(PRESETS[y]) - stars3(PRESETS[x]) || (PRESETS[y].stars || 0) - (PRESETS[x].stars || 0) || x - y;   // x before y: more stars now, then the stars of the second listening, then the array order
+TOP_LIST.sort(before3);
+// the factory order is each category's order too: every section lists its presets from the best to the least rated
+PRESETS.map((p, i) => i).sort(before3).forEach((i, rank) => { PRESETS[i].rank = rank; });
 for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
 if (new Set(PRESETS.map(p => p.name)).size !== PRESETS.length) throw new Error('preset names must be unique');
 const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app / a new plugin instance opens: the first of TOP Sounds (beta 1.0)
@@ -701,7 +713,9 @@ const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app
 const DEMO_RAW = require('./demo_presets.js');
 const DEMO_PRESETS = DEMO_RAW.presets.map(r => ({ name: r.name, v: convertLegacy(r.v) }));
 const TOUR = DEMO_RAW.order.slice();
-for (const n of TOUR) if (!DEMO_PRESETS.some(p => p.name === n)) throw new Error('TOUR: preset not found: ' + n);
+// version 1.0.2: the first two presets heard (the opening of the piece) are two of the owner's latest favourites (10 stars in his third listening), played as they are in the factory list
+TOUR[2] = 'AA · Flint Ripple Haze'; TOUR[3] = 'AB · Kalimba Lung Machine';
+for (const n of TOUR) if (!DEMO_PRESETS.some(p => p.name === n) && !PRESETS.some(p => p.name === n)) throw new Error('TOUR: preset not found: ' + n);
 if (!PRESETS.some(p => p.name === DEFAULT_PRESET)) throw new Error('DEFAULT_PRESET not found: ' + DEFAULT_PRESET);
 
 // Validate preset keys and ranges at generation time.

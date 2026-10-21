@@ -577,7 +577,7 @@ class SynthUI {
   // Selection only: saving stays in the status bar (Save preset / Export / Import).
   bLists() {
     const S = this.SPEC, P = S.PRESETS;
-    const lists = [{ label: 'TOP Sounds', presets: [...Array(Math.min(S.TOP, P.length)).keys()] }];
+    const lists = [{ label: 'TOP Sounds', presets: [...Array(Math.min(S.TOP, P.length)).keys()].sort((a, b) => P[a].rank - P[b].rank) }];
     for (const c of S.CATEGORIES) {
       const l = [];
       for (let k = 0; k < P.length; k++) if (P[k].cat === c) l.push(k);

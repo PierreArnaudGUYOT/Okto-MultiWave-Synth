@@ -343,7 +343,7 @@ async function main() {
     if (SPEC.DEFAULT_PRESET) check(startLabel.includes(SPEC.DEFAULT_PRESET), `the app opens on '${SPEC.DEFAULT_PRESET}'`, `label '${startLabel}'`);
     // the preset menu (click on the name) and WS_TEST.presets() list the factory presets in tools/spec.js order
     // (beta 0.2: the TOP Sounds, then each category's presets by rank: the array order has the 300 new presets before the 200 of beta 0.1)
-    const specNames = SPEC.PRESETS.slice(0, SPEC.TOP).map((p) => p.name);
+    const specNames = SPEC.PRESETS.slice(0, SPEC.TOP).sort((a, b) => a.rank - b.rank).map((p) => p.name);   // (version 1.0.2: the TOP Sounds go by rank too)
     for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.slice(SPEC.TOP).filter((q) => q.cat === c).sort((a, b) => a.rank - b.rank)) specNames.push(p.name);
     const menuItems = await ev(`(() => { const n = document.querySelector('.presets .pname'); if (!n) return null; n.click();
       const it = [...document.querySelectorAll('.pmenu .it')].map((e) => e.textContent.replace(/✕$/, ''));

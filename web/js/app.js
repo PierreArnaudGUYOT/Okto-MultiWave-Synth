@@ -149,7 +149,7 @@
     // categories and of the presets' ranks (beta 0.2: the numbering is not the order of the lists any more: the 300 new presets 201-500
     // come before the 200 of beta 0.1 in the array, but each category lists its presets together). The arrows step through this list.
     const add = (k, group) => list.push({ id: 'f:' + k, name: P[k].name, group, current: presetId === 'f:' + k, deletable: false });
-    for (let k = 0; k < Math.min(SPEC.TOP, P.length); k++) add(k, '★ TOP SOUNDS');
+    [...Array(Math.min(SPEC.TOP, P.length)).keys()].sort((a, b) => P[a].rank - P[b].rank).forEach(k => add(k, '★ TOP SOUNDS'));   // (version 1.0.2: by rank, the most starred first)
     for (const c of SPEC.CATEGORIES) {
       const ks = [];
       for (let k = SPEC.TOP; k < P.length; k++) if (P[k].cat === c) ks.push(k);

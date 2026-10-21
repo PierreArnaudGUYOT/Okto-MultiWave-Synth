@@ -127,6 +127,10 @@ int main(int argc, char** argv) {
 
   // Okto MultiWave Synth: the chord keyboard through the VST2 entry point (MIDI in, the processor's chord type out to the host)
   {
+    {   // a steady, sustained sound for the chord test (the default program is the first TOP Sound, which changes with the owner's ratings: a siren sweep in version 1.0.2)
+      int k = 0; for (int i = 0; i < kNumPresets; i++) if (!std::strcmp(kPresets[i].name, "A " "\xC2\xB7" " Warm Pad")) k = i;
+      D(fx, 2, 0, k); render(fx, 4);
+    }
     midi(fx, 0x90, 67, 100); Render single = render(fx, 60); midi(fx, 0x80, 67, 0); render(fx, 400);
     fx->setParameter(fx, P_CHORD_MODE, 1.0f); render(fx, 1);
     const int autoBefore = automateCalls;

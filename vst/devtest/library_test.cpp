@@ -181,22 +181,27 @@ int wmain(int argc, wchar_t** argv) {
     lib.restore(kA);
   }
 
-  std::printf("8b. the lists of a file of beta 0.3.3 (\"LIST ORDER v4\") are not read: the default lists, with the new TOP Sounds\n");
+  std::printf("8b. the lists of a file of 1.0 (\"LIST ORDER v5\") are not read (the default lists: sorted, Other) and its stars are kept; a file of beta 0.3.3 (v4) loses its stars too\n");
   {
     e = lib.setTop(kA, true);   // a list the player changed ...
     check(e.empty() && lib.inTop(kA), "a player's TOP Sounds addition is written", u8(e));
     lib.setStars(kA, 7);   // ... and a rating
     check(lib.stars(kA) == 7, "the rating is kept in the file");
     std::string t = readAll(file);
-    const size_t lo = t.find("######## LIST ORDER v5");
-    check(lo != std::string::npos, "the file says LIST ORDER v5");
+    const size_t lo = t.find("######## LIST ORDER v6");
+    check(lo != std::string::npos, "the file says LIST ORDER v6");
     if (lo != std::string::npos) {
-      t.replace(lo, 22, "######## LIST ORDER v4");   // ... and the same file as beta 0.3.3 wrote it
-      writeTextFile(file, t);
+      std::string t5 = t; t5.replace(lo, 22, "######## LIST ORDER v5");   // ... and the same file as 1.0 wrote it
+      writeTextFile(file, t5);
       sleepMs(30);
       lib.refresh();
-      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTopList, "the v4 lists are rebuilt: the default TOP Sounds, with the presets rated above 7", std::to_string(lib.lists()[0].second.size()));
-      check(lib.stars(kA) == 0, "the stars of that older file are not carried over: every sound starts with none", std::to_string(lib.stars(kA)));
+      check(!lib.inTop(kA) && (int)lib.lists()[0].second.size() == kNumTopList, "the v5 lists are rebuilt: the default TOP Sounds and sections", std::to_string(lib.lists()[0].second.size()));
+      check(lib.stars(kA) == 7, "the stars of a file of 1.0 are kept", std::to_string(lib.stars(kA)));
+      std::string t4 = t; t4.replace(lo, 22, "######## LIST ORDER v4");   // ... and as beta 0.3.3 wrote it
+      writeTextFile(file, t4);
+      sleepMs(30);
+      lib.refresh();
+      check(lib.stars(kA) == 0, "the stars of a file older than 1.0 are not carried over: every sound starts with none", std::to_string(lib.stars(kA)));
     }
     lib.setTop(kA, false);
   }

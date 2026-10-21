@@ -421,6 +421,7 @@ class Library {
   static void parse(const std::string& all, State& t) {
     int part = 0;   // 0 = before any marker (a beta 0.3 user-bank file), 1 = factory presets, 2 = user bank, 3 = list order
     int orderList = -1;
+    bool keepStars = false;   // version 1.0.2: the stars of a file of 1.0 or later ("LIST ORDER v5" or v6) are kept
     bool v2 = false;   // lists of this version's format ("LIST ORDER v5", beta 0.3.4; they say which presets they hold); older ones are not read
     std::vector<std::vector<int>> orders(listLabels().size());
     std::vector<char> present(listLabels().size(), 0), known(kNumPresets, 0);
@@ -459,7 +460,7 @@ class Library {
         cur = nullptr; sec = -1;
         part = line.find("FACTORY") != std::string::npos ? 1 : line.find("USER BANK") != std::string::npos ? 2 :
                line.find("LIST ORDER") != std::string::npos ? 3 : 0;
-        if (part == 3) v2 = line.find("LIST ORDER v5") != std::string::npos;   // beta 0.3.4 (v5: the presets he rated above 7 in his second listening join TOP Sounds); beta 0.3.1: the lists of beta 0.3 ("v3", kept from beta 0.7) are rebuilt: the presets rated above 7 and the favourites join TOP Sounds
+        if (part == 3) { v2 = line.find("LIST ORDER v6") != std::string::npos; keepStars = v2 || line.find("LIST ORDER v5") != std::string::npos; }   // version 1.0.2 (v6: the sorted sections and Other, after the owner's third listening: the v5 lists of 1.0 / 1.0.1 are rebuilt)
         orderList = -1;
         continue;
       }
@@ -509,7 +510,7 @@ class Library {
       else if (cur) parseParamLine(line, cur->v);
     }
     endFb();
-    if (!v2) std::fill(t.stars.begin(), t.stars.end(), (signed char)-1);   // version 1.0: the stars of a file of an older version are not carried over: every sound starts with none (the user bank keeps its own)
+    if (!keepStars) std::fill(t.stars.begin(), t.stars.end(), (signed char)-1);   // version 1.0: the stars of a file of an older version are not carried over: every sound starts with none (the user bank keeps its own)
     if (!v2) return;   // a beta 0.3 / 0.4 / 0.5 file: the default lists of this version
     // beta 0.5: each list holds what the file names, in its order (a preset in one category only: the first named);
     // a preset the file does not know, or a list it does not have, takes the default places; a known preset that no
@@ -560,7 +561,7 @@ class Library {
       paramLines(t.vals[k].data(), s);
     }
     L("");
-    L("######## LIST ORDER v5 (the preset browser: what each list holds, in its order; built-in names) ########");
+    L("######## LIST ORDER v6 (the preset browser: what each list holds, in its order; built-in names) ########");
     for (size_t i = 0; i < t.lists.size(); i++) {
       L("");
       L("== " + listLabels()[i] + " ==");

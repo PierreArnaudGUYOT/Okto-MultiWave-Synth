@@ -547,7 +547,7 @@ async function stepPresets() {
   log(`  ${names.length} presets`);
   if (SPEC) {
     // the menu lists the TOP Sounds, then each category's presets by rank (beta 0.2: not the array order, which has the 300 new presets before the 200 of beta 0.1)
-    const sn = SPEC.PRESETS.slice(0, SPEC.TOP).map((p) => p.name);
+    const sn = SPEC.PRESETS.slice(0, SPEC.TOP).sort((a, b) => a.rank - b.rank).map((p) => p.name);   // (version 1.0.2: the TOP Sounds too go by rank)
     for (const c of SPEC.CATEGORIES) for (const p of SPEC.PRESETS.slice(SPEC.TOP).filter((q) => q.cat === c).sort((a, b) => a.rank - b.rank)) sn.push(p.name);
     check(names.length === sn.length, 'preset count matches the spec', `${names.length} vs ${sn.length}`);
     const diff = sn.map((n, i) => (names[i] !== n ? `#${i} '${names[i]}' vs spec '${n}'` : null)).filter(Boolean);
@@ -743,7 +743,7 @@ async function stepPanel() {
   // TOP Sounds = the sounds of beta 0.7 that OktoPierre kept (21 in the final list), the categories in the spec order (Pad ... Drums & Perc): in the preset browser
   // (its sound types and their numbers) and in the preset menu (its groups: the categories that hold a sound that is not a TOP Sound)
   const TOP_N = SPEC.TOP;
-  const topNames = SPEC.PRESETS.slice(0, SPEC.TOP).map((p) => p.name);
+  const topNames = SPEC.PRESETS.slice(0, SPEC.TOP).sort((a, b) => a.rank - b.rank).map((p) => p.name);
   const lastCat = SPEC.CATEGORIES[SPEC.CATEGORIES.length - 1];
   check(SPEC.TOP === TOP_N && SPEC.PRESETS.length === TOP_N + SPEC.NEW_COUNT && lastCat === 'Drums & Perc', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets; ${lastCat} is the last category`,
     `TOP ${SPEC.TOP}, presets ${SPEC.PRESETS.length}, last category '${lastCat}'`);
