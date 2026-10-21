@@ -30,6 +30,18 @@
 #include <arm_neon.h>
 #define WS_V2 1
 #endif
+// The kernels that use the layer. On Apple silicon each can be left out (-DWS_NO_NEON_BAND, -DWS_NO_NEON_FILTER, -DWS_NO_NEON_REVERB) to measure what it is worth there.
+#if defined(WS_V2)
+#if defined(__SSE2__) || !defined(WS_NO_NEON_BAND)
+#define WS_V2_BAND 1
+#endif
+#if defined(__SSE2__) || !defined(WS_NO_NEON_FILTER)
+#define WS_V2_FILTER 1
+#endif
+#if defined(__SSE2__) || !defined(WS_NO_NEON_REVERB)
+#define WS_V2_REVERB 1
+#endif
+#endif
 
 namespace ws {
 
@@ -735,7 +747,7 @@ inline double ladder(double* st, int o, double u, double G, double k, int type) 
 // pairs (2q, 2q + 1) listed in pq[0 .. npq - 1] (every pair that holds an active layer; the other layer of a pair is computed too and never used); otherwise the layers of the
 // active list act[0 .. na - 1]. lg and t must be 16-byte aligned (NL entries each). rampGains: lg[b] += d[b] for the same pairs of layers.
 inline void bandTerms(const float* base, const float* nx, double fr, const double* lg, double* t, const int* pq, int npq, const int* act, int na) {
-#if defined(WS_V2)
+#if defined(WS_V2_BAND)
   (void)act; (void)na;
   const v2d f = v2_set1(fr);
   for (int e = 0; e < npq; e++) {
@@ -749,7 +761,7 @@ inline void bandTerms(const float* base, const float* nx, double fr, const doubl
 #endif
 }
 inline void rampGains(double* lg, const double* d, const int* pq, int npq) {
-#if defined(WS_V2)
+#if defined(WS_V2_BAND)
   for (int e = 0; e < npq; e++) { const int b = 2 * pq[e]; v2_store(lg + b, v2_add(v2_load(lg + b), v2_load(d + b))); }
 #else
   (void)pq; (void)npq;
@@ -1782,7 +1794,7 @@ class Engine {
       kf[f] = vc.fk; comp[f] = type == 1 ? 1 + 0.6 * vc.fk : 1;   // OTA: the low end the resonance takes away comes back in part
       G0[f] = vc.fG0; dG[f] = (vc.fG1 - vc.fG0) / n;
     }
-#if defined(WS_V2)
+#if defined(WS_V2_FILTER)
     const v2d c27 = v2_set1(27), c9 = v2_set1(9), c3 = v2_set1(3), cm3 = v2_set1(-3), vgin = v2_set1(gin), vmk = v2_set1(mk);
     // tnh() on two lanes; min / max keep a NaN as it is, like the comparisons of the scalar form
     auto tnh2 = [&](v2d x) {
@@ -2085,7 +2097,7 @@ class Engine {
       if (++dlyW >= dlyLen) dlyW = 0;
       if (rmix > 0) {
         double inp = (l + r) * 0.015, wl = 0, wr = 0;
-#if defined(WS_V2)
+#if defined(WS_V2_REVERB)
         // version 1.0.7 (CPU review 2.4): comb k (left) and comb k + 8 (right) are independent chains of the same operations: they run as the two lanes of one register; the sums
         // wl and wr stay scalar and in the order of the loop below. The all-passes k (left chain) and k + 4 (right chain) likewise.
         {

@@ -44,6 +44,19 @@ jobs:
           echo "NEON against scalar: $n files, $bad differ" | tee -a out/dsp-arm64/neon_time.log
           test "$bad" -eq 0
           rm -f out/dsp-arm64/*.raw out/dsp-arm64-scalar/*.raw
+      - name: NEON against the scalar code, CPU time (Apple silicon)
+        run: |
+          mkdir -p out/neon
+          node tools/cpu_cases.js out/neon sample 4
+          FL="-std=c++17 -O2 -DNDEBUG -ffp-contract=off -arch arm64 -Ivst/src"
+          for v in "all:" "band:-DWS_NO_NEON_FILTER -DWS_NO_NEON_REVERB" "filter:-DWS_NO_NEON_BAND -DWS_NO_NEON_REVERB" "reverb:-DWS_NO_NEON_BAND -DWS_NO_NEON_FILTER"; do
+            name=${v%%:*}; opts=${v#*:}
+            clang++ $FL -DWS_NO_NEON -Dws=ws_old -DAB_MAKE=makeOld -c vst/devtest/cpu_ab_engine.cpp -o build/mac/ab_old.o
+            clang++ $FL $opts -Dws=ws_new -DAB_MAKE=makeNew -c vst/devtest/cpu_ab_engine.cpp -o build/mac/ab_new.o
+            clang++ -std=c++17 -O2 -arch arm64 vst/devtest/cpu_ab.cpp build/mac/ab_old.o build/mac/ab_new.o -o build/mac/cpu_ab
+            build/mac/cpu_ab out/neon/cases_sample.txt --chords 6 --reps 3 --out out/neon/ab_$name.csv
+            node tools/cpu_ab_report.js out/neon/ab_$name.csv out/neon/cases_sample.txt "NEON kernels: $name" | head -1 | tee -a out/neon/summary.txt
+          done
       - name: Sound identical to the web engine (Intel, Rosetta)
         run: |
           mkdir -p out/dsp-x86_64
