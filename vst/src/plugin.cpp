@@ -15,6 +15,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 #include <chrono>
+#include <condition_variable>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -321,6 +322,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     for (int i = 0; i < kNumParams; i++) if (!kParams[i].hidden) plain[i].store(v[i]);
     stateDirty.store(true);
     structVersion.fetch_add(1);
+    kick();
     return kResultOk;
   }
   tresult PLUGIN_API getState(IBStream* state) override {
@@ -397,7 +399,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
             const bool morph = morphNeeded(engine.p); const int vsig = variantSig(engine.p);
             const bool tablesEnd = morph != lastMorph || vsig != lastVarSig;
             lastMorph = morph; lastVarSig = vsig;
-            if ((kParams[id].structural && id != (ParamID)P_OSC_VIEW) || levelEnds || tablesEnd) structVersion.fetch_add(1);
+            if ((kParams[id].structural && id != (ParamID)P_OSC_VIEW) || levelEnds || tablesEnd) { structVersion.fetch_add(1); kick(); }
           }
         }
       }
@@ -545,6 +547,11 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
   std::atomic<int> setState_[kSets];
   std::atomic<int> pendingIdx{-1};
   std::mutex buildMutex;        // serialises table builds (builder thread, activation, offline rendering)
+  // version 1.0.7: the builder thread sleeps until a structural edit (it used to wake every 3 ms for the life of the instance: 0.2 % of a core per instance).
+  // kick() is the only call added to the audio thread, once per structural edit: it takes no lock (a wake-up that falls between the thread's check and its wait
+  // is caught by the 50 ms time-out)
+  std::mutex wakeMutex; std::condition_variable wake;
+  void kick() { wake.notify_one(); }
   bool offline = false;
   std::thread worker;
   std::atomic<bool> quit{false};
@@ -583,11 +590,14 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
           setState_[idx].store(kPending);
           int old = pendingIdx.exchange(idx);
           if (old >= 0) setState_[old].store(kFree);
-        } else std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        } else {
+          std::unique_lock<std::mutex> wl(wakeMutex);
+          wake.wait_for(wl, std::chrono::milliseconds(50), [this] { return quit.load() || structVersion.load() != builtVersion.load(); });
+        }
       }
     });
   }
-  void stopWorker() { quit.store(true); if (worker.joinable()) worker.join(); }
+  void stopWorker() { quit.store(true); kick(); if (worker.joinable()) worker.join(); }
   void sendShared() {
     if (!peer || !sharedId) return;
     IMessage* m = makeMessage(hostContext, "ws.shared");
