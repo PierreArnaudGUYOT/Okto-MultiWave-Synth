@@ -271,11 +271,13 @@ a.hbtn { display: flex; flex-direction: column; align-items: center; justify-con
 .dw-stop { flex: none; border: 1px solid var(--card-edge); background: var(--inset); color: var(--text); border-radius: 7px; font-size: 9.5px; font-weight: 700;
   letter-spacing: 0.08em; padding: 3px 8px; cursor: pointer; }
 .dw-stop:hover { border-color: var(--accent); color: var(--accent); }
-.dw-body { padding: 8px 12px 9px; }
-.dw-sec { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--dim); text-transform: uppercase; }
-.dw-param { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 4px; }
-.dw-val { font-size: 12px; color: var(--accent); margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dw-text { font-size: 11.5px; line-height: 1.4; color: var(--text); margin-top: 6px; min-height: 48px; }
+.dw-body { padding: 10px 14px 10px; }
+.dw-sec { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--dim); text-transform: uppercase; }
+.dw-param { font-size: 17px; font-weight: 700; color: var(--text); margin-top: 5px; line-height: 1.25; }
+.dw-val { font-size: 12.5px; color: var(--accent); margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the presentation of the synth (DEMO_STORY): the chapter in small capitals, then the sentence, large and plain */
+.dw-chap { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--card-edge); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--accent); }
+.dw-text { font-size: 17px; line-height: 1.42; font-weight: 500; color: var(--text); margin-top: 5px; min-height: 72px; }
 .dw-prog { height: 3px; background: rgba(255,255,255,0.14); border-radius: 2px; margin-top: 8px; overflow: hidden; }
 .dw-prog i { display: block; height: 100%; width: 0; background: var(--accent); }
 .dw-foot { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--faint); margin-top: 5px; }
@@ -342,13 +344,13 @@ a.hbtn { display: flex; flex-direction: column; align-items: center; justify-con
 }
 #manual-overlay { position: fixed; inset: 0; background: rgba(5, 6, 8, 0.72); z-index: 90; display: flex; align-items: center; justify-content: center; }
 #manual-overlay[hidden] { display: none; }
-.manual-frame { width: min(1100px, 94vw); height: 90vh; background: #fff; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+.manual-frame { width: min(1100px, 94vw); height: 90vh; background: #1c0a20; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
   box-shadow: 0 30px 80px rgba(0,0,0,0.7); }
 .manual-bar { height: 44px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 10px 0 18px; background: #2b0f2e; color: var(--text); font-size: 13px; font-weight: 600; }
 .manual-bar a { color: var(--brand); font-weight: 500; text-decoration: none; }
 .manual-bar button { border: 0; background: transparent; color: #c0c8d4; font-size: 18px; cursor: pointer; width: 34px; height: 34px; border-radius: 6px; }
 .manual-bar button:hover { background: rgba(255,255,255,0.08); }
-#manual-iframe { flex: 1; border: 0; width: 100%; background: #fff; }
+#manual-iframe { flex: 1; border: 0; width: 100%; background: #1c0a20; }
 
 .tip { position: fixed; pointer-events: none; z-index: 60; background: #1c0a20; color: var(--text); border: 1px solid rgba(255,255,255,0.28); border-radius: 8px;
   padding: 4px 8px; font-size: 11.5px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,0.5); }

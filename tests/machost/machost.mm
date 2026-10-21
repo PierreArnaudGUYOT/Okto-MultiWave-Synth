@@ -312,8 +312,8 @@ int main(int argc, char** argv) {
     NSDictionary* info = [NSDictionary dictionaryWithContentsOfFile:[bp stringByAppendingPathComponent:@"Contents/Info.plist"]];
     check(info && [info[@"CFBundlePackageType"] isEqualToString:@"BNDL"] && [info[@"CFBundleExecutable"] isEqualToString:@"OktoMultiWaveSynth"],
           "Info.plist: a BNDL bundle, executable OktoMultiWaveSynth", info ? std::string([[info description] UTF8String]).substr(0, 0) : "missing");
-    check([[NSFileManager defaultManager] fileExistsAtPath:[bp stringByAppendingPathComponent:@"Contents/Resources/manual/manual-a.html"]],
-          "the manuals are in Contents/Resources/manual");
+    check([[NSFileManager defaultManager] fileExistsAtPath:[bp stringByAppendingPathComponent:@"Contents/Resources/manual/manual.html"]],
+          "the manual is in Contents/Resources/manual");
     CFURLRef url = CFURLCreateWithFileSystemPath(nullptr, (__bridge CFStringRef)bp, kCFURLPOSIXPathStyle, true);
     CFBundleRef bundle = CFBundleCreate(nullptr, url);
     CFRelease(url);

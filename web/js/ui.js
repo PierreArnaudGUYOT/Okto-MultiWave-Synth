@@ -145,10 +145,10 @@ class SynthUI {
       case 'drawbar': return this.drawbar(w, box);
       case 'logo': return this.logo(box);
       case 'presets': return this.presets(box);
-      case 'manual': {   // beta 0.6: one button, the manual of the engine shown (each manual links to the other)
+      case 'manual': {   // beta 0.6: one button; version 1.0.6: the manual is one page
         const b = el('button', 'hbtn manual', box, { width: '100%', height: '100%' });
         b.innerHTML = 'USER<b>MANUAL</b>';
-        b.onclick = () => this.host.openManual(this.mode === 1 ? 'B' : 'A');
+        b.onclick = () => this.host.openManual();
         this.manualBtn = b;
         return;
       }
@@ -729,7 +729,6 @@ class SynthUI {
     this.dev.classList.toggle('mode-a', m === 0);
     this.dev.classList.toggle('mode-b', m === 1);
     if (this.browser) this.browser.classList.toggle('mode-b', m === 1);
-    if (this.manualBtn) this.manualBtn.title = m === 1 ? 'User manual B — the additive oscillator B1 (an additive oscillator is shown)' : 'User manual A — the subtractive oscillators A1 · A2 (a subtractive oscillator is shown)';
     for (const s of this.sections) s.el.classList.toggle('hidden', this.secHidden(s.spec));
   }
   secHidden(spec) {
