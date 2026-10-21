@@ -57,7 +57,8 @@ const FMTS = ['pct', 'db', 'sec', 'hz', 'cents', 'band', 'dbband', 'int', 'choic
 const WTYPES = ['knobL', 'knobM', 'knobS', 'knobT', 'seg', 'step', 'drawbar', 'scope', 'scalogram', 'atom', 'source', 'window',
   'adsr', 'leds', 'fxheads', 'keyboard', 'wheels', 'logo', 'presets', 'manual', 'download', 'meter', 'zoom', 'credit', 'menu',
   'toggle', 'label', 'chordpads', 'chordname', 'strumplate', 'osctabs',   // beta 0.3: the folder tabs of the oscillators
-  'lfotabs'];   // beta 0.3.4: the LFO 2 | LFO 3 tabs of the LFO 2/3 card
+  'lfotabs',   // beta 0.3.4: the LFO 2 | LFO 3 tabs of the LFO 2/3 card
+  'feedback'];   // version 1.0.9: the web app's SEND FEEDBACK button (web only: the plug-in's editor skips the widgets of the web app)
 const q = s => JSON.stringify(s); // UTF-8 string literal (JSON escaping is valid C for our content)
 const num = v => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 const enumName = k => 'P_' + k.toUpperCase();

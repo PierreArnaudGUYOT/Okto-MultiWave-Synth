@@ -31,8 +31,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: '1.0.8',
-  versionNum: '1.0.8',
+  version: '1.0.9',
+  versionNum: '1.0.9',
   date: '2026-10-21',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -388,7 +388,8 @@ section('header', '', 0, 0, 1100, 48, -1, [
   { type: 'logo', x: 16, y: 8, w: 224, h: 32 },   // version 1.0: OKTOWAVE / FRACTAL WAVELET SYNTHESIZER
   { type: 'zoom', x: 248, y: 14, w: 50, h: 20 },
   { type: 'presets', x: 384, y: 9, w: 296, h: 30 },   // beta 0.3: narrower (the oscillator tabs left the header: they are the folder tabs under it)
-  { type: 'download', only: 'web', x: 862, y: 9, w: 68, h: 30 },   // the plug-in has SAVE PRESET there
+  { type: 'download', only: 'web', x: 788, y: 9, w: 68, h: 30 },   // version 1.0.9: one button to the left (the plug-in has SAVE PRESET at 862)
+  { type: 'feedback', only: 'web', x: 862, y: 9, w: 68, h: 30 },   // version 1.0.9: SEND FEEDBACK, between DOWNLOAD VST and USER MANUAL (a Google Form in a new tab)
   { type: 'manual', x: 936, y: 9, w: 68, h: 30 },
   { type: 'knobS', param: 'master', x: 1028, y: 6, w: 36, h: 36 },
   { type: 'meter', x: 1072, y: 9, w: 14, h: 30 },

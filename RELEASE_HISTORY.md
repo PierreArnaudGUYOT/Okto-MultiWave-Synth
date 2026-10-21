@@ -3,6 +3,15 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth 1.0.9 — 2026-10-21 (a way to send feedback)
+
+**In short**
+- **A "Send feedback" button in the web app.** In the header, between **DOWNLOAD VST** and **USER MANUAL**, **SEND FEEDBACK** opens a short form (Google Forms: two optional questions, one for your feedback, one for a bug with your OS and setup) in a new tab; no Google account is needed. The welcome window has the same door: a fifth box, **Send your feedback**, under "Learn more about the sound engine". The web page itself sends nothing: the buttons are plain links, and no referrer is sent to Google.
+- The plug-in is the 1.0.8 one with its version number (its manual page names the new button); no sound, no preset, no layout changed.
+
+**Checked** (a short validation: the sound engine did not change)
+- Build, the quick suite with the C++/JS cross-check (323 cases), the plug-in window in a host, the VST2 entry point, the web smoke test, the manual's pages, the welcome window and the panel of the web test (65 checks), the demo test.
+
 ## Okto MultiWave Synth 1.0.8 — 2026-10-21 (the demo changes preset exactly on the chord)
 
 **In short**

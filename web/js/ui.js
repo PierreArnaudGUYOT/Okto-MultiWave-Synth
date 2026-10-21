@@ -17,6 +17,8 @@ const engHTML = (eng) => eng.replace(/[AB]/g, c => `<span class="${c.toLowerCase
 const SVGNS = 'http://www.w3.org/2000/svg';
 // beta 0.6: where the free plug-in is published (the header's DOWNLOAD VST; index.html's welcome window links there too)
 const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases/latest';   // the official release page (version 1.0.3: the Free-Wavelet-Synthesizer-VST repository)
+// version 1.0.9: the owner's feedback form (a Google Form: it opens without a Google account; the header's SEND FEEDBACK; index.html's welcome window links to the same address)
+const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdqkWNwanzcDDURcKepEK_U1P8b_HyR8B5_Gk48xtuQOYHqgQ/viewform';
 
 function el(tag, cls, parent, style) {
   const e = document.createElement(tag);
@@ -157,6 +159,13 @@ class SynthUI {
         a.href = VST_RELEASES; a.target = '_blank'; a.rel = 'noopener';
         a.innerHTML = 'DOWNLOAD<b>VST</b>';
         a.title = 'Download the free VST plug-in (Windows VST3 / VST2) from GitHub';
+        return;
+      }
+      case 'feedback': {   // version 1.0.9, web only: the feedback form, in a new tab (no referrer sent)
+        const a = el('a', 'hbtn fb', box, { width: '100%', height: '100%' });
+        a.href = FEEDBACK_FORM; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.innerHTML = 'SEND<b>FEEDBACK</b>';
+        a.title = 'Tell the developer what you think: a short form opens in a new tab (Google Forms, no account needed)';
         return;
       }
       case 'label': box.classList.add('wlabel'); el('span', '', box).textContent = w.text; return;   // (a span: the oriental PLAY card puts the caption on a plate)

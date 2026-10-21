@@ -46,8 +46,8 @@ var WS_SPEC = {
   "panelCredit": "By OktoPierre",
   "copyright": "Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)",
   "license": "GPL v3",
-  "version": "1.0.8",
-  "versionNum": "1.0.8",
+  "version": "1.0.9",
+  "versionNum": "1.0.9",
   "date": "2026-10-21",
   "doi": "",
   "base": "Wavelet Synthesizer beta 0.7"
@@ -3398,6 +3398,14 @@ var WS_SPEC = {
     },
     {
      "type": "download",
+     "only": "web",
+     "x": 788,
+     "y": 9,
+     "w": 68,
+     "h": 30
+    },
+    {
+     "type": "feedback",
      "only": "web",
      "x": 862,
      "y": 9,
