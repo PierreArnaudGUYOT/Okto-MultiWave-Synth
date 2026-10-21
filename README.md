@@ -34,6 +34,8 @@ from version 1.0.6 the macOS plug-in is built and tested on GitHub's Macs and re
 ## What version 1.0.9 changes
 
 - **A "Send feedback" button in the web app**: in the header (between DOWNLOAD VST and USER MANUAL) and in the welcome window. It opens a short Google Form in a new tab (a bug, an idea, a sound you miss; no Google account needed). The page itself sends nothing.
+- **A clearer oriental look** (TUNING ARAB or TURK): the selectors of the PLAY card (TUNING, MAQAM, TONIC) sit on an opaque dark plate so that their text reads over the pattern; the panel and the preset browser take the colours of the pattern (bronze for ARAB, carmine for TURK); in the web app the pattern also fills the dark margins of the page. Web app and plug-in.
+- **The credits are back in the manual** (the testers, the demo music, the licences of what is reused).
 
 ## What version 1.0.8 changes
 

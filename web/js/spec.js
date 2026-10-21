@@ -19,7 +19,20 @@ var WS_SPEC = {
     "#3a2c14",
     "#281d0d"
    ],
-   "dim": "#cdbf9c"
+   "dim": "#cdbf9c",
+   "g": [
+    "#2b2010",
+    "#4a3715",
+    "#7a5618",
+    "#b07a22",
+    "#d9a03a"
+   ],
+   "glow": [
+    "#e46f4a",
+    "#f0b84a",
+    "#a8431f"
+   ],
+   "page": "#0e0a05"
   },
   "turk": {
    "a": "#ff5468",
@@ -33,10 +46,26 @@ var WS_SPEC = {
     "#401522",
     "#2c0e17"
    ],
-   "dim": "#d1aab1"
+   "dim": "#d1aab1",
+   "g": [
+    "#33101a",
+    "#5a1a2a",
+    "#8f2a3c",
+    "#c23a4a",
+    "#e0603c"
+   ],
+   "glow": [
+    "#ff5468",
+    "#ffb347",
+    "#a0183a"
+   ],
+   "page": "#12060a"
   },
   "tile": 34,
-  "opacity": 0.7
+  "opacity": 0.7,
+  "plate": "#0a0e1b",
+  "pageTile": 64,
+  "pageOpacity": 0.55
  },
  "CHORD_H": 120,
  "APP": {

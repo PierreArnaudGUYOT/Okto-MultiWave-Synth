@@ -6,10 +6,11 @@
 namespace ws {
 
 constexpr float kDeviceW = 1100.0f, kDeviceH = 944.0f, kChordH = 120.0f;
-// version 1.0.5: one palette per tuning, [0] ARAB (sand-gold), [1] TURK (carmine)
-struct OrientPal { unsigned a, b, c1, c2, c3, c4, c5, pl0, pl1, dim; };
-constexpr OrientPal kOrientPals[2] = { { 0xf0b84a, 0xe46f4a, 0xc98a1f, 0xe46f4a, 0xfbf0d6, 0x2b2010, 0x4a3715, 0x3a2c14, 0x281d0d, 0xcdbf9c }, { 0xff5468, 0xffb347, 0xd6334a, 0xffb347, 0xffe9ea, 0x33101a, 0x5a1a2a, 0x401522, 0x2c0e17, 0xd1aab1 } };
+// version 1.0.5: one palette per tuning, [0] ARAB (sand-gold), [1] TURK (carmine); version 1.0.9: g = the panel's gradient (5 stops), glow = its three blobs
+struct OrientPal { unsigned a, b, c1, c2, c3, c4, c5, pl0, pl1, dim, g[5], glow[3]; };
+constexpr OrientPal kOrientPals[2] = { { 0xf0b84a, 0xe46f4a, 0xc98a1f, 0xe46f4a, 0xfbf0d6, 0x2b2010, 0x4a3715, 0x3a2c14, 0x281d0d, 0xcdbf9c, { 0x2b2010, 0x4a3715, 0x7a5618, 0xb07a22, 0xd9a03a }, { 0xe46f4a, 0xf0b84a, 0xa8431f } }, { 0xff5468, 0xffb347, 0xd6334a, 0xffb347, 0xffe9ea, 0x33101a, 0x5a1a2a, 0x401522, 0x2c0e17, 0xd1aab1, { 0x33101a, 0x5a1a2a, 0x8f2a3c, 0xc23a4a, 0xe0603c }, { 0xff5468, 0xffb347, 0xa0183a } } };
 constexpr float kOrientTile = 34.0f, kOrientOpacity = 0.7f;
+constexpr unsigned kOrientPlate = 0x0a0e1b;   // version 1.0.9: the opaque plate under the captions and selectors of the PLAY card on the pattern
 inline constexpr const char* kAppName = "Okto MultiWave Synth";
 inline constexpr const char* kAppAuthor = "Pierre Arnaud GUYOT";
 inline constexpr const char* kAppCredit = "created by OktoPierre";

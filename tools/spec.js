@@ -20,9 +20,14 @@ const DEVICE = { w: 1100, h: 944 };   // the panel (beta 0.3.4: 944, the owner's
 // version 1.0.5: the same pattern in two colours, one for each tuning: ARAB sand-gold, TURK carmine (the owner's choice among four pairs); a / b = the accent of the subtractive / additive oscillators
 // while the tuning is on (the rest of the names as above); the web reads ORIENT.arab / ORIENT.turk, the plug-in kOrientPals[0] / [1].
 const ORIENT = {
-  arab: { a: '#f0b84a', b: '#e46f4a', c1: '#c98a1f', c2: '#e46f4a', c3: '#fbf0d6', c4: '#2b2010', c5: '#4a3715', pl: ['#3a2c14', '#281d0d'], dim: '#cdbf9c' },
-  turk: { a: '#ff5468', b: '#ffb347', c1: '#d6334a', c2: '#ffb347', c3: '#ffe9ea', c4: '#33101a', c5: '#5a1a2a', pl: ['#401522', '#2c0e17'], dim: '#d1aab1' },
+  // version 1.0.9 (proposal): g = the panel's gradient (5 stops, as the Crepuscule one) and glow = its three colour blobs, in the colours of the pattern; page = the dark ground of the web page behind the pattern
+  arab: { a: '#f0b84a', b: '#e46f4a', c1: '#c98a1f', c2: '#e46f4a', c3: '#fbf0d6', c4: '#2b2010', c5: '#4a3715', pl: ['#3a2c14', '#281d0d'], dim: '#cdbf9c',
+    g: ['#2b2010', '#4a3715', '#7a5618', '#b07a22', '#d9a03a'], glow: ['#e46f4a', '#f0b84a', '#a8431f'], page: '#0e0a05' },
+  turk: { a: '#ff5468', b: '#ffb347', c1: '#d6334a', c2: '#ffb347', c3: '#ffe9ea', c4: '#33101a', c5: '#5a1a2a', pl: ['#401522', '#2c0e17'], dim: '#d1aab1',
+    g: ['#33101a', '#5a1a2a', '#8f2a3c', '#c23a4a', '#e0603c'], glow: ['#ff5468', '#ffb347', '#a0183a'], page: '#12060a' },
   tile: 34, opacity: 0.7,
+  plate: '#0a0e1b',   // version 1.0.9: the OPAQUE dark plate under the PLAY card's captions and selectors (TUNING, MAQAM, TONIC) on the pattern
+  pageTile: 64, pageOpacity: 0.55,   // version 1.0.9 (web): the same pattern, larger, in the page's margins
 };
 const APP = {
   name: 'Okto MultiWave Synth',

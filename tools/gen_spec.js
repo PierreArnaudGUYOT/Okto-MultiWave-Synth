@@ -69,10 +69,11 @@ h += `constexpr float kDeviceW = ${DEVICE.w}.0f, kDeviceH = ${DEVICE.h}.0f, kCho
 // beta 0.3.4: the oriental colour code (ORIENT in tools/spec.js), 0xRRGGBB; the pattern's tile in px and its opacity over the PLAY card's gradient kOrientPl0 -> kOrientPl1
 {
   const hx = c => '0x' + c.slice(1);
-  const pal = P => `{ ${hx(P.a)}, ${hx(P.b)}, ${hx(P.c1)}, ${hx(P.c2)}, ${hx(P.c3)}, ${hx(P.c4)}, ${hx(P.c5)}, ${hx(P.pl[0])}, ${hx(P.pl[1])}, ${hx(P.dim)} }`;
-  h += '// version 1.0.5: one palette per tuning, [0] ARAB (sand-gold), [1] TURK (carmine)\nstruct OrientPal { unsigned a, b, c1, c2, c3, c4, c5, pl0, pl1, dim; };\n';
+  const pal = P => `{ ${hx(P.a)}, ${hx(P.b)}, ${hx(P.c1)}, ${hx(P.c2)}, ${hx(P.c3)}, ${hx(P.c4)}, ${hx(P.c5)}, ${hx(P.pl[0])}, ${hx(P.pl[1])}, ${hx(P.dim)}, { ${P.g.map(hx).join(', ')} }, { ${P.glow.map(hx).join(', ')} } }`;
+  h += '// version 1.0.5: one palette per tuning, [0] ARAB (sand-gold), [1] TURK (carmine); version 1.0.9: g = the panel\'s gradient (5 stops), glow = its three blobs\nstruct OrientPal { unsigned a, b, c1, c2, c3, c4, c5, pl0, pl1, dim, g[5], glow[3]; };\n';
   h += `constexpr OrientPal kOrientPals[2] = { ${pal(ORIENT.arab)}, ${pal(ORIENT.turk)} };\n`;
   h += `constexpr float kOrientTile = ${num(ORIENT.tile)}f, kOrientOpacity = ${num(ORIENT.opacity)}f;\n`;
+  h += `constexpr unsigned kOrientPlate = ${hx(ORIENT.plate)};   // version 1.0.9: the opaque plate under the captions and selectors of the PLAY card on the pattern\n`;
 }
 h += `inline constexpr const char* kAppName = ${q(APP.name)};\ninline constexpr const char* kAppAuthor = ${q(APP.author)};\n`;
 h += `inline constexpr const char* kAppCredit = ${q(APP.credit)};\ninline constexpr const char* kAppVersion = ${q(APP.version)};\n`;
