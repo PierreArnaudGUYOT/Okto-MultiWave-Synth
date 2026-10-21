@@ -605,6 +605,7 @@ function WSCoreFactory(SPEC) {
     this.holdCnt = new Uint8Array(128);    // how many held keys and chord notes want each note sounding (reference count)
     this.plainHeld = new Uint8Array(128);  // keys played as themselves (below the selector octave, or over the chord)
     this.plateHeld = new Uint8Array(128);  // notes of the strum plate being touched
+    this.selHeld = new Uint8Array(128);    // the selector keys held (they make no sound, so the panel's keyboard lights them from here)
     this.chordRoot = -1; this.chordN = 0; this.chordVel = 0; this.chordLastRoot = 60;
     this.chordNote = new Int16Array(MAXV); this.chordOn = new Uint8Array(MAXV); this.strumDue = new Float64Array(MAXV);
     this.noMicro = false;        // the demo and the evaluation passage play in equal temperament whatever the oriental tuning says
@@ -832,6 +833,7 @@ function WSCoreFactory(SPEC) {
     if (this.p[P.chord_mode] < 0.5) { this.noteOn(note, vel); return; }
     const base = this.chordBase();
     if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
+      this.selHeld[note] = 1;
       const t = SPEC.CHORD_KEYS[note - base];
       if (this.p[P.chord_type] !== t) {
         this.p[P.chord_type] = t; this.chordTypeChanged = true;
@@ -849,6 +851,7 @@ function WSCoreFactory(SPEC) {
   };
   E.keyOff = function (note) {
     if (note < 0 || note > 127) return;
+    this.selHeld[note] = 0;
     if (this.p[P.chord_mode] < 0.5) { this.noteOff(note); return; }
     if (note === this.chordRoot) { this.endChord(); return; }
     if (this.plainHeld[note]) { this.plainHeld[note] = 0; this.holdOff(note); return; }
@@ -965,7 +968,7 @@ function WSCoreFactory(SPEC) {
     }
   };
   E.chordClear = function () {   // allNotesOff / allSoundOff: the layer forgets everything (the voices are released there)
-    this.chordRoot = -1; this.chordN = 0; this.holdCnt.fill(0); this.plainHeld.fill(0); this.plateHeld.fill(0);
+    this.chordRoot = -1; this.chordN = 0; this.holdCnt.fill(0); this.plainHeld.fill(0); this.plateHeld.fill(0); this.selHeld.fill(0);
   };
   // The strum plate: its notes play as themselves, whatever CHORD says (they come from the panel), counted like held keys
   E.plateOn = function (note, vel) {

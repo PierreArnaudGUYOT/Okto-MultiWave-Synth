@@ -72,7 +72,7 @@ function WSWorkletMain() {
       if (this.since >= this.dispEvery) {
         this.since = 0;
         const d = eng.disp, keys = [];
-        for (let k = 0; k < 128; k++) if (eng.keys[k]) keys.push(k);
+        for (let k = 0; k < 128; k++) if (eng.keys[k] || eng.selHeld[k]) keys.push(k);   // (the selector keys of CHORD MODE make no sound: they are lit while held)
         // Okto MultiWave Synth: the chord sounding (root, its notes started so far), the last root, and the chord type (a selector key
         // may have changed it: the app then updates its panel)
         const notes = [];

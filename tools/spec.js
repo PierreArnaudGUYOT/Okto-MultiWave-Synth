@@ -25,8 +25,8 @@ const APP = {
   panelCredit: 'By OktoPierre',      // beta 0.7: the panel's credit (bottom left, small and discreet)
   copyright: 'Copyright (C) 2026 Pierre Arnaud GUYOT (OktoPierre)',
   license: 'GPL v3',                 // shown on the panel; the licence is GPL-3.0-or-later (file LICENSE)
-  version: '1.0',
-  versionNum: '1.0.0',
+  version: '1.0.1',
+  versionNum: '1.0.1',
   date: '2026-10-20',
   doi: '',                           // no Zenodo record yet (the base synthesizer's is 10.5281/zenodo.23431760)
   base: 'Wavelet Synthesizer beta 0.7',   // the synthesizer Okto MultiWave Synth is built on
@@ -665,7 +665,9 @@ const SECTION_OF = { Keys: 'Keyboard', Pluck: 'Keyboard' };
 const TOP_RAW = require('./presets_top.js').filter(r => RATED2.names[r.name] >= 3).map((r, i) => ({ r, i }))
   .sort((a, b) => RATED2.names[b.r.name] - RATED2.names[a.r.name] || a.i - b.i).map(x => x.r);
 const PRESETS = [];
-for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: applyAdj(r.name, convertLegacy(r.v)), stars: RATED2.names[r.name] });
+// version 1.0.1: the TOP Sounds are in master_adjust.js too, by name (a loud chord at velocity 1 must not reach the output stage): only their master volume goes down
+const lowerMaster = (v, down) => (down ? { ...v, master: Math.max(-36, (v.master !== undefined ? v.master : -3) - down) } : v);
+for (const r of TOP_RAW) PRESETS.push({ name: r.name, cat: r.cat, v: lowerMaster(applyAdj(r.name, convertLegacy(r.v)), MASTER_ADJ[r.name]), stars: RATED2.names[r.name] });
 const TOP_COUNT = PRESETS.length;
 // beta 0.3.3: a uniform trim of every preset numbered 501 and up while the good ones had not been chosen (2 dB); the owner has chosen them (beta 0.3.4): 0, and the loud-chord
 // calibration is per preset (MASTER_ADJ, on top of the masters of the data files).

@@ -50,5 +50,23 @@ eng.noteOff(60);
 for (let k = 0; k < 1500 && eng.disp.mask; k++) eng.process(L, R, 128);
 check(eng.disp.mask === 0, 'the mask is empty once no voice is active', String(eng.disp.mask));
 
+console.log('4. CHORD MODE: the selector key of the left hand (no sound) is lit while it is held (the keyboard of the panel reads it from keys / selHeld)');
+{
+  const w = Float64Array.from(v); w[P.chord_mode] = 1; w[P.chord_type] = 0;
+  const e2 = new C.Engine(sr); w.forEach((x, i) => e2.setParam(i, x)); e2.setTables(C.buildTables(w, true));
+  const base = e2.chordBase(), sel = base + 4, root = base + 12 + 7;
+  e2.keyOn(sel, 0.9);
+  check(e2.selHeld[sel] === 1 && !e2.keys[sel], 'a selector key held is in selHeld and makes no sound (not in keys)');
+  e2.keyOn(root, 0.9);
+  for (let k = 0; k < 4; k++) e2.process(L, R, 128);
+  check(e2.selHeld[sel] === 1 && e2.keys[root] === 1, 'the selector key stays lit while the root plays the chord', 'root ' + e2.keys[root]);
+  e2.keyOff(sel);
+  check(e2.selHeld[sel] === 0, 'the selector key goes out when it is released');
+  e2.keyOn(sel, 0.9); e2.setParam(P.chord_mode, 0); e2.keyOff(sel);
+  check(e2.selHeld[sel] === 0, 'released after CHORD was switched off: not left lit');
+  e2.setParam(P.chord_mode, 1); e2.keyOn(base + 2, 0.9); e2.chordClear();
+  check(e2.selHeld.every(x => x === 0), 'allNotesOff forgets the lit selector keys');
+}
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASS');
 process.exit(fails ? 1 : 0);

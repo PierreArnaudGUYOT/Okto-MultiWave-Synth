@@ -502,7 +502,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
       engine.disp.peakL = 0; engine.disp.peakR = 0;
       for (int w = 0; w < 4; w++) {
         uint32_t bits = 0;
-        for (int k = 0; k < 32; k++) if (engine.keys[w * 32 + k]) bits |= 1u << k;
+        for (int k = 0; k < 32; k++) if (engine.keys[w * 32 + k] || engine.selHeld[w * 32 + k]) bits |= 1u << k;   // (the selector keys of CHORD MODE make no sound: lit while held)
         shared->keys[w].store(bits);
       }
       // Okto MultiWave Synth: the chord sounding for the panel (its name, its notes, the strum plate)

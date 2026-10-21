@@ -1,6 +1,6 @@
 # Okto MultiWave Synth
 
-*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **version 1.0**, the final version (2026-10-20), see
+*Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **version 1.0.1**, the final version with its fixes (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
 Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
@@ -20,6 +20,10 @@ directly, no DAW needed).
 (a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
 The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
 (the code is portable, but no macOS build is made or tested here).
+
+## What version 1.0.1 changes
+
+- **Every preset is quieter on a big chord struck hard** (volumes only: 183 of the 237 went down by 1 to 12 dB; no preset reaches the limiter on a ten-note chord at maximum velocity), and in CHORD MODE **the key of the left hand lights up while it is held**.
 
 ## What version 1.0 changes
 

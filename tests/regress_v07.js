@@ -27,12 +27,15 @@ let fails = 0, worst = 0;
 // beta 1.0: the TOP Sounds are sorted by the owner's stars and one was left out (unrated); the three he adjusted (SAVE PRESET) are no longer beta 0.7's sounds: they are not compared
 const ADJ = require('../tools/ratings_final.js').adjusted;
 let compared = 0;
+// version 1.0.1: the master volume of the TOP Sounds went down by whole dB where a big chord struck hard reached the output stage (tools/master_adjust.js, by name): beta 0.7's sound is compared at that master
+const MA = require('../tools/master_adjust.js'), oldMaster = OLD_SPEC.PARAMS.findIndex(x => x.key === 'master');
 for (let q = 0; q < OLD_SPEC.TOP; q++) {
   const p = OLD_SPEC.PRESETS[q], o = SPEC.PRESETS.slice(0, SPEC.TOP).find(x => x.name === p.name);
   if (!o) { console.log(`skip ${p.name.padEnd(26)} (left out of the final list)`); continue; }
   if (ADJ[p.name]) { console.log(`skip ${p.name.padEnd(26)} (adjusted by the owner)`); continue; }
   compared++;
-  const a = render(OLD, p.values), b = render(C, o.values);
+  const pv = Array.from(p.values); if (MA[p.name]) pv[oldMaster] = Math.max(-36, pv[oldMaster] - MA[p.name]);
+  const a = render(OLD, pv), b = render(C, o.values);
   let peak = 0, maxd = 0;
   for (let k = 0; k < 2; k++) for (let j = 0; j < n; j++) { peak = Math.max(peak, Math.abs(a[k][j])); maxd = Math.max(maxd, Math.abs(a[k][j] - b[k][j])); }
   const rel = maxd / Math.max(peak, 1e-9), ok = rel <= tol && peak > 0.01;

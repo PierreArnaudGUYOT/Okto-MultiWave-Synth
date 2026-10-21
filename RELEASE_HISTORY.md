@@ -3,6 +3,20 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Okto MultiWave Synth 1.0.1 — 2026-10-20 (no more crackle on a big chord struck hard, the left-hand key lights up)
+
+A fix release of the final version (plug-in and web app), after two remarks of OktoPierre: "there is heavy crackling in the VST and the web version" and "in CHORD MODE the left-hand note is not lit on the keyboard when I play".
+
+**In short**
+- **The volume of every preset is set again on big chords struck hard** (all 237, the TOP Sounds too). The loud-chord test of beta 0.3.2 (five chords at velocity 1) gets three more: eight notes over three octaves, ten notes (both hands) and nine notes in the middle of the keyboard, all at velocity 1, and the target is now **0.7, the knee of the soft limiter**, instead of 0.9 (the guard): a preset whose loudest chord goes above it has its master volume lowered by whole dB. 183 of the 237 went down (1 to 12 dB, 3 dB for the median: `tools/master_adjust.js`, by number, and by name for the TOP Sounds); before, the loudest peaks before the output stage reached 2.74, now **none of the 237 presets goes above 0.69 on any of the eight chords**, so neither the peak guard nor the soft limiter works on them. Only volumes changed: the sounds are the same.
+- **CHORD MODE: the key of the left hand is lit while it is held.** The keys of the selector octave choose the chord type and make no sound, so the keyboard, which lights what sounds, never lit them. The engine now keeps them (`selHeld`, in `core.js` and `dsp.h`) and the panel (web and plug-in) lights them while they are held, as the root that plays the chord.
+- The demo of the web app is unchanged (the presets of the Wavelet Synthesizer's tour at their own level).
+
+**Checked**
+- The plug-in and engine lane of `node tests/full.js` (13 steps): the quick suite, the C++ engine against the JavaScript reference (**323 cases, worst difference 2.1e-7**), the 18 TOP Sounds of beta 0.7 (compared at their lowered masters: worst 7.8e-8 of the peak), the engine tests (with the new one for the lit selector keys), the presets file, the VST2 entry point, the plug-in window in a host, the crackle of three chords.
+- **The big chords, all 237 presets** (`tools/supermod/loud.js --spec --all --target 0.7`): before, 183 of them reached the output stage (peaks up to 2.74); now **none does** (the peak before the output stage is at most 0.69). `tools/crackle.js` on the 8-note and the 10-note chords at velocity 1: **0 of 237 above 0.2 %** (HF residual).
+- The web app: the smoke test and the demo tour (67 checks) pass; the full web run on every preset (`test_web`) was still running when this was published.
+
 ## Okto MultiWave Synth 1.0 — 2026-10-20 (the final version: the 237 presets he kept, the interface he chose, the manual)
 
 The **official release**. It keeps what OktoPierre kept after his listening, opens on his best sound, sorts every list from the best to the least rated, takes out what he does not need any more, and has the interface he chose among the mock-ups.

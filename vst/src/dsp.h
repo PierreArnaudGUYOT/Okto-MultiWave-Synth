@@ -785,6 +785,7 @@ class Engine {
   // Okto MultiWave Synth: the chord layer (keyOn / keyOff, see there)
   uint8_t holdCnt[128] = {};    // how many held keys and chord notes want each note sounding (reference count)
   uint8_t plainHeld[128] = {};  // keys played as themselves (below the selector octave, or over the chord)
+  uint8_t selHeld[128] = {};    // the selector keys held (they make no sound, so the panel's keyboard lights them from here)
   uint8_t plateHeld[128] = {};  // notes of the strum plate being touched
   int chordRoot = -1, chordN = 0, chordLastRoot = 60; double chordVel = 0;
   int16_t chordNote[MAXV] = {}; uint8_t chordOn[MAXV] = {}; double strumDue[MAXV] = {};
@@ -990,6 +991,7 @@ class Engine {
     if (p[P_CHORD_MODE] < 0.5) { noteOn(note, vel); return; }
     const int base = chordBase();
     if (note >= base && note < base + 12) {   // the selector octave: a chord type, no sound
+      selHeld[note] = 1;
       const int t = kChordKeys[note - base];
       if (p[P_CHORD_TYPE] != t) {
         p[P_CHORD_TYPE] = t; chordTypeChanged = true;
@@ -1007,6 +1009,7 @@ class Engine {
   }
   void keyOff(int note) {
     if (note < 0 || note > 127) return;
+    selHeld[note] = 0;
     if (p[P_CHORD_MODE] < 0.5) { noteOff(note); return; }
     if (note == chordRoot) { endChord(); return; }
     if (plainHeld[note]) { plainHeld[note] = 0; holdOff(note); return; }
@@ -1097,7 +1100,7 @@ class Engine {
   }
   void chordClear() {   // allNotesOff / allSoundOff: the layer forgets everything (the voices are released there)
     chordRoot = -1; chordN = 0;
-    std::memset(holdCnt, 0, sizeof holdCnt); std::memset(plainHeld, 0, sizeof plainHeld); std::memset(plateHeld, 0, sizeof plateHeld);
+    std::memset(holdCnt, 0, sizeof holdCnt); std::memset(plainHeld, 0, sizeof plainHeld); std::memset(plateHeld, 0, sizeof plateHeld); std::memset(selHeld, 0, sizeof selHeld);
   }
   // The strum plate: its notes play as themselves, whatever CHORD says, counted like held keys
   void plateOn(int note, double vel) {
