@@ -3,6 +3,11 @@
 Created by **Pierre Arnaud GUYOT** ("OktoPierre"). Okto MultiWave Synth is built on his Wavelet Synthesizer (beta 0.7) and on
 the chord keyboard of his WaveChord work; their histories follow its own first release below.
 
+## Unreleased — 2026-10-21 (the demo in phrases of 8 beats, the demo vote test version)
+
+- **The demo changes preset with the music**: it starts on the low F that begins the theme of the right hand and a new preset comes every 8 beats (3.58 s), at the start of each phrase (30 phrases for the 30 presets), instead of on a chord near every 4 s. The levels of the presets were measured again on their own phrase.
+- **A test version to sort the presets**: the web app with a vote on the demo (rate each preset 1 to 10 stars at the end of its phrase; 10 can be moved to the start, under 5 five other presets are offered; the whole demo is played again to accept; the report goes to the feedback form). Built by `tools/make_vote_build.js`, published in the test repository only.
+
 ## Okto MultiWave Synth 1.0.9 — 2026-10-21 (a way to send feedback, a clearer oriental look)
 
 **In short**

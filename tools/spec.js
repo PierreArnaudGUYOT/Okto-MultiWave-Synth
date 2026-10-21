@@ -757,7 +757,7 @@ const KEYATTAC = PRESETS.map((p, i) => i).filter(i => PRESETS[i].vote).sort((a, 
   return { name: p.name, from: p.name, stars: p.vote, v };
 });
 const DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;   // sound loaded when the app / a new plugin instance opens: the first of TOP Sounds (beta 1.0)
-// The preset tour of the demo (the default piece, Beethoven's Appassionata, about one preset every 4 s; it starts at 7.8 s, so the first two are not heard). Version 1.0: it is the tour of the
+// The preset tour of the demo (the default piece, Beethoven's Appassionata; version 1.0.10: one preset per phrase of 8 beats, 3.6 s, from the low F that starts the theme; before, about one every 4 s from 7.8 s, so the first two entries of the old list were not heard). Version 1.0: it is the tour of the
 // Wavelet Synthesizer's web app (beta 0.7.1): the same piece, the same presets in the same order, at the same level. Those presets are not all in the factory list (the 237 the owner kept), so
 // the tour carries its own copies, DEMO_PRESETS (tools/demo_presets.js, written by tools/demo_presets_extract.js from that web app and converted as the TOP Sounds are): they play the demo
 // and are in no list of the browsers.
@@ -786,6 +786,9 @@ let DEMO_TRIM = {}; try { DEMO_TRIM = require('./demo_trim.js'); } catch (e) { i
   for (let i = 0; i < HEARD; i++) if (SWAP_IN_DEMO[slots[i]]) slots[i] = SWAP_IN_DEMO[slots[i]];
   if (new Set(slots).size !== HEARD) throw new Error('TOUR: a sound plays twice');
   TOUR.splice(2, TOUR.length - 2, ...slots, fresh[f], fresh[f + 1]);
+  // version 1.0.10: the demo plays one preset per phrase of 8 beats from its first note (web/js/demo.js), 30 phrases: scene k plays TOUR[k]. The two entries that were never heard (the demo used to start
+  // at 7.8 s, after the first two of its 4-second steps) are dropped: the list is the order of the 30 presets heard (the first is A · Wavelet Lead, the last AB · Step Spiral).
+  TOUR.splice(0, 2);
 }
 for (const n of TOUR) if (!DEMO_PRESETS.some(p => p.name === n) && !PRESETS.some(p => p.name === n)) throw new Error('TOUR: preset not found: ' + n);
 // version 1.0.6: what the demo window says while the piece plays (the owner's request: a short, readable presentation of the synth, the wavelets and the idea of an oscillator made of them, and how it
