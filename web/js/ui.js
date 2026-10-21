@@ -313,31 +313,17 @@ class SynthUI {
     const svg = document.createElementNS(NSVG, 'svg');
     svg.setAttribute('class', 'oscframe'); svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     const path = document.createElementNS(NSVG, 'path');
-    // version 1.0.5 (the owner's choice "trail of light"): the outline is one shape, the folder tab of the oscillator shown and the plate. Its stroke is the accent where it leaves the tab and fades along the plate;
-    // the fill fades the same way (the gradients start at the tab's left edge; the stroke's glow is the CSS drop-shadow of svg.oscframe)
+    // Crépuscule: the outline is one shape, the folder tab of the oscillator shown and the plate, drawn flat: the accent colour, solid, and a 10 % tint inside (svg.oscframe in synth.css; the 1.0.5 "trail of light" gradients are gone)
     const outline = v => {
       const tabL = Math.max(v * 182, x0), tabR = v * 182 + 176, tt = 0.5, rt = 9;
       return 'M' + x0 + ',' + y0 + ' ' + (tabL > x0 + 0.5 ? 'H' + tabL + ' ' : '') + 'V' + (tt + rt) + ' Q' + tabL + ',' + tt + ' ' + (tabL + rt) + ',' + tt + ' H' + (tabR - rt) + ' Q' + tabR + ',' + tt + ' ' + tabR + ',' + (tt + rt) + ' V' + y0 +
         ' H' + (xn - r) + ' Q' + xn + ',' + y0 + ' ' + xn + ',' + (y0 + r) + ' V' + (yn - r) + ' Q' + xn + ',' + yn + ' ' + (xn + r) + ',' + yn + ' H' + (x1 - r) + ' Q' + x1 + ',' + yn + ' ' + x1 + ',' + (yn + r) +
         ' V' + (y1 - r) + ' Q' + x1 + ',' + y1 + ' ' + (x1 - r) + ',' + y1 + ' H' + (x0 + r) + ' Q' + x0 + ',' + y1 + ' ' + x0 + ',' + (y1 - r) + ' Z';
     };
-    const defs = document.createElementNS(NSVG, 'defs');
-    const lg = (id, stops) => {
-      const g = document.createElementNS(NSVG, 'linearGradient');
-      g.setAttribute('id', id); g.setAttribute('gradientUnits', 'userSpaceOnUse'); g.setAttribute('x1', 0); g.setAttribute('x2', W); g.setAttribute('y1', 0); g.setAttribute('y2', 0);
-      for (const [o, a] of stops) { const st = document.createElementNS(NSVG, 'stop'); st.setAttribute('offset', o); st.setAttribute('stop-opacity', a); g.appendChild(st); }
-      defs.appendChild(g); return g;
-    };
-    const gStroke = lg('oscStroke', [[0, 1], [0.5, 0.45], [1, 0.06]]), gFill = lg('oscFill', [[0, 0.14], [1, 0.01]]);
-    svg.appendChild(defs);
     svg.appendChild(path);
     sec.insertBefore(svg, sec.firstChild);
     const SLOTS_ = SL;
-    this.outlinePaint = () => {
-      const v = Math.round(this.host.get(i)), col = this.accentFor(SLOTS_[v] ? SLOTS_[v].mode : 0);
-      path.setAttribute('d', outline(v));
-      for (const g of [gStroke, gFill]) { g.setAttribute('x1', Math.max(v * 182, x0)); for (const st of g.children) st.setAttribute('stop-color', col); }
-    };
+    this.outlinePaint = () => { path.setAttribute('d', outline(Math.round(this.host.get(i)))); };
     const tabs = SL.map((sl, s) => {
       const b = el('button', 'otab ' + (sl.mode === 0 ? 'ea' : 'eb'), box);
       b.style.left = (s * 182) + 'px';
@@ -816,7 +802,7 @@ class SynthUI {
   }
 
   // beta 0.3: A1 A2 yellow, B1 blue. Beta 0.3.4: while the TUNING switch is ARAB or TURK, the oriental colour code (ORIENT in tools/spec.js): terracotta / turquoise
-  accentFor(mode) { return this.orient ? (mode === 0 ? this.orientPal().a : this.orientPal().b) : mode === 0 ? '#ffcf3d' : '#4aa8ff'; }
+  accentFor(mode) { return this.orient ? (mode === 0 ? this.orientPal().a : this.orientPal().b) : mode === 0 ? '#ffd166' : '#7ae7ff'; }   // Crépuscule: gold for A1 A2, cyan for B1 (the same as --accent-a / --accent-b in synth.css)
   accent() { return this.accentFor(this.mode); }
   accentRGB() { return hexRGB(this.accentFor(this.mode)); }
   // version 1.0.5: the palette of the tuning on (ARAB sand-gold, TURK carmine), with the tile and the opacity of the pattern
