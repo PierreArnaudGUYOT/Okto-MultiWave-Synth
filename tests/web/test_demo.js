@@ -248,7 +248,8 @@ async function lifecycleTests() {
   log(`  tab B before start: audioState() = '${st2}'`);
   check(st2 === 'none' || st2 === 'suspended', "tab B: audioState() reports no running context before start ('none' or 'suspended')", st2);
   await T2.evaluate('Promise.resolve(WS_TEST.start()).then(() => true)');
-  await sleep(1000);
+  // tab A is told by a message, then suspends its context (a promise): under a heavy load (the other lane of full.js) that takes longer than a second, so wait for it (version 1.0.6)
+  for (let i = 0; i < 40; i++) { await sleep(250); if (await A.evaluate('WS_TEST.audioState()') === 'suspended' && !(await A.evaluate('WS_TEST.demoState()')).running) break; }
   const aState = await A.evaluate('WS_TEST.audioState()'), aDemo = (await A.evaluate('WS_TEST.demoState()')).running, aOv = await A.evaluate(OVERLAY_EXPR);
   log(`  after tab B starts: tab A audio '${aState}', demo running ${aDemo}, overlay ${JSON.stringify(aOv)}`);
   check(aState === 'suspended', "starting audio in tab B suspends tab A's AudioContext", aState);
