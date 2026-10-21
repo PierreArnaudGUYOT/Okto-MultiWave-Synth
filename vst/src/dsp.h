@@ -1158,7 +1158,6 @@ class Engine {
   ExpMemo mKd, mVol, mLvl; double mCompKd = std::nan(""), mComp = 0;   // the output stage's and the level smoothing's factors
   int uMemoU = -1; double uMemoDet = std::nan(""), uMemoWidth = std::nan("");   // the unison copies' detune and pan, for the settings they were computed with
   struct FgMemo { int type = -1; double cut = 0, slope = 0, res = 0, fg[NB] = {}; } fgMemo[NS];
-  int act[NL];
   // per block, computed once for all voices (prepBlock): the oscillators' levels (smoothed over 20 ms) and settings
   struct Prep {
     double tune = 0; int ftype = 0; double fcut = 0, fslope = 0, fres = 0, fkey = 0, fenv = 0, fvel = 0, pcen = 0, pwid = 0, pdep = 0;
@@ -1457,13 +1456,15 @@ class Engine {
     ownLevel[s] = lev; ownStage[s] = st;
   }
 
-  // Render one voice's oscillator s for n samples with table set (mode, mips, rms), accumulating into bufL/bufR.
-  // Does not modify the voice: the end phases are left in endPh[s] so that several renders of the same oscillator (table
-  // crossfade, WAVELET MORPH, phase sets) start from the same state. The output follows the amp envelope (envA), the own
-  // envelope when it is on, the crossfade (ramping from fade0 by fadeInc per sample; invert: 1 - fade) and the oscillator's
-  // level share gain0 (+ gainInc per sample).
-  void renderVoice(const Voice& vc, int n, int s, int mode, const float* mips, const float* rms, double fade0, double fadeInc,
-                   bool invert, double gain0, double gainInc) {
+  // One table set to render for an oscillator, and its share of the oscillator's level (gain0, then + gainInc per sample).
+  struct Pass { int mode; const float* mips; const float* rms; double gain0, gainInc; };
+  static constexpr int kMaxPasses = 16;   // (at most 8 happen: the two sets either side of the place q at the start and at the end of the block, for the oscillator and for its WAVELET 2 twin)
+
+  // The loop of 1.0.6 for one set (a preset whose oscillators have one table set each: no WAVELET 2 twin, no LFO variant): the fused loop below costs a few per cent more
+  // there. Same operations in the same order, so the same bits.
+  void renderSingle(const Voice& vc, int n, int s, const Pass& pz, double fade0, double fadeInc, bool invert) {
+    const int mode = pz.mode; const float* mips = pz.mips; const float* rms = pz.rms; const double gain0 = pz.gain0, gainInc = pz.gainInc;
+    int act[NL];
     const Slot& sl = vc.sl[s];
     const size_t off = (size_t)sl.mip * TW;
     const double* g = sl.g; const double* dg = sl.dg;
@@ -1536,6 +1537,138 @@ class Engine {
         oL += y * panL[u]; oR += y * panR[u];
       }
       wL[i] += (float)(oL * env); wR[i] += (float)(oR * env);
+    }
+  }
+
+  // What one set needs: its active layers (from its rms at the voice's mip level and the band gains), the band gains and their steps padded to NL entries (pairs for SSE2; a band that
+  // is not in the active list keeps its gain, step 0, and its term is never added; when every active step is exactly 0 the per-sample ramp lg += 0 is skipped: the same values).
+  struct Run {
+    const float* mips; int mode, na, npq; bool ramp, contig, useDry, unity; double gain, gainInc; const double* tvA;
+    alignas(16) double lg[NL], dgl[NL], tv[NL];
+    int act[NL], pq[NL / 2];
+  };
+
+  // The sample loop of renderPasses for K sets (K = 0: np sets, counted at run time).
+  template <int K>
+  void renderLoop(Run* rn, int npRun, int n, size_t off, const double* own, double fade0, double fadeInc, bool invert, bool needWin, double pc, double pw, double pd, double* ph) {
+    const int np = K ? K : npRun;
+    // the unison copies' steps, pans and phases in locals: the band terms are written through a pointer, which the compiler could take for the engine's own arrays
+    const int Un = U;
+    double incL[4], phL[4], pnL[4], pnR[4];
+    for (int u = 0; u < Un; u++) { incL[u] = inc[u]; phL[u] = ph[u]; pnL[u] = panL[u]; pnR[u] = panR[u]; }
+    double fade = fade0;
+    for (int i = 0; i < n; i++) {
+      const double fg1 = fade >= 1 ? 1 : fade;
+      const double envF = eP[i] * (invert ? 1 - fg1 : fg1);
+      fade += fadeInc;
+      // the phases, the table row and the position window of every unison copy: the same for every set
+      double fru[4], wu[4]; int i0u[4];
+      for (int u = 0; u < Un; u++) {
+        double x = phL[u] + incL[u];
+        if (x >= 1) x -= std::floor(x);   // keeps the table row inside [0, N) even for steps longer than a cycle
+        phL[u] = x;
+        const double pos = x * N; const int i0 = (int)pos;
+        i0u[u] = i0; fru[u] = pos - i0;
+        wu[u] = needWin ? windowValue(x, pc, pw, pd) : 0;
+      }
+      float aL = wL[i], aR = wR[i];
+      for (int k = 0; k < np; k++) {
+        Run& r = rn[k];
+        if (r.ramp) rampGains(r.lg, r.dgl, r.pq, r.npq);
+        double env = envF;
+        if (!r.unity) env *= r.gain;
+        if (own) env *= own[i];
+        r.gain += r.gainInc;
+        double oL = 0, oR = 0;
+        for (int u = 0; u < Un; u++) {
+          const float* base = r.mips + off + (size_t)i0u[u] * NL; const float* nx = base + NL;
+          const double fr = fru[u];
+          bandTerms(base, nx, fr, r.lg, r.tv, r.pq, r.npq, r.act, r.na);   // tv[b] = lg[b] * (v0 + fr * (nx[b] - v0)) for the active layers, summed below in the order of the active list
+          double y;
+          if (r.mode == 0) {
+            double sum = 0;
+            if (r.contig) { for (int j = 0; j < r.na; j++) sum += r.tvA[j]; }
+            else for (int j = 0; j < r.na; j++) sum += r.tv[r.act[j]];
+            if (r.useDry) {
+              double v0 = base[DRY], dry = v0 + fr * (nx[DRY] - v0);
+              y = dry + wu[u] * (sum - dry);
+            } else y = sum;
+          } else {
+            double first = 0, sum = 0;
+            if (r.contig) {
+              int j = 0;
+              if (r.act[0] == 0) { first = r.tv[0]; j = 1; }
+              for (; j < r.na; j++) sum += r.tvA[j];
+            } else
+              for (int j = 0; j < r.na; j++) {
+                int b = r.act[j]; double v = r.tv[b];
+                if (b == 0) first = v; else sum += v;
+              }
+            y = pd > 0 ? first + wu[u] * sum : first + sum;
+          }
+          oL += y * pnL[u]; oR += y * pnR[u];
+        }
+        aL += (float)(oL * env); aR += (float)(oR * env);
+      }
+      wL[i] = aL; wR[i] = aR;
+    }
+    for (int u = 0; u < Un; u++) ph[u] = phL[u];
+  }
+
+  // Render one voice's oscillator s for n samples with the table sets ps[0 .. np - 1] (the oscillator's own, its WAVELET 2 twin, the neighbouring sets of an LFO variant, in
+  // the order they are listed), accumulating into wL / wR. Does not modify the voice: the end phases are left in endPh[s] so that several renders of the same oscillator (the table
+  // crossfade) start from the same state. The output follows the amp envelope (eP), the own envelope when it is on, the crossfade (ramping from fade0 by fadeInc per sample;
+  // invert: 1 - fade) and each set's share of the level.
+  // Version 1.0.7 (CPU review 2.1): the sets are rendered together, sample by sample, instead of one pass over the block per set. What they have in common (the phases, the table
+  // row, the position window, the envelope) is computed once instead of once per set, the mix is read and written once, and the sets' independent chains overlap. Each set does
+  // exactly the operations it did as a pass of its own, in the same order, and its output is added to the mix in the order of the list, as the successive passes added it:
+  // the sound is bit for bit the same (checked by cpu_bench --check and dsp_render against the engine of 1.0.6).
+  void renderPasses(const Voice& vc, int n, int s, const Pass* ps, int np, double fade0, double fadeInc, bool invert) {
+    if (np <= 0) return;
+    if (np > kMaxPasses) np = kMaxPasses;
+    if (np == 1) { renderSingle(vc, n, s, ps[0], fade0, fadeInc, invert); return; }
+    const Slot& sl = vc.sl[s];
+    const size_t off = (size_t)sl.mip * TW;
+    const double* g = sl.g; const double* dg = sl.dg;
+    // A fundamental at or above Nyquist can only alias: the wavetable part of such a voice stays silent.
+    const bool audible = sl.f0 < 0.5 * sr;
+    double* ph = endPh[s];
+    for (int u = 0; u < U; u++) { inc[u] = sl.f0 * detMul[u] / sr; ph[u] = sl.phase[u]; }
+    const double pc = sl.pc, pw = sl.pw, pd = sl.pd;
+    const double* own = ownOn[s] ? ownBuf[s] : nullptr;
+    if (own && ownZero[s]) {   // the output is the product of the envelope and the own envelope, which is 0 all block: every sample adds (float)(x * 0) = +-0, which changes no sum; the phases move as ever
+      for (int i = 0; i < n; i++)
+        for (int u = 0; u < U; u++) { double x = ph[u] + inc[u]; if (x >= 1) x -= std::floor(x); ph[u] = x; }
+      return;
+    }
+    Run rn[kMaxPasses];
+    bool needWin = false;
+    for (int k = 0; k < np; k++) {
+      Run& r = rn[k]; const Pass& pz = ps[k];
+      r.mips = pz.mips; r.mode = pz.mode;
+      int na = 0;
+      if (audible)
+        for (int b = 0; b < NB; b++)
+          if (pz.rms[sl.mip * NL + b] > 1e-7f && (std::fabs(g[b]) > 1e-6 || std::fabs(g[b] + dg[b] * n) > 1e-6)) r.act[na++] = b;
+      r.na = na;
+      r.useDry = audible && pz.mode == 0 && pd > 0;
+      for (int b = 0; b < NL; b++) { r.lg[b] = b < NB ? g[b] : 0; r.dgl[b] = 0; r.tv[b] = 0; }
+      r.ramp = false;
+      unsigned pairs = 0;   // the pairs of layers (2q, 2q + 1) that hold an active layer
+      for (int j = 0; j < na; j++) { const int b = r.act[j]; r.dgl[b] = dg[b]; if (dg[b] != 0) r.ramp = true; pairs |= 1u << (b >> 1); }
+      r.npq = 0;
+      for (int q = 0; q < NL / 2; q++) if (pairs >> q & 1) r.pq[r.npq++] = q;
+      r.contig = na > 0 && r.act[na - 1] - r.act[0] + 1 == na;   // the active layers are consecutive: the sum runs straight along tv from the first one
+      r.tvA = r.tv + (na > 0 ? r.act[0] : 0);
+      r.unity = pz.gain0 == 1 && pz.gainInc == 0;
+      r.gain = pz.gain0; r.gainInc = pz.gainInc;
+      if (pz.mode == 0 ? r.useDry : pd > 0) needWin = true;
+    }
+    switch (np) {   // the loop is compiled for 2 to 4 sets (the common cases) and for any number
+      case 2: renderLoop<2>(rn, np, n, off, own, fade0, fadeInc, invert, needWin, pc, pw, pd, ph); break;
+      case 3: renderLoop<3>(rn, np, n, off, own, fade0, fadeInc, invert, needWin, pc, pw, pd, ph); break;
+      case 4: renderLoop<4>(rn, np, n, off, own, fade0, fadeInc, invert, needWin, pc, pw, pd, ph); break;
+      default: renderLoop<0>(rn, np, n, off, own, fade0, fadeInc, invert, needWin, pc, pw, pd, ph); break;
     }
   }
 
@@ -1643,15 +1776,15 @@ class Engine {
     endSubPhase = sph;
   }
 
-  // SOURCE PHASE moved by LFO 2 (beta 0.4): a subtractive set with its phase sets (ph, index 0 = the set itself) plays the sets on
-  // each side of the voice's place q (share 1 - |q - k| round the cycle), q moving from ap0 to ap1 across the block; the shares
-  // of a block start and end each add up to 1. Without phase sets exactly renderVoice. A share of 0 at both ends renders nothing.
-  void renderTable(const Voice& vc, int n, int s, const SetRef& main, const SetRef* ph, int vk, double fade0, double fadeInc, bool invert,
-                   double gain0, double gainInc) {
+  // The sets to render for one table (main, with ph its variants: SOURCE PHASE, SPARSITY or SOURCE WIDTH moved by an LFO), appended to the list ps (np entries) in the order the passes
+  // of 1.0.6 were made; returns the new count. SOURCE PHASE moved by LFO 2 (beta 0.4): a subtractive set with its phase sets (ph, index 0 = the set itself) plays the sets on
+  // each side of the voice's place q (share 1 - |q - k| round the cycle), q moving from ap0 to ap1 across the block; the shares of a block start and end each add up to 1.
+  // Without variants exactly the set itself. A share of 0 at both ends renders nothing.
+  int addPasses(Pass* ps, int np, const Voice& vc, int n, int s, const SetRef& main, const SetRef* ph, int vk, double gain0, double gainInc) {
     if (!ph) {
-      if (gain0 == 0 && gainInc == 0) return;
-      renderVoice(vc, n, s, main.mode, main.mips, main.rms, fade0, fadeInc, invert, gain0, gainInc);
-      return;
+      if (gain0 == 0 && gainInc == 0) return np;
+      ps[np++] = Pass{main.mode, main.mips, main.rms, gain0, gainInc};
+      return np;
     }
     const double gain1 = gain0 + gainInc * n;
     const int KN = VK_N[vk]; const Slot& sl = vc.sl[s]; const double q0 = sl.vq0[vk], q1 = sl.vq1[vk];
@@ -1663,21 +1796,24 @@ class Engine {
       const double s0 = k == a0 ? 1 - f0 : k == b0 ? f0 : 0, s1 = k == a1 ? 1 - f1 : k == b1 ? f1 : 0;
       if (s0 == 0 && s1 == 0) continue;
       const double k0 = gain0 * s0, k1 = gain1 * s1;
-      renderVoice(vc, n, s, ph[k].mode, ph[k].mips, ph[k].rms, fade0, fadeInc, invert, k0, (k1 - k0) / n);
+      if (np < kMaxPasses) ps[np++] = Pass{ph[k].mode, ph[k].mips, ph[k].rms, k0, (k1 - k0) / n};
     }
+    return np;
   }
 
-  // WAVELET MORPH: without WAVELET 2 tables exactly renderTable (bit-identical sound when the morph is off); with them, the
-  // oscillator (share 1 - morph) and the same oscillator built with WAVELET 2 (share morph), the voice's morph moving from wm0
-  // to wm1. The oscillator's level moves from m0 to m1 across the block.
+  // WAVELET MORPH: without WAVELET 2 tables exactly the oscillator's own table (bit-identical sound when the morph is off); with them, the oscillator (share 1 - morph) and the
+  // same oscillator built with WAVELET 2 (share morph), the voice's morph moving from wm0 to wm1. The oscillator's level moves from m0 to m1 across the block.
   void renderSlot(const Voice& vc, int n, int s, const SlotRef& t, double fade0, double fadeInc, bool invert, double lv0, double lv1) {
     const bool hv = t.vk >= 0;
-    if (!t.hasW2) { renderTable(vc, n, s, t.main, hv ? t.var : nullptr, t.vk, fade0, fadeInc, invert, lv0, (lv1 - lv0) / n); return; }
-    const double a0 = lv0 * (1 - vc.wm0), a1 = lv1 * (1 - vc.wm1), b0 = lv0 * vc.wm0, b1 = lv1 * vc.wm1;
-    renderTable(vc, n, s, t.main, hv ? t.var : nullptr, t.vk, fade0, fadeInc, invert, a0, (a1 - a0) / n);
-    renderTable(vc, n, s, t.w2, hv && t.hasW2Var ? t.w2var : nullptr, t.vk, fade0, fadeInc, invert, b0, (b1 - b0) / n);
+    Pass ps[kMaxPasses]; int np = 0;
+    if (!t.hasW2) np = addPasses(ps, np, vc, n, s, t.main, hv ? t.var : nullptr, t.vk, lv0, (lv1 - lv0) / n);
+    else {
+      const double a0 = lv0 * (1 - vc.wm0), a1 = lv1 * (1 - vc.wm1), b0 = lv0 * vc.wm0, b1 = lv1 * vc.wm1;
+      np = addPasses(ps, np, vc, n, s, t.main, hv ? t.var : nullptr, t.vk, a0, (a1 - a0) / n);
+      np = addPasses(ps, np, vc, n, s, t.w2, hv && t.hasW2Var ? t.w2var : nullptr, t.vk, b0, (b1 - b0) / n);
+    }
+    renderPasses(vc, n, s, ps, np, fade0, fadeInc, invert);
   }
-
 
   // The oscillator shown on the panel, and the level meters
   void publish(float pkL, float pkR, uint32_t vmask) {
