@@ -499,9 +499,11 @@
   window.addEventListener('blur', () => { for (const n of heldCodes.values()) noteOff(n); heldCodes.clear(); });
 
   // ---------------------------------------------------------------- manuals
-  // version 1.0.6: the manual is one page (manual/manual.html), shown over the window
-  function openManual() {
-    const url = 'manual/manual.html';
+  // the manual has eight pages in manual/: the MANUAL button opens its contents (manual.html), the welcome window's "Learn more" box the introduction to
+  // wavelets (wavelets.html); both are shown over the window and neither starts the audio. Only a plain page name of the folder is accepted.
+  const MANUAL_PAGE = /^[a-z0-9-]+\.html$/;
+  function openManual(page) {
+    const url = 'manual/' + (typeof page === 'string' && MANUAL_PAGE.test(page) ? page : 'manual.html');
     $('manual-iframe').src = url;
     $('manual-newtab').href = url;
     $('manual-title').textContent = 'OktoWave — user manual';
@@ -586,6 +588,7 @@
   $('w-demo').onclick = () => resumeAudio().then(() => { if (actx) playDemo(); });
   // the manual viewer, over the window (Ctrl / Shift / Cmd + click: the browser's new tab or window)
   $('w-manual').onclick = (e) => { if (e.ctrlKey || e.shiftKey || e.metaKey) return; e.preventDefault(); openManual(); };
+  $('w-learn').onclick = (e) => { if (e.ctrlKey || e.shiftKey || e.metaKey) return; e.preventDefault(); openManual('wavelets.html'); };
   $('start-overlay').addEventListener('pointerdown', (e) => { if (e.target === $('start-overlay')) resumeAudio(); });
   $('manual-close').onclick = closeManual;
   $('manual-overlay').addEventListener('pointerdown', (e) => { if (e.target === $('manual-overlay')) closeManual(); });
