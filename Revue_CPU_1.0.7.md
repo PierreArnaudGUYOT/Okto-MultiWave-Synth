@@ -28,14 +28,14 @@ The review (`GIT\Exchange Claude\CPU Load analysis`: `OktoWave_1.0.6_Resource_Re
 | 7 | Dependency map instead of dirty-all | **done, conservative** (`ui.js` `canvasDeps`: the displays of the sound still follow any parameter; keyboard, wheels, LEDs, chord pads, meter, effect headings only the parameters they read, plus the oscillator shown and the tuning, which change their colour). A test was added to `smoke.js` | knob drag: keyboard redraws 96 -> 29 per second, wheels gone, frame time -9 % (headless Edge) |
 | 8 | Parallel build | **done in the plug-in** (`buildTables(..., threads)`: up to 4 threads, helpers below normal priority; not offline rendering); `filter()` made safe for two first callers. Web Workers not done | all 237 presets: **13.6 s -> 4.4 s** with 4 threads (x3.1), the same bytes |
 | 9 | Preset loads through the Worker | **not done**: the new sound would start only when the tables arrive (up to 0.3 s later) and the parameters sent meanwhile would meet the old tables; it needs its own design and test campaign with the click-free preset change of 1.0.6 | - |
-| 10 | NEON kernels | **done** (`dsp.h`: a two-double layer `v2_*`, SSE2 on x86, NEON on Apple silicon; `bandTerms`, `rampGains`, the voice filter, the reverb); each kernel can be switched off (`-DWS_NO_NEON`, `-DWS_NO_NEON_BAND`, `_FILTER`, `_REVERB`) | Apple silicon, 75 presets, chord of 6, paired: **-18.5 %** mean (median -16 %, best -44 %, **no preset slower**); band + ramp -8 %, voice filter -8 %, reverb -2 % |
+| 10 | NEON kernels | **done** (`dsp.h`: a two-double layer `v2_*`, SSE2 on x86, NEON on Apple silicon; `bandTerms`, `rampGains`, the voice filter, the reverb); each kernel can be switched off (`-DWS_NO_NEON`, `-DWS_NO_NEON_BAND`, `_FILTER`, `_REVERB`) | Apple silicon (GitHub runner), 75 presets, chord of 6, paired, two runs: **-18.5 % and -20.4 %** mean (median -16 % and -18 %, best -45 %; single presets move by about +-10 % between runs, the noise of a shared runner); band + ramp -9 %, voice filter -8 %, reverb -2 % |
 | 11 | Shared cache of table sets | **not done** (advanced: lifetimes, memory budget) | - |
 | 12 | Reverb in pairs, envelopes interleaved | reverb **done** (x86 and Apple silicon); envelope interleave not done (it is 1.9 % of the samples) | in the totals above |
 | 13 | Small cleanups | **done**: mono scratch sized at setup (4.1), one VST2 flag instead of 175 exchanges (4.2), the worklet and the Workers get the 11 entries of the spec the engine reads (7.4), the display of the oscillator shown built once per set of values (3.8). Not done: 4.3, 4.4 (0.3 ms per preset change), 7.5 | - |
 | 14 | Pruned inverse FFT | **not done** (needs its own proof of the signed zeros) | - |
 | 15 | AVX2 | **not done** (two code paths; the v2 layer is the place for it) | - |
 
-Total on x86, 75 presets, chord of 6, the engine of 1.0.6 against the engine of 1.0.7 (`cpu_ab`): about **-10 %** mean (the heaviest third about -12 %), no preset slower by more than the noise of the measure; the web engine **-16.6 %**; Apple silicon **-18.5 %**.
+Total on x86, 75 presets, chord of 6, the engine of 1.0.6 against the engine of 1.0.7 (`cpu_ab`): about **-10 %** mean (the heaviest third about -12 %), no preset slower by more than the noise of the measure; the web engine **-16.6 %**; Apple silicon **about -19 %**.
 
 ## Repeating the proof
 

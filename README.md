@@ -34,7 +34,7 @@ from version 1.0.6 the macOS plug-in is built and tested on GitHub's Macs and re
 ## What version 1.0.7 changes
 
 - **The manual is eight short pages** with figures made from the engine: the idea of wavelets (one page), subtractive synthesis with wavelets (three), additive synthesis with wavelets (three), and a contents page. The welcome window of the web app has a box that opens the introduction.
-- **Less CPU, the same sound bit for bit** (about 10 % on x86, 16.6 % in the web engine, 18.5 % on Apple silicon; a preset's tables are built 3 times sooner; idle plug-in instances cost almost nothing): see [Revue_CPU_1.0.7.md](Revue_CPU_1.0.7.md).
+- **Less CPU, the same sound bit for bit** (about 10 % on x86, 16.6 % in the web engine, about 19 % on Apple silicon; a preset's tables are built 3 times sooner; idle plug-in instances cost almost nothing): see [Revue_CPU_1.0.7.md](Revue_CPU_1.0.7.md).
 
 ## What version 1.0.6 changes
 
