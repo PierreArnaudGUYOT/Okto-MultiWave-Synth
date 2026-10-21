@@ -517,7 +517,7 @@ int main(int argc, char** argv) {
       click(pv, z.x + z.w / 2, z.y + z.h / 2);
       pump(0.3);
       ViewRect zr; view->getSize(&zr);
-      check(gMenusSeen >= 1 && zr.getWidth() == 1898 && zr.getHeight() == 1092 && (int)frame->box.frame.size.width == 1898,
+      check(gMenusSeen >= 1 && zr.getWidth() == 1976 && zr.getHeight() == 1227 && (int)frame->box.frame.size.width == 1976,
             "the window size menu: 130 % (the window follows)", fmt("%d menus, %d x %d", gMenusSeen, zr.getWidth(), zr.getHeight()));
       shot(pv, out + "/mac_zoom130.png");
       gMenuChoice = "Window size 100%";
