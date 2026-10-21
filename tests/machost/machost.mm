@@ -254,6 +254,22 @@ static int colours(NSView* v, NSRect r) {
     }
   return (int)seen.size();
 }
+// the light pixels (luma above a limit) of a rectangle of the view: how many, and the box that holds them (version 1.0.6: the turned card titles)
+static int lightInk(NSView* v, NSRect r, int lumaMin, int& bw, int& bh) {
+  NSBitmapImageRep* rep = [v bitmapImageRepForCachingDisplayInRect:v.bounds];
+  [v cacheDisplayInRect:v.bounds toBitmapImageRep:rep];
+  const double sx = rep.pixelsWide / v.bounds.size.width, sy = rep.pixelsHigh / v.bounds.size.height;
+  int n = 0, x0 = 1 << 30, x1 = -1, y0 = 1 << 30, y1 = -1;
+  for (int y = (int)r.origin.y; y < (int)(r.origin.y + r.size.height); y++)
+    for (int x = (int)r.origin.x; x < (int)(r.origin.x + r.size.width); x++) {
+      NSUInteger px[4] = {};
+      [rep getPixel:px atX:(NSInteger)(x * sx) y:(NSInteger)(y * sy)];
+      if ((299 * (int)px[0] + 587 * (int)px[1] + 114 * (int)px[2]) / 1000 < lumaMin) continue;
+      n++; x0 = std::min(x0, x); x1 = std::max(x1, x); y0 = std::min(y0, y); y1 = std::max(y1, y);
+    }
+  bw = n ? x1 - x0 + 1 : 0; bh = n ? y1 - y0 + 1 : 0;
+  return n;
+}
 
 // the save / question windows of the editor, answered as a player would: the name typed, then the first button
 static std::string gTypeName;
@@ -398,6 +414,15 @@ int main(int argc, char** argv) {
     check(cols > 40, "the panel is drawn (many colours)", fmt("%d colours", cols));
     const int bcols = colours(pv, NSMakeRect(1104, 8, 408, 700));
     check(vr.getWidth() == 1100 || bcols > 10, "the preset browser is drawn", fmt("%d colours", bcols));
+    for (const char* id : {"fx", "play"}) {   // the titles of the EFFECTS and PLAY cards are turned a quarter turn, inside the left strip of their card
+      const ws::SectionDef* sd = nullptr;
+      for (int si = 0; si < ws::kNumSections; si++) if (std::strcmp(ws::kSections[si].id, id) == 0) sd = &ws::kSections[si];
+      if (!sd) { check(false, std::string("the card ") + id + " is in the panel"); continue; }
+      int bw = 0, bh = 0;
+      const float rx0 = std::max(0.f, sd->x - 11);   // the gap on the left of the card, then its title strip (24 wide)
+      const int n = lightInk(pv, NSMakeRect(rx0, sd->y + 2, sd->x + 24 - rx0, sd->h - 4), 185, bw, bh);
+      check(n > 15 && bh >= 2 * bw && bw <= 22, std::string("the title of the card ") + id + " reads upwards in its strip (not across the card's edge)", fmt("%d light pixels, %d wide x %d high", n, bw, bh));
+    }
     const std::string font = [[NSFont systemFontOfSize:10].fontName UTF8String];
     std::printf("  system font: %s\n", font.c_str());
     {   // text widths against Windows' Segoe UI (GDI+ widths without the 1/6 em margins, measured on Windows 11)
