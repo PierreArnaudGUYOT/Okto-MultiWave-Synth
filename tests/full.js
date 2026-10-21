@@ -62,6 +62,16 @@ step('plug-in: presets file (library_test)', () => {
   if (r.code !== 0) return { ok: false, detail: 'compile: ' + tail(r.out, 2) };
   r = run(exe, [path.join(SCRATCH, 'library_out')]); return { ok: ok(r, /ALL PASS/), detail: tail(r.out, 1) };
 });
+// version 1.0.7: the tables built by several threads (the plug-in's builder) are the bytes the one-thread build gives, every vector of the sets of the sampled presets
+step('plug-in: parallel table build (tables_equal)', () => {
+  const exe = path.join(SCRATCH, 'tables_equal.exe'), dir = path.join(SCRATCH, 'cases');
+  let r = node('tools/cpu_cases.js', dir, 'sample', '4');
+  if (r.code !== 0) return { ok: false, detail: 'cases: ' + tail(r.out, 2) };
+  r = cc(['vst/devtest/tables_equal.cpp'], exe, []);
+  if (r.code !== 0) return { ok: false, detail: 'compile: ' + tail(r.out, 2) };
+  r = run(exe, [path.join(dir, 'cases_sample.txt'), '--threads', '4', '--reps', '2'], { timeout: 600000 });
+  return { ok: ok(r, /: 0 different/), detail: tail(r.out, 1) };
+});
 step('plug-in: VST2 entry point', () => {
   const exe = path.join(SCRATCH, 'vst2_smoke.exe');
   let r = cc(['vst/devtest/vst2_smoke.cpp'], exe, ['-luser32', '-lgdi32']);
