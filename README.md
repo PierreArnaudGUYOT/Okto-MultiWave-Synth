@@ -187,7 +187,7 @@ Beta 0.3.1 applies the first ratings of OktoPierre (80 of the new presets rated 
 
 ### Web app
 Open `web/index.html` in Chrome, Edge or Firefox (double-click; no server or install needed). A welcome window offers **Run
-the demo**, **Play the synth** or **Download the VST**. **MANUAL** (header) opens the manual (one page).
+the demo**, **Play the synth** or **Download the VST**. **MANUAL** (header) opens the manual; the welcome window's **Learn more about the sound engine** box opens its introduction to wavelets.
 - Play with the mouse on the keyboard, a MIDI keyboard (Web MIDI), or the computer keyboard: digits **1 2 3 4 5 6 7 8 9 0** =
   C D E F G A B C D E; the letter rows A W S E D F T G Y H U J K O L P = a chromatic piano; **Z** / **X** = octave down / up.
 - **MIDI**: notes, pitch bend, mod wheel, sustain; Program Change selects a preset; **MIDI learn** by a right-click on a control.
@@ -235,7 +235,7 @@ tools/make_presets.js  builds the presets of beta 0.1 from tools/recipes_*.js (t
                        matching, distinctness check, contact sheets)
 tools/supermod/        composes the presets of beta 0.2 and 0.3 from oscillator layers, drums and LFO 2 / LFO 3 recipes, measures and selects them
 tools/dsp_selftest.js  engine self-test;  tools/dsp_compare.js  C++ engine against the JavaScript reference
-web/manual/manual.html  the manual: one hand-written page + panel.jpg (tools/manual_shot.js takes the picture)
+web/manual/            the manual: eight hand-written pages (contents + wavelets + 3 subtractive + 3 additive), manual.css / manual.js, img/ (tools/manual_figs.js), panel.jpg (tools/manual_shot.js)
 web/                   web application (vanilla JS, Web Audio AudioWorklet, no libraries)
   js/core.js           DSP reference implementation (also runs inside the AudioWorklet and the table-building Worker)
   js/ui.js, app.js     panel UI, presets, MIDI, computer keyboard
