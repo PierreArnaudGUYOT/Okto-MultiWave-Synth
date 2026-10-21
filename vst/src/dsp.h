@@ -17,13 +17,59 @@
 #include <thread>
 #include <vector>
 #include "generated/spec.h"
-// CPU optimisations (CLAUDE.md "CPU optimisations", Revue_CPU.md): SSE2 does the same double-precision operations as the scalar code, lane by lane, so the output is
-// bit-identical; without SSE2 (other platforms) the scalar form is used. No FMA, no fast-math, no reassociation anywhere.
+// CPU optimisations (CLAUDE.md "CPU optimisations", Revue_CPU.md): SSE2 (x86) and, since version 1.0.7, NEON (Apple silicon) do the same double-precision operations as the scalar code,
+// lane by lane, so the output is bit-identical; without either (other platforms, or -DWS_NO_NEON, which the macOS workflow uses to prove it) the scalar form is used.
+// No FMA, no fast-math, no reassociation anywhere.
+#if defined(__clang__)
+#pragma STDC FP_CONTRACT OFF
+#endif
 #if defined(__SSE2__)
 #include <emmintrin.h>
+#define WS_V2 1
+#elif defined(__aarch64__) && defined(__ARM_NEON) && !defined(WS_NO_NEON)
+#include <arm_neon.h>
+#define WS_V2 1
 #endif
 
 namespace ws {
+
+#if defined(WS_V2)
+// Two doubles in one register, the operations the kernels use: each one is one instruction on both platforms, with the same result (no fused multiply-add: v2_mul and v2_add stay two
+// operations; the compiler is told not to contract them). v2_min / v2_max keep a NaN as it is (SSE2 returns its second operand, NEON the NaN: the same value for the clamp the kernels make).
+#if defined(__SSE2__)
+using v2d = __m128d;
+inline v2d v2_set1(double x) { return _mm_set1_pd(x); }
+inline v2d v2_set(double hi, double lo) { return _mm_set_pd(hi, lo); }                       // lane 0 = lo, lane 1 = hi
+inline v2d v2_load(const double* p) { return _mm_load_pd(p); }                              // 16-byte aligned
+inline v2d v2_loadu(const double* p) { return _mm_loadu_pd(p); }
+inline void v2_store(double* p, v2d v) { _mm_store_pd(p, v); }                              // 16-byte aligned
+inline void v2_storeu(double* p, v2d v) { _mm_storeu_pd(p, v); }
+inline v2d v2_add(v2d a, v2d b) { return _mm_add_pd(a, b); }
+inline v2d v2_sub(v2d a, v2d b) { return _mm_sub_pd(a, b); }
+inline v2d v2_mul(v2d a, v2d b) { return _mm_mul_pd(a, b); }
+inline v2d v2_div(v2d a, v2d b) { return _mm_div_pd(a, b); }
+inline v2d v2_min(v2d a, v2d b) { return _mm_min_pd(a, b); }
+inline v2d v2_max(v2d a, v2d b) { return _mm_max_pd(a, b); }
+inline v2d v2_cvt(const float* p) { return _mm_cvtps_pd(_mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)p))); }   // the two floats at p, as doubles
+inline void v2_f32(v2d v, float& lo, float& hi) { const __m128 r = _mm_cvtpd_ps(v); lo = _mm_cvtss_f32(r); hi = _mm_cvtss_f32(_mm_shuffle_ps(r, r, 1)); }   // each lane rounded to a float
+#else
+using v2d = float64x2_t;
+inline v2d v2_set1(double x) { return vdupq_n_f64(x); }
+inline v2d v2_set(double hi, double lo) { return vsetq_lane_f64(hi, vdupq_n_f64(lo), 1); }
+inline v2d v2_load(const double* p) { return vld1q_f64(p); }
+inline v2d v2_loadu(const double* p) { return vld1q_f64(p); }
+inline void v2_store(double* p, v2d v) { vst1q_f64(p, v); }
+inline void v2_storeu(double* p, v2d v) { vst1q_f64(p, v); }
+inline v2d v2_add(v2d a, v2d b) { return vaddq_f64(a, b); }
+inline v2d v2_sub(v2d a, v2d b) { return vsubq_f64(a, b); }
+inline v2d v2_mul(v2d a, v2d b) { return vmulq_f64(a, b); }
+inline v2d v2_div(v2d a, v2d b) { return vdivq_f64(a, b); }
+inline v2d v2_min(v2d a, v2d b) { return vminq_f64(a, b); }
+inline v2d v2_max(v2d a, v2d b) { return vmaxq_f64(a, b); }
+inline v2d v2_cvt(const float* p) { return vcvt_f64_f32(vld1_f32(p)); }
+inline void v2_f32(v2d v, float& lo, float& hi) { const float32x2_t r = vcvt_f32_f64(v); lo = vget_lane_f32(r, 0); hi = vget_lane_f32(r, 1); }
+#endif
+#endif
 
 constexpr int N = 2048;           // samples per cycle
 constexpr int NB = 11;            // detail bands (band 1 = coarsest)
@@ -685,13 +731,13 @@ inline double ladder(double* st, int o, double u, double G, double k, int type) 
 // pairs (2q, 2q + 1) listed in pq[0 .. npq - 1] (every pair that holds an active layer; the other layer of a pair is computed too and never used); otherwise the layers of the
 // active list act[0 .. na - 1]. lg and t must be 16-byte aligned (NL entries each). rampGains: lg[b] += d[b] for the same pairs of layers.
 inline void bandTerms(const float* base, const float* nx, double fr, const double* lg, double* t, const int* pq, int npq, const int* act, int na) {
-#if defined(__SSE2__)
+#if defined(WS_V2)
   (void)act; (void)na;
-  const __m128d f = _mm_set1_pd(fr);
+  const v2d f = v2_set1(fr);
   for (int e = 0; e < npq; e++) {
     const int b = 2 * pq[e];
-    const __m128d a = _mm_cvtps_pd(_mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)(base + b)))), c = _mm_cvtps_pd(_mm_castsi128_ps(_mm_loadl_epi64((const __m128i*)(nx + b))));
-    _mm_store_pd(t + b, _mm_mul_pd(_mm_load_pd(lg + b), _mm_add_pd(a, _mm_mul_pd(f, _mm_sub_pd(c, a)))));
+    const v2d a = v2_cvt(base + b), c = v2_cvt(nx + b);
+    v2_store(t + b, v2_mul(v2_load(lg + b), v2_add(a, v2_mul(f, v2_sub(c, a)))));
   }
 #else
   (void)pq; (void)npq;
@@ -699,8 +745,8 @@ inline void bandTerms(const float* base, const float* nx, double fr, const doubl
 #endif
 }
 inline void rampGains(double* lg, const double* d, const int* pq, int npq) {
-#if defined(__SSE2__)
-  for (int e = 0; e < npq; e++) { const int b = 2 * pq[e]; _mm_store_pd(lg + b, _mm_add_pd(_mm_load_pd(lg + b), _mm_load_pd(d + b))); }
+#if defined(WS_V2)
+  for (int e = 0; e < npq; e++) { const int b = 2 * pq[e]; v2_store(lg + b, v2_add(v2_load(lg + b), v2_load(d + b))); }
 #else
   (void)pq; (void)npq;
   for (int b = 0; b < NL; b++) lg[b] += d[b];
@@ -1732,13 +1778,13 @@ class Engine {
       kf[f] = vc.fk; comp[f] = type == 1 ? 1 + 0.6 * vc.fk : 1;   // OTA: the low end the resonance takes away comes back in part
       G0[f] = vc.fG0; dG[f] = (vc.fG1 - vc.fG0) / n;
     }
-#if defined(__SSE2__)
-    const __m128d c27 = _mm_set1_pd(27), c9 = _mm_set1_pd(9), c3 = _mm_set1_pd(3), cm3 = _mm_set1_pd(-3), vgin = _mm_set1_pd(gin), vmk = _mm_set1_pd(mk);
+#if defined(WS_V2)
+    const v2d c27 = v2_set1(27), c9 = v2_set1(9), c3 = v2_set1(3), cm3 = v2_set1(-3), vgin = v2_set1(gin), vmk = v2_set1(mk);
     // tnh() on two lanes; min / max keep a NaN as it is, like the comparisons of the scalar form
-    auto tnh2 = [&](__m128d x) {
-      x = _mm_max_pd(cm3, _mm_min_pd(c3, x));
-      const __m128d x2 = _mm_mul_pd(x, x);
-      return _mm_div_pd(_mm_mul_pd(x, _mm_add_pd(c27, x2)), _mm_add_pd(c27, _mm_mul_pd(c9, x2)));
+    auto tnh2 = [&](v2d x) {
+      x = v2_max(cm3, v2_min(c3, x));
+      const v2d x2 = v2_mul(x, x);
+      return v2_div(v2_mul(x, v2_add(c27, x2)), v2_add(c27, v2_mul(c9, x2)));
     };
     for (int i = 0; i < n; i++) {
       float aL = bufL[i], aR = bufR[i];
@@ -1746,29 +1792,29 @@ class Engine {
         const int v = list[f]; double* st = voices[v].fs;
         const double G = G0[f] + dG[f] * (i + 1), k = kf[f];
         const double g1 = 1 - G, G2 = G * G, G3 = G2 * G, G4 = G2 * G2;
-        __m128d u = _mm_set_pd((double)vtR[v][i], (double)vtL[v][i]);
-        if (drive > 0) u = _mm_mul_pd(tnh2(_mm_mul_pd(vgin, u)), vmk);
-        u = _mm_mul_pd(u, _mm_set1_pd(comp[f]));
-        const __m128d s1 = _mm_loadu_pd(st), s2 = _mm_loadu_pd(st + 2), s3 = _mm_loadu_pd(st + 4), s4 = _mm_loadu_pd(st + 6);
-        const __m128d vG = _mm_set1_pd(G);
+        v2d u = v2_set((double)vtR[v][i], (double)vtL[v][i]);
+        if (drive > 0) u = v2_mul(tnh2(v2_mul(vgin, u)), vmk);
+        u = v2_mul(u, v2_set1(comp[f]));
+        const v2d s1 = v2_loadu(st), s2 = v2_loadu(st + 2), s3 = v2_loadu(st + 4), s4 = v2_loadu(st + 6);
+        const v2d vG = v2_set1(G);
         // S = g1 * (G3 s1 + G2 s2 + G s3 + s4), y4l = (G4 u + S) / (1 + k G4), x = u - k y4l: the feedback solved without delay for the linear ladder
-        const __m128d S = _mm_mul_pd(_mm_set1_pd(g1), _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(_mm_set1_pd(G3), s1), _mm_mul_pd(_mm_set1_pd(G2), s2)), _mm_mul_pd(vG, s3)), s4));
-        const __m128d y4l = _mm_div_pd(_mm_add_pd(_mm_mul_pd(_mm_set1_pd(G4), u), S), _mm_set1_pd(1 + k * G4));
-        __m128d x = _mm_sub_pd(u, _mm_mul_pd(_mm_set1_pd(k), y4l)), y1, y2, y3, y4;
+        const v2d S = v2_mul(v2_set1(g1), v2_add(v2_add(v2_add(v2_mul(v2_set1(G3), s1), v2_mul(v2_set1(G2), s2)), v2_mul(vG, s3)), s4));
+        const v2d y4l = v2_div(v2_add(v2_mul(v2_set1(G4), u), S), v2_set1(1 + k * G4));
+        v2d x = v2_sub(u, v2_mul(v2_set1(k), y4l)), y1, y2, y3, y4;
         if (type == 0) {   // LADDER: every stage saturates
-          const __m128d a = tnh2(x), v1 = _mm_mul_pd(_mm_sub_pd(a, s1), vG); y1 = _mm_add_pd(v1, s1); _mm_storeu_pd(st, _mm_add_pd(y1, v1));
-          const __m128d b = tnh2(y1), v2 = _mm_mul_pd(_mm_sub_pd(b, s2), vG); y2 = _mm_add_pd(v2, s2); _mm_storeu_pd(st + 2, _mm_add_pd(y2, v2));
-          const __m128d c = tnh2(y2), v3 = _mm_mul_pd(_mm_sub_pd(c, s3), vG); y3 = _mm_add_pd(v3, s3); _mm_storeu_pd(st + 4, _mm_add_pd(y3, v3));
-          const __m128d d = tnh2(y3), v4 = _mm_mul_pd(_mm_sub_pd(d, s4), vG); y4 = _mm_add_pd(v4, s4); _mm_storeu_pd(st + 6, _mm_add_pd(y4, v4));
+          const v2d a = tnh2(x), v1 = v2_mul(v2_sub(a, s1), vG); y1 = v2_add(v1, s1); v2_storeu(st, v2_add(y1, v1));
+          const v2d b = tnh2(y1), v2 = v2_mul(v2_sub(b, s2), vG); y2 = v2_add(v2, s2); v2_storeu(st + 2, v2_add(y2, v2));
+          const v2d c = tnh2(y2), v3 = v2_mul(v2_sub(c, s3), vG); y3 = v2_add(v3, s3); v2_storeu(st + 4, v2_add(y3, v3));
+          const v2d d = tnh2(y3), v4 = v2_mul(v2_sub(d, s4), vG); y4 = v2_add(v4, s4); v2_storeu(st + 6, v2_add(y4, v4));
         } else {           // OTA: only the input of the loop saturates
           x = tnh2(x);
-          const __m128d v1 = _mm_mul_pd(_mm_sub_pd(x, s1), vG); y1 = _mm_add_pd(v1, s1); _mm_storeu_pd(st, _mm_add_pd(y1, v1));
-          const __m128d v2 = _mm_mul_pd(_mm_sub_pd(y1, s2), vG); y2 = _mm_add_pd(v2, s2); _mm_storeu_pd(st + 2, _mm_add_pd(y2, v2));
-          const __m128d v3 = _mm_mul_pd(_mm_sub_pd(y2, s3), vG); y3 = _mm_add_pd(v3, s3); _mm_storeu_pd(st + 4, _mm_add_pd(y3, v3));
-          const __m128d v4 = _mm_mul_pd(_mm_sub_pd(y3, s4), vG); y4 = _mm_add_pd(v4, s4); _mm_storeu_pd(st + 6, _mm_add_pd(y4, v4));
+          const v2d v1 = v2_mul(v2_sub(x, s1), vG); y1 = v2_add(v1, s1); v2_storeu(st, v2_add(y1, v1));
+          const v2d v2 = v2_mul(v2_sub(y1, s2), vG); y2 = v2_add(v2, s2); v2_storeu(st + 2, v2_add(y2, v2));
+          const v2d v3 = v2_mul(v2_sub(y2, s3), vG); y3 = v2_add(v3, s3); v2_storeu(st + 4, v2_add(y3, v3));
+          const v2d v4 = v2_mul(v2_sub(y3, s4), vG); y4 = v2_add(v4, s4); v2_storeu(st + 6, v2_add(y4, v4));
         }
-        const __m128 r = _mm_cvtpd_ps(_mm_mul_pd(y4, _mm_set1_pd(envAv[v][i])));   // (float)(ladder(...) * env), left in lane 0, right in lane 1
-        aL += _mm_cvtss_f32(r); aR += _mm_cvtss_f32(_mm_shuffle_ps(r, r, 1));
+        float oL, oR; v2_f32(v2_mul(y4, v2_set1(envAv[v][i])), oL, oR);   // (float)(ladder(...) * env), left in lane 0, right in lane 1
+        aL += oL; aR += oR;
       }
       bufL[i] = aL; bufR[i] = aR;
     }
