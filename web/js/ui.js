@@ -16,7 +16,7 @@ const splitName = (name) => { const m = /^(\d{3,4} )?((?:[AB][12]?)+) · (.*)$/.
 const engHTML = (eng) => eng.replace(/[AB]/g, c => `<span class="${c.toLowerCase()}">${c}</span>`).replace(/[12]/g, d => `<span class="d">${d}</span>`);
 const SVGNS = 'http://www.w3.org/2000/svg';
 // beta 0.6: where the free plug-in is published (the header's DOWNLOAD VST; index.html's welcome window links there too)
-const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases';
+const VST_RELEASES = 'https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases/latest';   // the official release page (version 1.0.3: the Free-Wavelet-Synthesizer-VST repository)
 
 function el(tag, cls, parent, style) {
   const e = document.createElement(tag);

@@ -10,7 +10,7 @@ Read this file first, then CLAUDE.md for the part you are going to touch.
 
 | | Wavelet Synthesizer (initial branch) | OktoWave = Okto MultiWave Synth 1.0 (this repository) |
 |---|---|---|
-| Repository | Free-Wavelet-Synthesizer-VST (public) | Okto-MultiWave-Synth (public: source + web app on GitHub Pages, `main`, path `/web/`) |
+| Repository | Free-Wavelet-Synthesizer-VST (public; its `main` carried the Wavelet Synthesizer up to beta 0.7.1, tag `v0.7.1-beta`, and carries OktoWave from 1.0.3) | Okto-MultiWave-Synth (public: source + web app on GitHub Pages, `main`, path `/web/`) |
 | Plug-in zips | its Releases (Windows, macOS) | the **test** repository `Wavelet-Synthesizer-TEST`, release `multiwave-v1.0` (only the VST zip there: no web app, no code pushed) |
 | Sound sources | two **engines**: A (subtractive wavelet) and B (additive wavelet), blended by `ab_mix` | three **oscillators**: A1, A2 (subtractive) and B1 (additive), each with its own tone, scale filter, window, tuning, envelope and pitch envelope; OSC MIX levels |
 | Parameters | 88 | 175 (`tools/spec.js`, one definition for the web app, the plug-in and the manuals) |
@@ -28,7 +28,7 @@ Read this file first, then CLAUDE.md for the part you are going to touch.
 Rules that follow from the family tie (do not break them):
 - **The TOP Sounds must sound exactly as in the Wavelet Synthesizer beta 0.7**: `tools/presets_top.js` keeps them in that version's parameters and `convertLegacy` (`tools/spec.js`) turns `ab_mix` / `engine` into the levels of A1 and B1. `tests/regress_v07.js` checks it (worst difference 8.8e-8 of the peak).
 - **The demo tour is the initial web app's tour**: `tools/demo_presets.js` holds its 30 presets (values of beta 0.7.1, written by `tools/demo_presets_extract.js` from that web app), played by `WS_SPEC.DEMO_PRESETS` in no browser list. At the same notes the Okto engine renders them at the same RMS level (median difference 0.00 dB, never louder).
-- Never edit or push to the Wavelet Synthesizer repository from here; never push code to the test repository (zips only); never write the trademark "Omnichord" (the chord keyboard is "chord harp" / "CHORD MODE"); no brand names for the filter types (LADDER / OTA).
+- The Free-Wavelet-Synthesizer-VST repository carries this version since 1.0.3 (a normal commit on top of beta 0.7.1, never a rewrite: the Wavelet Synthesizer is in its history and in its Releases, tag `v0.7.1-beta`); do not force-push it. Never push code to the test repository (zips only); never write the trademark "Omnichord" (the chord keyboard is "chord harp" / "CHORD MODE"); no brand names for the filter types (LADDER / OTA).
 
 ## 2. How the code is organised (the design of the program)
 

@@ -73,7 +73,7 @@ function writeReport(abort) {
   return n('FAIL') + (abort ? 1 : 0);
 }
 // beta 0.6: where the free VST plug-in is published (the header's DOWNLOAD VST and the welcome window's third choice)
-const VST_URL = 'https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases';
+const VST_URL = 'https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases/latest';
 const db = (x) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf');
 const short = (arr, max = 10) => (arr.length > max ? arr.slice(0, max).join('; ') + `; ... (${arr.length} total)` : arr.join('; '));
 

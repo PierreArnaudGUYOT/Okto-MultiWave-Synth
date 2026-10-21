@@ -1,10 +1,23 @@
-# Okto MultiWave Synth
+# OktoWave — Okto MultiWave Synth
+
+# ⬇ DOWNLOAD THE PLUG-IN (Windows, VST3 / VST2)
+
+1. Open the **[latest release](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases/latest)** (or, on this page: **Releases** in the right-hand column, then **v1.0.3**).
+2. Scroll down to **Assets** and click **OktoMultiWaveSynth-1.0.3-win64.zip**.
+3. Unzip it and copy the whole folder **OktoMultiWaveSynth.vst3** into `C:\Program Files\Common Files\VST3` (VST3; needs administrator rights) or into your VST2 plug-in folder. `INSTALL.txt` in the zip says more.
+4. In your DAW, rescan the plug-ins (Ableton Live: *Preferences → Plug-ins → Rescan*), then open *Plug-ins → OktoPierre → Okto MultiWave Synth*.
+
+# ▶ PLAY IT ONLINE (nothing to install)
+
+**https://pierrearnaudguyot.github.io/Free-Wavelet-Synthesizer-VST/web/** (Chrome or Edge; a MIDI keyboard plays it directly, no DAW needed).
+
+---
 
 *Created by **Pierre Arnaud GUYOT** ("OktoPierre") — **version 1.0.3**, the final version with its fixes (2026-10-20), see
 [RELEASE_HISTORY.md](RELEASE_HISTORY.md). Architecture and maintenance notes: [CLAUDE.md](CLAUDE.md).*
 
-Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST)
-(beta 0.7) with **three oscillators instead of two engines**: two subtractive wavelet oscillators (**A1, A2**) and one
+Okto MultiWave Synth is the [Wavelet Synthesizer](https://github.com/PierreArnaudGUYOT/Free-Wavelet-Synthesizer-VST/releases/tag/v0.7.1-beta)
+(beta 0.7.1) with **three oscillators instead of two engines**: two subtractive wavelet oscillators (**A1, A2**) and one
 additive wavelet oscillator (**B1**). It is a polyphonic synthesizer that shapes sound with the **discrete wavelet
 transform** instead of Fourier filters: one cycle of each tone is split into 11 octave-spaced wavelet bands and resynthesised
 band by band. It comes as a **web application** and a **VST3 / VST2 instrument** for Windows x64 (Ableton Live and other
@@ -14,12 +27,9 @@ The listening test of the earlier betas (**EVALUATE SOUNDS**, which asked for 1 
 version, and so were the extra demo songs, the song menu next to DEMO and the loading of a MIDI file: the ratings it collected shaped
 the preset list (see the notes of the betas below), and the demo is one piece, Beethoven's *Appassionata*.
 
-**Play online:** https://pierrearnaudguyot.github.io/Okto-MultiWave-Synth/ (Chrome or Edge; a MIDI keyboard plays it
-directly, no DAW needed).
-**Download the plug-in:** the [Releases](https://github.com/PierreArnaudGUYOT/Okto-MultiWave-Synth/releases) page
-(a zip for Windows 64-bit, VST3 and VST2). The web app also works offline: download the repository and open `web/index.html`.
-The Wavelet Synthesizer itself, and its macOS plug-in, stay on its own page; this test version is built for Windows and the web
-(the code is portable, but no macOS build is made or tested here).
+The web app also works offline: download the repository and open `web/index.html`. The same web app is at https://pierrearnaudguyot.github.io/Okto-MultiWave-Synth/ too (the development repository).
+The Wavelet Synthesizer beta 0.7.1 that this repository carried until version 1.0.3 stays in its history and in the Releases (tag `v0.7.1-beta`, with its macOS plug-in);
+this version is built for Windows and the web (the code is portable, but no macOS build is made or tested here).
 
 ## What version 1.0.3 changes
 
