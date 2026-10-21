@@ -51,6 +51,12 @@ function staticChecks() {
     for (const s of require(R('web', 'js', 'spec.js')).SECTIONS) for (const part of (s.title || '').split(' \u00B7 ').map(x => x.trim()).filter(Boolean)) if (!text.includes(part.toUpperCase()) && !text.includes(part.replace(/\/.*/, '').toUpperCase())) miss.push('the manual does not name "' + part + '" (card ' + s.id + ')');
     for (const im of fs.readFileSync(manualFile, 'utf8').matchAll(/src="([^"]+)"/g)) if (!fs.existsSync(R('web', 'manual', im[1]))) miss.push('picture ' + im[1] + ' is missing');
   }
+  // the bundle built on this machine holds exactly the manual of web/manual (a build that merged the folder kept the old manuals of 1.0.5 inside it)
+  const bundleManual = R('build', 'OktoMultiWaveSynth.vst3', 'Contents', 'Resources', 'manual');
+  if (fs.existsSync(bundleManual)) {
+    const names = (d) => fs.readdirSync(d).sort().join(', ');
+    if (names(bundleManual) !== names(R('web', 'manual'))) miss.push('the built bundle holds [' + names(bundleManual) + '] but web/manual has [' + names(R('web', 'manual')) + ']: run  vst\\build.bat');
+  }
   report('manual', miss.length === 0, miss.length ? [...new Set(miss)].slice(0, 5).join('; ') : 'one page, it names every card of the panel, its picture is there', t3);
 }
 
