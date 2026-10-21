@@ -24,6 +24,7 @@ jobs:
       - name: Sound identical to the web engine (Apple silicon)
         run: |
           mkdir -p out/dsp-arm64
+          node tools/dsp_compare.js --list out/dsp-arm64
           clang++ -std=c++17 -O2 -ffp-contract=off -arch arm64 -Ivst/src vst/devtest/dsp_render.cpp -o build/mac/dsp_render_arm64
           build/mac/dsp_render_arm64 out/dsp-arm64 > out/dsp-arm64/render.log
           node tools/dsp_compare.js out/dsp-arm64 | tee out/dsp-arm64/compare.log
@@ -31,6 +32,7 @@ jobs:
       - name: Sound identical to the web engine (Intel, Rosetta)
         run: |
           mkdir -p out/dsp-x86_64
+          node tools/dsp_compare.js --list out/dsp-x86_64
           clang++ -std=c++17 -O2 -ffp-contract=off -arch x86_64 -Ivst/src vst/devtest/dsp_render.cpp -o build/mac/dsp_render_x86_64
           arch -x86_64 build/mac/dsp_render_x86_64 out/dsp-x86_64 > out/dsp-x86_64/render.log
           node tools/dsp_compare.js out/dsp-x86_64 | tee out/dsp-x86_64/compare.log
