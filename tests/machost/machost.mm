@@ -381,7 +381,7 @@ int main(int argc, char** argv) {
     if (!view) return 1;
     check(view->isPlatformTypeSupported(kPlatformTypeNSView) == kResultTrue, "NSView supported");
     ViewRect vr; view->getSize(&vr);
-    check(vr.getHeight() == 840 && (vr.getWidth() == 1100 || vr.getWidth() == 1460), "size: the panel (+ the preset browser)", fmt("%d x %d", vr.getWidth(), vr.getHeight()));
+    check(vr.getHeight() == 944 && (vr.getWidth() == 1100 || vr.getWidth() == 1520), "size: the panel (+ the preset browser)", fmt("%d x %d", vr.getWidth(), vr.getHeight()));
     Frame* frame = new Frame();
     frame->win = [[NSWindow alloc] initWithContentRect:NSMakeRect(80, 80, vr.getWidth(), vr.getHeight())
                                              styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
@@ -394,9 +394,9 @@ int main(int argc, char** argv) {
     if (!pv) return 1;
     pump(0.6);
     check(shot(pv, out + "/mac_editor_open.png"), "screenshot mac_editor_open.png");
-    const int cols = colours(pv, NSMakeRect(0, 0, 1100, 840));
+    const int cols = colours(pv, NSMakeRect(0, 0, 1100, 944));
     check(cols > 40, "the panel is drawn (many colours)", fmt("%d colours", cols));
-    const int bcols = colours(pv, NSMakeRect(1104, 8, 348, 700));
+    const int bcols = colours(pv, NSMakeRect(1104, 8, 408, 700));
     check(vr.getWidth() == 1100 || bcols > 10, "the preset browser is drawn", fmt("%d colours", bcols));
     const std::string font = [[NSFont systemFontOfSize:10].fontName UTF8String];
     std::printf("  system font: %s\n", font.c_str());
@@ -419,7 +419,7 @@ int main(int argc, char** argv) {
     std::map<ParamID, ParamValue> before;
     for (int i = 0; i < nParams; i++) { ParameterInfo pi; p.ctl->getParameterInfo(i, pi); before[pi.id] = p.ctl->getParamNormalized(pi.id); }
     auto changedParams = [&]() { int n = 0; for (auto& kv : before) if (std::fabs(p.ctl->getParamNormalized(kv.first) - kv.second) > 1e-9) n++; return n; };
-    if (vr.getWidth() == 1460) {
+    if (vr.getWidth() == 1520) {
       const float cx = 1100 + 4 + 12 + 30, catY0 = 8 + 72 + 12;   // the category column: TOP Sounds, Bass, Lead, ... Source Phase
       click(pv, cx, catY0 + 26 * 1);                                // Bass (beta 0.7: right after TOP Sounds, Source Phase last again)
       const float rowX = 1100 + 4 + 136 + 60, rowY0 = 8 + 98 + 11;
@@ -440,17 +440,18 @@ int main(int argc, char** argv) {
       const int chk = changedParams();
       check(chk > 0, "arrow key down: the next sound of the list plays", fmt("%d parameters changed", chk));
     }
-    // the engine tab B
-    const Spot eng = find(ws::W_SEG, ws::P_ENGINE);
-    ParamValue e0 = p.ctl->getParamNormalized(ws::P_ENGINE);
-    click(pv, eng.x + eng.w * 0.75f, eng.y + eng.h / 2);
+    // the folder tab OSC3 B1 (version 1.0.6: the folder tabs OSC1 A1 | OSC2 A2 | OSC3 B1, 176 x 40 px every 182, are the engine tabs of the Wavelet Synthesizer)
+    const Spot eng = find(ws::W_OSCTABS, ws::P_OSC_VIEW);
+    check(eng.type >= 0, "the folder tabs are in the panel");
+    ParamValue e0 = p.ctl->getParamNormalized(ws::P_OSC_VIEW);
+    click(pv, eng.x + 2 * 182.f + 88, eng.y + 16);
     pump(0.3);
-    ParamValue e1 = p.ctl->getParamNormalized(ws::P_ENGINE);
-    check(e1 > 0.5 && p.handler->edits.count(ws::P_ENGINE), "engine tab B: the parameter changes and the host hears it", fmt("%.2f -> %.2f", e0, e1));
+    ParamValue e1 = p.ctl->getParamNormalized(ws::P_OSC_VIEW);
+    check(e1 > 0.9 && p.handler->edits.count(ws::P_OSC_VIEW), "folder tab OSC3 B1: the parameter changes and the host hears it", fmt("%.2f -> %.2f", e0, e1));
     shot(pv, out + "/mac_engine_b.png");
-    click(pv, eng.x + eng.w * 0.25f, eng.y + eng.h / 2);
+    click(pv, eng.x + 88, eng.y + 16);
     pump(0.2);
-    check(p.ctl->getParamNormalized(ws::P_ENGINE) < 0.5, "engine tab A again");
+    check(p.ctl->getParamNormalized(ws::P_OSC_VIEW) < 0.1, "folder tab OSC1 A1 again");
     // beta 0.6: the delay's SYNC button (plug-in only): a click turns it on (the host hears it), a second one off
     {
       const Spot sy = find(ws::W_TOGGLE, ws::P_FX_DSYNC);
@@ -468,7 +469,14 @@ int main(int argc, char** argv) {
     }
     // a large knob dragged upwards
     Spot knob{-1, -1, 0, 0, 0, 0};
-    for (const Spot& s : spots()) if (s.type == ws::W_KNOBL && s.param >= 0 && ws::kSections[0].mode != 1) { knob = s; break; }
+    for (int si = 0; si < ws::kNumSections && knob.type < 0; si++) {   // a large knob of a card that shows with oscillator A1 (the view the plug-in opens on)
+      const ws::SectionDef& sd = ws::kSections[si];
+      if (sd.view > 0 || sd.vis >= 0) continue;
+      for (int k = 0; k < sd.numWidgets; k++) {
+        const ws::WidgetDef& w = ws::kWidgets[sd.firstWidget + k];
+        if (w.type == ws::W_KNOBL && w.param >= 0) { knob = Spot{w.type, w.param, sd.x + w.x, sd.y + w.y, w.w, w.h}; break; }
+      }
+    }
     if (knob.type >= 0) {
       const float kx = knob.x + knob.w / 2, ky = knob.y + 32;
       const ParamValue k0 = p.ctl->getParamNormalized(knob.param);
@@ -483,9 +491,9 @@ int main(int argc, char** argv) {
       check(std::fabs(p.ctl->getParamNormalized(knob.param) - k1) > 1e-6, "Cmd-click resets the knob");
     }
     // HIDE the browser, then the preset name brings it back
-    if (vr.getWidth() == 1460) {
+    if (vr.getWidth() == 1520) {
       const int r0 = frame->resizes;
-      click(pv, 1100 + 4 + 336 - 70 + 29, 8 + 6 + 10);   // HIDE
+      click(pv, 1100 + 4 + 408 - 70 + 29, 8 + 6 + 10);   // HIDE
       pump(0.3);
       ViewRect v2; view->getSize(&v2);
       check(v2.getWidth() == 1100 && frame->resizes > r0 && (int)frame->box.frame.size.width == 1100, "HIDE: the window becomes the panel alone", fmt("%d x %d", v2.getWidth(), v2.getHeight()));
@@ -494,7 +502,7 @@ int main(int argc, char** argv) {
       click(pv, pr.x + 120, pr.y + pr.h / 2);
       pump(0.3);
       view->getSize(&v2);
-      check(v2.getWidth() == 1460, "a click on the preset name brings the browser back", fmt("%d", v2.getWidth()));
+      check(v2.getWidth() == 1520, "a click on the preset name brings the browser back", fmt("%d", v2.getWidth()));
     }
 
     // ---------------------------------------------------------------- pop-up menus: window size, the preset menu
@@ -516,7 +524,7 @@ int main(int argc, char** argv) {
       click(pv, (z.x + z.w / 2) * 1.3f, (z.y + z.h / 2) * 1.3f);   // the view's points are now 1.3 logical units
       pump(0.3);
       view->getSize(&zr);
-      check(zr.getWidth() == 1460 && zr.getHeight() == 840, "back to 100 %", fmt("%d x %d", zr.getWidth(), zr.getHeight()));
+      check(zr.getWidth() == 1520 && zr.getHeight() == 944, "back to 100 %", fmt("%d x %d", zr.getWidth(), zr.getHeight()));
       // Control-click on the preset name: the classic menu, its "Hide the preset browser"
       const Spot pr = find(ws::W_PRESETS);
       gMenuChoice = "Hide the preset browser";
@@ -531,7 +539,7 @@ int main(int argc, char** argv) {
       mouse(pv, NSEventTypeLeftMouseUp, pr.x + 120, pr.y + pr.h / 2);
       pump(0.3);
       view->getSize(&zr);
-      check(zr.getWidth() == 1460, "... and Show the preset browser", fmt("%d wide", zr.getWidth()));
+      check(zr.getWidth() == 1520, "... and Show the preset browser", fmt("%d wide", zr.getWidth()));
     }
     gMenuChoice.clear();
     CFRunLoopTimerInvalidate(menuTimer); CFRelease(menuTimer);
