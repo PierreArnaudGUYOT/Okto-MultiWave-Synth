@@ -13,6 +13,8 @@
 #ifdef __APPLE__
 #define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0   // no check() / verify() macros from Apple's headers
 #include <CoreFoundation/CoreFoundation.h>
+#include <pthread.h>
+#include <pthread/qos.h>
 #endif
 #include <chrono>
 #include <condition_variable>
@@ -223,6 +225,20 @@ static bool readState(IBStream* s, double* plain) {
   return true;
 }
 
+// version 1.0.7 (CPU review 3.4): the sets of a preset are built by up to buildThreads() threads (the same bits, a third of the time on a heavy preset). The helper threads run below
+// the normal priority so that they do not take the cores of the DAW's audio threads.
+static void lowerBuildPriority() {
+#if defined(_WIN32)
+  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+#elif defined(__APPLE__)
+  pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif
+}
+static int buildThreads() {
+  static const int n = [] { const unsigned hw = std::thread::hardware_concurrency(); gBuildThreadInit = lowerBuildPriority; return (int)std::max(1u, std::min(4u, hw / 2)); }();
+  return n;
+}
+
 // ================================================================== processor
 class Processor : public IComponent, public IAudioProcessor, public IConnectionPoint, public IProcessContextRequirements {
  public:
@@ -296,7 +312,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
         int idx = claimFree();
         if (idx >= 0) {
           try {
-            buildTables(snap, true, sets[idx]);
+            buildTables(snap, true, sets[idx], buildThreads());
           } catch (...) {   // out of memory: the host is told, it does not crash
             setState_[idx].store(kFree);
             return kResultFalse;
@@ -355,6 +371,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
     // beta 0.6 (security review): only real rates; an absurd one would overflow the 4 s delay line's size
     if (setup.sampleRate >= kMinRate && setup.sampleRate <= kMaxRate && setup.sampleRate != engine.sr) engine.setSampleRate(setup.sampleRate);
     offline = setup.processMode == kOffline;
+    if (setup.maxSamplesPerBlock > 0 && setup.maxSamplesPerBlock <= 1 << 20) scratch.resize((size_t)setup.maxSamplesPerBlock);   // (version 1.0.7: the right channel of a mono host layout is not allocated on the audio thread)
     return kResultOk;
   }
   tresult PLUGIN_API setProcessing(TBool) override { return kResultOk; }
@@ -578,7 +595,7 @@ class Processor : public IComponent, public IAudioProcessor, public IConnectionP
           if (idx < 0) { lk.unlock(); std::this_thread::sleep_for(std::chrono::milliseconds(2)); continue; }
           double snap[kNumParams]; for (int i = 0; i < kNumParams; i++) snap[i] = plain[i].load();
           try {
-            buildTables(snap, true, sets[idx]);
+            buildTables(snap, true, sets[idx], buildThreads());
           } catch (...) {   // out of memory: the sound keeps its tables, this state is given up (the next change tries again)
             setState_[idx].store(kFree);
             builtVersion.store(v);

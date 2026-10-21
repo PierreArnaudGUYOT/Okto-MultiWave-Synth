@@ -5,12 +5,16 @@
 // DSP core (C++ port of web/js/core.js, same algorithm 1:1).
 #pragma once
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 #include "generated/spec.h"
 // CPU optimisations (CLAUDE.md "CPU optimisations", Revue_CPU.md): SSE2 does the same double-precision operations as the scalar code, lane by lane, so the output is
@@ -141,17 +145,18 @@ inline bool parseValue(const ParamDef& p, std::string s, double& out) {
 
 // ------------------------------------------------------------------ wavelets
 struct Filter { double h[kMaxWaveletLen], g[kMaxWaveletLen]; int L; };
-inline const Filter& filter(int w) {
-  static Filter f[kNumWavelets];
-  static bool init = false;
-  if (!init) {
+struct FilterBank {   // built by the first call, once, whichever thread it is (a function-local static)
+  Filter f[kNumWavelets];
+  FilterBank() {
     for (int k = 0; k < kNumWavelets; k++) {
       int L = kWaveletLen[k]; f[k].L = L;
       for (int n = 0; n < L; n++) { f[k].h[n] = kWaveletH[k][n]; f[k].g[n] = ((n & 1) ? -1.0 : 1.0) * kWaveletH[k][L - 1 - n]; }
     }
-    init = true;
   }
-  return f[std::min(kNumWavelets - 1, std::max(0, w))];
+};
+inline const Filter& filter(int w) {
+  static const FilterBank bank;
+  return bank.f[std::min(kNumWavelets - 1, std::max(0, w))];
 }
 
 // periodic orthogonal DWT; c[0] = approximation, band b at c[2^(b-1) .. 2^b - 1]
@@ -431,44 +436,73 @@ inline void buildSet(const double* params, int s, bool withMips, Tables& t, doub
   }
 }
 
-// The other sets of a variant of subtractive oscillator s with wavelet wav (core.js variantSets). PHASE: phase a_phase + k / PHASE_K for
+// One set to build: the arguments of buildSet and where its mip tables go.
+struct BuildJob { std::vector<float>* mips; std::vector<float>* rms; int s; double wavelet, phase, sparsity, width; };
+
+// The other sets of a variant of subtractive oscillator s with wavelet wav (core.js variantSets), as jobs. PHASE: phase a_phase + k / PHASE_K for
 // k = 1 .. PHASE_K - 1 (set 0 is the oscillator's own). SPARSITY and WIDTH: the SPARSE_K sparsities k / (SPARSE_K - 1) and the WIDTH_K
 // widths WIDTH_MIN + k (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1), k = 0 .. K - 1 (all of them; the oscillator's own set is not one of them).
-inline void variantSets(const double* params, int s, double wav, int vk, std::vector<std::vector<float>>& mips, std::vector<std::vector<float>>& rms, Tables& sc) {
+inline void variantJobs(const double* params, int s, double wav, int vk, std::vector<std::vector<float>>& mips, std::vector<std::vector<float>>& rms, std::vector<BuildJob>& jobs) {
   const int first = vk == VK_PHASE ? 1 : 0, cnt = VK_N[vk] - first;
-  mips.resize(cnt); rms.resize(cnt);
+  mips.resize(cnt); rms.resize(cnt);   // (before the jobs hold pointers into them)
   for (int k = first; k < VK_N[vk]; k++) {
-    std::vector<float>* m = &mips[k - first]; std::vector<float>* r = &rms[k - first];
-    if (vk == VK_PHASE) { double v = params[kSlots[s].phase] + (double)k / PHASE_K; v -= std::floor(v); buildSet(params, s, true, sc, wav, v, -1, -1, m, r); }
-    else if (vk == VK_SPARSITY) buildSet(params, s, true, sc, wav, -1, (double)k / (SPARSE_K - 1), -1, m, r);
-    else buildSet(params, s, true, sc, wav, -1, -1, WIDTH_MIN + k * (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1), m, r);
+    BuildJob j{&mips[k - first], &rms[k - first], s, wav, -1, -1, -1};
+    if (vk == VK_PHASE) { double v = params[kSlots[s].phase] + (double)k / PHASE_K; v -= std::floor(v); j.phase = v; }
+    else if (vk == VK_SPARSITY) j.sparsity = (double)k / (SPARSE_K - 1);
+    else j.width = WIDTH_MIN + k * (WIDTH_MAX - WIDTH_MIN) / (WIDTH_K - 1);
+    jobs.push_back(j);
   }
 }
 
+// Called by the helper threads of a parallel build (version 1.0.7) before they start: the plug-in lowers their priority so that they do not take the cores of the DAW's audio threads.
+inline void (*gBuildThreadInit)() = nullptr;
+
 // withMips=false: the oscillator shown on the panel (displays). withMips=true: the oscillators the sound needs.
-inline void buildTables(const double* params, bool withMips, Tables& t) {
+// threads > 1 (version 1.0.7, CPU review 3.4): the sets of the preset (the oscillators' own, their WAVELET 2 twins, the sets of the LFO variants: up to 49) are independent, each built by
+// buildSet from the parameters alone into its own vectors, so they are built by up to `threads` threads: the same bits as one after the other, in a third of the time on a heavy preset.
+inline void buildTables(const double* params, bool withMips, Tables& t, int threads = 1) {
   t.needs = 0;
   for (int s = 0; s < NS; s++) t.slot[s].begin();
   if (!withMips) { buildSet(params, (int)jsRound(params[P_OSC_VIEW]), false, t); return; }
   const int need = tableNeeds(params);
   t.needs = need;
-  Tables sc;
+  std::vector<BuildJob> jobs;
   for (int s = 0; s < NS; s++) {
     if (!(need & (1 << s))) continue;
     SlotTables& st = t.slot[s];
-    st.on = true;
-    buildSet(params, s, true, sc, -1, -1, -1, -1, &st.mips, &st.rms);
-    st.mode = sc.mode;
+    st.on = true; st.mode = kSlots[s].mode;
+    jobs.push_back(BuildJob{&st.mips, &st.rms, s, -1, -1, -1, -1});
     if (slotMorph(params, s)) {   // WAVELET MORPH
-      buildSet(params, s, true, sc, params[P_WAV2], -1, -1, -1, &st.w2Mips, &st.w2Rms);
       st.hasW2 = true;
+      jobs.push_back(BuildJob{&st.w2Mips, &st.w2Rms, s, params[P_WAV2], -1, -1, -1});
     }
     const int vk = slotVariant(params, s);
     if (vk >= 0) {   // SOURCE PHASE / SPARSITY / SOURCE WIDTH moved by an LFO: every set also at the other values (also for WAVELET 2)
       st.vk = vk;
-      variantSets(params, s, params[kSlots[s].wavelet], vk, st.phMips, st.phRms, sc);
-      if (st.hasW2) variantSets(params, s, params[P_WAV2], vk, st.w2PhMips, st.w2PhRms, sc);
+      variantJobs(params, s, params[kSlots[s].wavelet], vk, st.phMips, st.phRms, jobs);
+      if (st.hasW2) variantJobs(params, s, params[P_WAV2], vk, st.w2PhMips, st.w2PhRms, jobs);
     }
+  }
+  auto run = [&](const BuildJob& j, Tables& sc) { buildSet(params, j.s, true, sc, j.wavelet, j.phase, j.sparsity, j.width, j.mips, j.rms); };
+  const int nt = std::min<int>(threads, (int)jobs.size());
+  if (nt <= 1 || jobs.size() < 4) {
+    Tables sc;
+    for (const BuildJob& j : jobs) run(j, sc);
+  } else {
+    std::atomic<size_t> next{0};
+    std::exception_ptr err; std::mutex errMutex;
+    auto work = [&](bool helper) {
+      try {
+        if (helper && gBuildThreadInit) gBuildThreadInit();
+        Tables sc;
+        for (;;) { const size_t i = next.fetch_add(1); if (i >= jobs.size()) break; run(jobs[i], sc); }
+      } catch (...) { std::lock_guard<std::mutex> lk(errMutex); if (!err) err = std::current_exception(); next.store(jobs.size()); }
+    };
+    std::vector<std::thread> helpers;
+    try { for (int i = 1; i < nt; i++) helpers.emplace_back(work, true); } catch (...) { /* no more threads: the ones started and this one do the work */ }
+    work(false);
+    for (std::thread& th : helpers) th.join();
+    if (err) std::rethrow_exception(err);
   }
   for (int s = 0; s < NS; s++) t.slot[s].end();
 }
