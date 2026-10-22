@@ -337,7 +337,7 @@ add('vf_r', 'Filter Env Release', 'RELEASE', { curve: 'exp', fmt: 'sec', min: 0.
 // three MIDI triggers (whose ids are not saved anywhere), so that the VST2 host, which sees the parameters up to the triggers, has them.
 add('vel_amt', 'Velocity Sensitivity', 'VELOCITY', { min: 0, max: 1, def: 0.5, perf: true });
 add('vel_target', 'Velocity Target', 'VEL TO', { curve: 'choice', fmt: 'choice', min: 0, max: 2, def: 0, perf: true,
-  choices: ['Volume', 'Filter cutoff', 'Volume + filter'], choiceShort: ['VOLUME', 'FILTER', 'VOL + FILTER'] });
+  choices: ['Volume', 'Filter cutoff', 'Volume + filter'], choiceShort: ['VOLUME', 'FILTER', 'VOL+FLT'] });
 // Version 1.0.12: the MIDI "panic" messages. A host sends them as controllers (CC 120 all sound off, CC 121 reset all controllers, CC 123 all notes off: their value is 0), which a VST3 plug-in
 // only receives through IMidiMapping, as parameters: three hidden parameters at the end of the list (the ids of every other parameter, and so every saved project, stay as they were).
 // The processor acts on a point of one of these queues whose value is NOT the default: the data byte of these messages is 0, a point at 0 is the trigger. The default is 0.5 so that a
@@ -544,7 +544,7 @@ section('play', 'PLAY · CHORD MODE · TUNING', 512, 792, 576, 128, -1, [
   { type: 'label', text: 'TONIC', x: 340, y: 70, w: 100, h: 14, vis: 'mt_mode', visOn: true },
   { type: 'step', param: 'mt_tonic', x: 340, y: 86, w: 110, h: 26, vis: 'mt_mode', visOn: true },
   kn('vel_amt', 486, 36),   // version 1.0.13: VELOCITY and where it goes (placed at the right of the card below)
-  { type: 'menu', param: 'vel_target', x: 470, y: 100, w: 84, h: 22 },
+  { type: 'menu', param: 'vel_target', text: 'TARGET', x: 470, y: 100, w: 84, h: 22 },
 ]);
 // the keyboard row: the wheels and the keyboard (C2-C7, 36 white keys)
 section('keys', '', 0, 928, 1100, 112, -1, [
@@ -623,8 +623,9 @@ section('chord', 'CHORD KEYBOARD', 12, 1054, 1076, 104, -1, [
   }
   const play = find('play'); box(play, 516, 726, 572, 98); play.vtitle = true; play.title = 'PLAY'; play.accentTitle = true;
   widget(play, 0, 26, 8, 100, 34); widget(play, 1, 26, 48, 100, 26); widget(play, 2, 158, 8, 150, 24); widget(play, 3, 158, 62, 176, 24);
-  widget(play, 4, 360, 44, 100, 14); widget(play, 5, 360, 62, 110, 26);
-  widget(play, 6, 498, 6, 52, 60); widget(play, 7, 482, 70, 84, 22);   // version 1.0.13: VELOCITY over its target, in the free column at the right
+  widget(play, 4, 340, 44, 88, 14); widget(play, 5, 340, 62, 88, 26);   // (version 1.0.14: TONIC 20 px to the left and 88 wide, for VELOCITY: a note name needs little room)
+  // version 1.0.13: VELOCITY and its target; version 1.0.14 (the owner): the knob at the LEFT of the menu, the menu with its caption TARGET above it, as in LFO 2/3 (80 wide, as there: VOLUME fits)
+  widget(play, 6, 432, 14, 52, 60); widget(play, 7, 486, 34, 80, 22);
   const keys = find('keys'); box(keys, 0, 830, 1100, 98);
   widget(keys, 0, 12, 0, 60, 82); widget(keys, 1, 82, 0, 1006, 82); widget(keys, 2, 14, 83, 170, 15);
   find('chord').y = DEVICE.h + 4;

@@ -53,7 +53,10 @@ const storyAt = (k) => STORY[Math.min(k, STORY.length - 1)];
 const FORCED = { v_voices: 16, v_oct: 0, v_glide: 0, vel_amt: 0 }; // + caps: amp_a <= 0.08, fx_dmix <= 0.1, fx_dfb <= 0.3 (version 1.0.13: the PLAY card's VELOCITY off during the demo)
 const CAPS = { amp_a: 0.08, fx_dmix: 0.1, fx_dfb: 0.3 };
 // web update 2026-10-22: the phrase of AA · Hollow Bass is played in the oriental tuning ARAB, maqam Saba (mt_scale 3) on B flat (mt_tonic 10); every other scene is WEST (mt_mode 0)
-const TUNING_SCENES = { 'AA · Hollow Bass': { mt_mode: 1, mt_scale: 3, mt_tonic: 10 } };
+const TUNING_SCENES = { 'AA · Hollow Bass': { mt_mode: 1, mt_scale: 3, mt_tonic: 10 }, 'A · Spiccato Strings': { mt_mode: 1, mt_scale: 0, mt_tonic: 7 } };   // (version 1.0.14: Spiccato Strings in ARAB RAST on G)
+// version 1.0.14: two presets play the demo with half their modulation (every amount of LFO 1, the amounts of LFO 2 and LFO 3): web/js/demo.js TOUR_CALM
+const CALM = { 'AA · Drum Bloom': 0.5, 'AB · Orbit Cloud': 0.5 };
+const CALM_KEYS = ['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew', 'lfo2_amt', 'lfo3_amt'];
 
 // ------------------------------------------------------------------ report
 const lines = [], results = [];
@@ -163,6 +166,7 @@ function tourChecks(name, song, samples, plan, full, intro = true, start = plan[
         if ((key === 'mt_scale' || key === 'mt_tonic') && !tun) continue;   // (the maqam and the tonic stay as the last oriental phrase left them: WEST ignores them)
         let e = tun && key in tun ? tun[key] : key in FORCED ? FORCED[key] : v;
         if (key in CAPS) e = Math.min(v, CAPS[key]);
+        if (CALM[want] !== undefined && CALM_KEYS.includes(key)) e = v * CALM[want];
         if (key === 'master' && (SPEC.DEMO_TRIM || {})[want]) e = Math.max(SPEC_BY_KEY.master.min, v - SPEC.DEMO_TRIM[want]);   // (version 1.0.4: the master of a few presets of the tour goes down in the demo)
         if (!(Math.abs(x.all[key] - e) <= 1e-6 * Math.max(1, Math.abs(SPEC_BY_KEY[key].max - SPEC_BY_KEY[key].min)))) { badVals.push(`t=${t.toFixed(1)} ${want}: ${key}=${x.all[key]} expected ${e}`); break; }
       }
