@@ -432,7 +432,7 @@ async function stepWelcome() {
   // version 1.0.14 (the owner: "met 'run the demo' au milieu, pour le mettre bien en valeur"): Run the demo is the middle one of the three boxes of the first row, highlighted
   check(JSON.stringify(titles) === JSON.stringify(['Play the synth', 'Run the demo', 'Download the VST', 'Learn more about the sound engine', 'Send your feedback']), 'five boxes: Play the synth, Run the demo (in the middle), Download the VST, Learn more about the sound engine, Send your feedback', JSON.stringify(titles));
   const demo = w.choices[1] || {}, play = w.choices.find((c) => c.id === 'start-btn'), dl = w.choices[2] || {};
-  check(/Appassionata/.test(demo.small) && demo.id === 'w-demo', "'Run the demo' (#w-demo) announces the Appassionata tour", JSON.stringify(demo));
+  check(demo.small.trim() === 'and play the Synth' && demo.id === 'w-demo', "'Run the demo' (#w-demo) says only 'and play the Synth' under it (version 1.0.14: the main information only)", JSON.stringify(demo));
   const hl = await ev("(() => { const d = document.getElementById('w-demo'), p = document.getElementById('start-btn'); const a = getComputedStyle(d), b = getComputedStyle(p); return { demo: d.classList.contains('demo'), bgDemo: a.backgroundImage, bgPlay: b.backgroundImage, wDemo: d.getBoundingClientRect().width, wPlay: p.getBoundingClientRect().width }; })()");
   check(hl.demo && /gradient/.test(hl.bgDemo) && hl.bgDemo !== hl.bgPlay && hl.wDemo > hl.wPlay, "'Run the demo' is highlighted (its own gradient, a little larger than the other boxes)", JSON.stringify(hl));
   check(!!play && play.title === 'Play the synth' && play.small.trim() === 'MIDI supported', "'Play the synth' is #start-btn and says only 'MIDI supported'", JSON.stringify(play));
@@ -804,8 +804,9 @@ async function stepPanel() {
   const inTop = new Set(SPEC.TOP_LIST);
   const topNames = SPEC.TOP_LIST.map((i) => SPEC.PRESETS[i].name);
   const lastCat = SPEC.CATEGORIES[SPEC.CATEGORIES.length - 1];
-  check(SPEC.PRESETS.length === SPEC.TOP + SPEC.NEW_COUNT && lastCat === 'Other', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets; ${lastCat} is the last category`,
-    `TOP ${SPEC.TOP}, presets ${SPEC.PRESETS.length}, last category '${lastCat}'`);
+  const lights = SPEC.PRESETS.filter((p) => / LGT$/.test(p.name)).length, high = SPEC.PRESETS.filter((p) => / HIGH_CPU$/.test(p.name));   // (version 1.0.14: the LGT versions, tools/spec.js LGT; the full versions of the favourites they replace are in Other)
+  check(SPEC.PRESETS.length === SPEC.TOP + SPEC.NEW_COUNT + lights && lights === 20 && high.length === 17 && high.every((p) => p.cat === 'Other' && !p.stars) && lastCat === 'Other', `spec: TOP Sounds = ${TOP_N} sounds, then ${SPEC.NEW_COUNT} new presets and ${lights} LGT versions (${high.length} HIGH_CPU originals in Other); ${lastCat} is the last category`,
+    `TOP ${SPEC.TOP}, presets ${SPEC.PRESETS.length}, light ${lights}, last category '${lastCat}'`);
   const bInfo = await ev(`(() => { const b = document.getElementById('browser'); if (!b) return null;
     const tab = b.querySelector('.btabs button'); if (tab) tab.click();   // FACTORY
     const first = b.querySelector('.bcats .bcat'); if (first) first.click();   // TOP Sounds

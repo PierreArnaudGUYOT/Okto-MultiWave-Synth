@@ -55,7 +55,7 @@ const CAPS = { amp_a: 0.08, fx_dmix: 0.1, fx_dfb: 0.3 };
 // web update 2026-10-22: the phrase of AA · Hollow Bass is played in the oriental tuning ARAB, maqam Saba (mt_scale 3) on B flat (mt_tonic 10); every other scene is WEST (mt_mode 0)
 const TUNING_SCENES = { 'AA · Hollow Bass': { mt_mode: 1, mt_scale: 3, mt_tonic: 10 }, 'A · Spiccato Strings': { mt_mode: 1, mt_scale: 0, mt_tonic: 7 } };   // (version 1.0.14: Spiccato Strings in ARAB RAST on G)
 // version 1.0.14: two presets play the demo with half their modulation (every amount of LFO 1, the amounts of LFO 2 and LFO 3): web/js/demo.js TOUR_CALM
-const CALM = { 'AA · Drum Bloom': 0.5, 'AB · Orbit Cloud': 0.5 };
+const CALM = { 'AB · Orbit Cloud': 0.5 };   // (AA · Drum Bloom: the demo plays its light version)
 const CALM_KEYS = ['lfo_pitch', 'lfo_cut', 'lfo_pos', 'lfo_wav', 'lfo_sp', 'lfo_res', 'lfo_ew', 'lfo2_amt', 'lfo3_amt'];
 
 // ------------------------------------------------------------------ report
@@ -441,24 +441,36 @@ async function main() {
     await ev('WS_TEST.demoStop()');
     await waitStopped(2000);
     await checkRestored(base, 'restart');
-    // web update 2026-10-22 (the owner: the presets did not change while the page was not on the screen): a hidden page (no animation frame, document.hidden) still changes the presets, the
-    // audio thread making each change at its chord
+    // version 1.0.14 (the owner: a preset changes at its place in the piece, never elsewhere): the page hidden (no animation frame, document.hidden) while the chord of scene 1 goes by, then shown
+    // again: no change is made late, in the middle of a phrase (the sound of scene 0 stays), and the change of scene 2 is made at its chord by the audio thread
     {
       const n0 = (await ev('WS_TEST.changes()')).length;
-      await ev("(() => { window.__raf = window.requestAnimationFrame; window.requestAnimationFrame = () => 0; Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); return 1; })()");
+      const label = () => ev("(document.querySelector('.presets .pname span') || {}).textContent");
       await ev('WS_TEST.demoStart()');
-      const sh = await waitDemoTime(8.2, 20000);
+      await waitDemoTime(1);
+      const first = await label();
+      await ev("(() => { window.__raf = window.requestAnimationFrame; window.__q = []; window.requestAnimationFrame = (cb) => { window.__q.push(cb); return 0; }; Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); return 1; })()");
+      await waitDemoTime(5.2, 15000);
+      await ev('(() => { window.requestAnimationFrame = window.__raf; delete document.hidden; const q = window.__q; window.__q = []; q.forEach((cb) => window.__raf(cb)); return q.length; })()');
+      await waitDemoTime(5.9);
+      const back = await label();
+      const s2 = await waitDemoTime(8.2, 15000);
+      const after = await label();
       const ch = (await ev('WS_TEST.changes()')).slice(n0);
       await ev('WS_TEST.demoStop()');
-      await ev('(() => { window.requestAnimationFrame = window.__raf; delete document.hidden; return 1; })()');
       await waitStopped(2000);
-      const atChord = ch.filter((c) => c.seq >= 0 && Math.abs(c.seq - c.at) < 0.1);
-      check(!!sh && sh.scene >= 2 && atChord.length >= 2, 'a hidden page (no animation frame): the presets still change, each at its chord (made by the audio thread)', JSON.stringify({ scene: sh && sh.scene, changes: ch }));
+      const made = (at) => ch.filter((c) => Math.abs(c.at - at) < 0.01);
+      const sc = await ev('WS_TEST.demoTour()'), c1 = sc[1].chord !== undefined ? sc[1].chord : 3.5821, c2 = sc[2].chord !== undefined ? sc[2].chord : 7.1642;
+      const ok = first === SPEC.TOUR[0] && back === SPEC.TOUR[0] && after === SPEC.TOUR[2] && made(c1).length === 0 && made(c2).length === 1 && Math.abs(made(c2)[0].seq - c2) < 0.1;
+      check(!!s2 && ok, 'a page hidden while a chord goes by: no change made late (the sound in place stays), the next change made at its chord', JSON.stringify({ first, back, after, changes: ch }));
       await checkRestored(base, 'hidden page');
     }
 
     // ---- Ctrl+click
     begin('Ctrl+click on a knob resets it to the default');
+    // (the knobs clicked are on the card of OSC1: the baseline preset may open on another tab — version 1.0.14: the light versions moved the list, the baseline is now AB · Rust Aurora Light, shown on OSC3)
+    await ev("WS_TEST.setParam('osc_view', 0)");
+    await sleep(150);
     const centre = (key) => { for (const sec of SPEC.SECTIONS) if (sec.view === undefined || sec.view <= 0) for (const w of sec.widgets) if (w.param === key) return [sec.x + w.x + w.w / 2, sec.y + w.y + w.h / 2]; return null; };
     for (const [key, x, y] of [['f_cutoff', ...centre('f_cutoff')], ['amp_a', ...centre('amp_a')]]) {
       const p = SPEC_BY_KEY[key];
@@ -472,7 +484,8 @@ async function main() {
       await B.mouse('mouseReleased', px, py, { buttons: 0, modifiers: 2 });
       await sleep(200);
       const v = await ev(`WS_TEST.getParam('${key}')`);
-      check(Math.abs(v - p.def) < 1e-9, `Ctrl+click on the ${p.name} knob resets it to the spec default (${p.def})`, `got ${v}`);
+      const there = Math.abs(v - p.def) < 1e-9 ? '' : await ev(`(() => { const e = document.elementFromPoint(${px}, ${py}); const o = document.querySelector('.overlay:not([hidden]), #start-overlay:not(.gone), .demo-win[style*="block"]'); return { osc_view: WS_TEST.getParam('osc_view'), at: e ? e.tagName + ' ' + (e.id || '') + ' in ' + ((e.closest('[id]') || {}).id || '') : null, cover: o ? (o.id || o.className) : null }; })()`);
+      check(Math.abs(v - p.def) < 1e-9, `Ctrl+click on the ${p.name} knob resets it to the spec default (${p.def})`, `got ${v}${there ? ' ' + JSON.stringify(there) : ''}`);
     }
     check(B.errors().length === 0, 'no console errors overall', short(B.errors()));
     await lifecycleTests();
