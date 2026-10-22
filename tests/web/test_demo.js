@@ -441,6 +441,21 @@ async function main() {
     await ev('WS_TEST.demoStop()');
     await waitStopped(2000);
     await checkRestored(base, 'restart');
+    // web update 2026-10-22 (the owner: the presets did not change while the page was not on the screen): a hidden page (no animation frame, document.hidden) still changes the presets, the
+    // audio thread making each change at its chord
+    {
+      const n0 = (await ev('WS_TEST.changes()')).length;
+      await ev("(() => { window.__raf = window.requestAnimationFrame; window.requestAnimationFrame = () => 0; Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); return 1; })()");
+      await ev('WS_TEST.demoStart()');
+      const sh = await waitDemoTime(8.2, 20000);
+      const ch = (await ev('WS_TEST.changes()')).slice(n0);
+      await ev('WS_TEST.demoStop()');
+      await ev('(() => { window.requestAnimationFrame = window.__raf; delete document.hidden; return 1; })()');
+      await waitStopped(2000);
+      const atChord = ch.filter((c) => c.seq >= 0 && Math.abs(c.seq - c.at) < 0.1);
+      check(!!sh && sh.scene >= 2 && atChord.length >= 2, 'a hidden page (no animation frame): the presets still change, each at its chord (made by the audio thread)', JSON.stringify({ scene: sh && sh.scene, changes: ch }));
+      await checkRestored(base, 'hidden page');
+    }
 
     // ---- Ctrl+click
     begin('Ctrl+click on a knob resets it to the default');
