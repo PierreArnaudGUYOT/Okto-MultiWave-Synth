@@ -906,9 +906,9 @@ const DEMO_PRESETS = DEMO_RAW.presets.map(r => ({ name: r.name, v: convertLegacy
 // 16-30 rated above 5, the best first: Orbit Drum (9) to 5, Ice Rise Clav (9) to 6, Salt Beam Strings (9) to 8, Swing of Odd (8) to 11; Drum Bloom, Wave Pulse Lead, Knock Sweep and Wood
 // Rise Bows went to their places. The plug-in's demo (PLAY DEMO) plays the same list.
 // Version 1.0.14: the heaviest presets of the tour play their LGT versions (see LGT above: the audio of the web demo broke up on the owner's laptop).
-const TOUR = [
+const TOUR = [   // (version 1.0.17, the owner: "remplace le deuxième son de la démo par le son numéro 20", his answer: the two swap places)
   "A · Wavelet Lead",
-  "AA · Tide Lute",
+  "AB · Rust Aurora LGT",
   "AB · Kalimba Lung Machine LGT",
   "AA · Hollow Bass",
   "AA · Orbit Drum",
@@ -926,7 +926,7 @@ const TOUR = [
   "AA · Wood Rise Bows",
   "AB · Sweep of Trumpet",
   "AA · Drum Bloom LGT",
-  "AB · Rust Aurora LGT",
+  "AA · Tide Lute",
   "A · Cello Section",
   "AB · Step Sub",
   "A · Wave Pulse Lead",
@@ -1049,6 +1049,15 @@ const KEYATTAC = PRESETS.map((p, i) => i).filter(i => PRESETS[i].vote && !PRESET
   for (const p of PRESETS) if (!CATEGORIES.includes(p.cat)) throw new Error(`preset ${p.name}: no category`);
   DEFAULT_PRESET = PRESETS[TOP_LIST[0]].name;
 }
+// Version 1.0.17: values a preset plays in the WEB APP ONLY (tools/gen_spec.js writes them in web/js/spec.js; the plug-in keeps the preset as it is). The owner: "je ne souhaite
+// pas changer les paramètres du preset Warm Pad dans la version VST; propose quelque chose pour qu'il ne craque pas dans la version web". His Warm Pad's PUNCH (94 %) made a
+// chord played at the full velocity of the mouse / computer keyboard reach the output limiter (peak 0.89 with four notes); at 50 % (every preset's PUNCH) it stays under it
+// (0.60 with three notes, 0.83 with four). His choice: PUNCH 50 % in the web app.
+const WEB_EDITS = { 'A · Warm Pad': { fx_punch: 0.5 } };
+for (const [name, e] of Object.entries(WEB_EDITS)) {
+  if (!PRESETS.some(p => p.name === name)) throw new Error('WEB_EDITS: no preset ' + name);
+  for (const k of Object.keys(e)) if (!(k in idx)) throw new Error('WEB_EDITS: unknown param ' + k);
+}
 // version 1.0.6: what the demo window says while the piece plays (the owner's request: a short, readable presentation of the synth, the wavelets and the idea of an oscillator made of them, and how it
 // differs from the other synthesizers). One sentence per preset of the tour (every ~4 s, so about 13 words at the most, simple words), [chapter, sentence]; the web app shows them in order, the last one stays
 // if the tour is longer. Only facts of the engine: tools/ and CLAUDE.md section 3.1 (a cycle is split into 11 bands of wavelets; the scale filter works on bands, the position window on a part of the cycle).
@@ -1103,5 +1112,5 @@ for (const s of S) {
 }
 
 module.exports = { DEVICE, ORIENT, CHORD_H, APP, DEFAULT_PRESET, PARAMS: P, INDEX: idx, SECTIONS: S, PRESETS, TOP: TOP_N, TOP_EXTRA, TOP_LIST, PRESET_EDITS: Object.assign({}, PRESET_EDITS, OWNER_EDITS),
-  DEMO_PRESETS, DEMO_TRIM, DEMO_STORY, KEYATTAC, CATEGORIES,
+  DEMO_PRESETS, DEMO_TRIM, DEMO_STORY, KEYATTAC, CATEGORIES, WEB_EDITS,
   LFO2_TARGETS, LFO2_ROLE, ROLES, SLOTS, DELAY_BEATS, LFO_BEATS, CHORDS, CHORD_KEYS, MICRO_TABLES, NEW_FIRST: TOP_N, NEW_COUNT: NEW_N, DESCRIPTIONS, TOUR };

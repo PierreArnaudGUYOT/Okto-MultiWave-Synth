@@ -1436,7 +1436,8 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
                        // version 1.0.17 (the owner: "créer un nouveau preset, copier et coller un preset, créer une nouvelle banque"): NEW, COPY, PASTE, NEW BANK, and in the
                        // sound / bank menus: rename and duplicate a sound of the user bank, rename and delete a bank of the player's own (ctxRow, ctxBank)
                        kCmdNewSound = 914, kCmdCopy = 915, kCmdPaste = 916, kCmdNewBank = 917, kCmdRenameBank = 918, kCmdDeleteBank = 919,
-                       kCmdRenameSound = 920, kCmdDuplicate = 921, kCmdRenameShown = 922;
+                       kCmdRenameSound = 920, kCmdDuplicate = 921, kCmdRenameShown = 922,
+                       kCmdDlgOk = 930, kCmdDlgWhat = 931, kCmdDlgHow = 941;   // (version 1.0.17, developer tests: the EXPORT / IMPORT window's button, its choice 931 + i, 941 + h)
   static constexpr const char* kNewSoundName = "New sound";   // the sound NEW makes, until it is saved
   static constexpr float kBrowserW = 420;                  // logical width added at the right while the browser is open
   static constexpr R kSaveBtn{862, 9, 68, 30};             // SAVE PRESET, before MANUAL
@@ -1567,6 +1568,9 @@ class Editor : public IPlugView, public IPlugViewContentScaleSupport, public Edi
     else if (cmd == kCmdBankExport) exportOpen();
     else if (cmd == kCmdBankShow) bankShow();
     else if (cmd == kCmdBankImport) importOpen();
+    else if (cmd == kCmdDlgOk && dlg.mode) { if (dlg.mode == 1) exportGo(); else importGo(); }   // (version 1.0.17: the window's EXPORT… / IMPORT, as a click would)
+    else if (cmd >= kCmdDlgWhat && cmd < kCmdDlgWhat + 4 && dlg.mode == 1) dlg.what = cmd - kCmdDlgWhat;
+    else if (cmd >= kCmdDlgHow && cmd < kCmdDlgHow + 3 && dlg.mode == 2) dlg.how = cmd - kCmdDlgHow;
     else if (cmd == kCmdSavePreset) savePreset();
     else if (cmd == kCmdRestore) restorePreset(host->presetIndex());
     else if (cmd == kCmdBrowser) setBrowser(!host->browserOpen());

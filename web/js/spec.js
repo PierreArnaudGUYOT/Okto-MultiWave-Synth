@@ -347,7 +347,7 @@ var WS_SPEC = {
  },
  "TOUR": [
   "A · Wavelet Lead",
-  "AA · Tide Lute",
+  "AB · Rust Aurora LGT",
   "AB · Kalimba Lung Machine LGT",
   "AA · Hollow Bass",
   "AA · Orbit Drum",
@@ -365,7 +365,7 @@ var WS_SPEC = {
   "AA · Wood Rise Bows",
   "AB · Sweep of Trumpet",
   "AA · Drum Bloom LGT",
-  "AB · Rust Aurora LGT",
+  "AA · Tide Lute",
   "A · Cello Section",
   "AB · Step Sub",
   "A · Wave Pulse Lead",
@@ -8430,7 +8430,7 @@ var WS_SPEC = {
     0.4,
     150,
     1,
-    0.935897
+    0.5
    ]
   },
   {
