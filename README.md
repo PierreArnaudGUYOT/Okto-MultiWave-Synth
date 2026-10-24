@@ -34,7 +34,7 @@ from version 1.0.6 the macOS plug-in is built and tested on GitHub's Macs and re
 ## What version 1.0.18 changes (OktoWave 1.0)
 
 - **VINTAGE** (plug-in): one knob that ages the instrument like an analog polyphonic synthesizer of the 70s and 80s: each voice a little out of tune in its own way, a slow drift and a wow of the pitch, a darker and warmer tone, voices a little different. 0 % (the default) is the clean sound of before. **TYPE**: **FIX** (fixed differences only), **BOTH** or **DRIFT** (the moving drift only). It stays when you change preset, so every sound can be aged.
-- **Copper knobs** (plug-in): every knob is a turned-metal knob in rosy copper, sharp at every window size.
+- **Copper knobs** (web app and plug-in): every knob is a turned-metal knob in rosy copper, sharp at every size.
 - **A tidier panel** (web app and plug-in): the OSC MIX levels are named **OS1 OS2 OS3**, as the tabs; in the subtractive oscillator's card WIDTH, SPARSITY, PHASE and the level are on one row.
 - **The author's latest settings** for *A · Warm Pad* and *AA · Crystal Swirl*, TOP Sounds in his new order; the synth opens on *AA · Crystal Swirl*.
 - **MIDI in the web app**: when a keyboard does not play, the MIDI status says what to do.
